@@ -1,0 +1,55 @@
+<schema>
+    <EnumType name="Weekday">
+        <enum name="SUN" /> 
+        <enum name="MON" />
+        <enum name="TUE" />
+        <enum name="WED" />
+        <enum name="THU" />
+        <enum name="FRI" />
+        <enum name="SAT" />
+    </EnumType>
+
+    <EnumType name="Month">
+        <enum name="JAN" value="1" />
+        <enum name="FEB" value="2" />
+        <enum name="MAR" value="3" />
+        <enum name="APR" value="4" />
+        <enum name="MAY" value="5" />
+        <enum name="JUN" value="6" />
+        <enum name="JUL" value="7" />
+        <enum name="AUG" value="8" />
+        <enum name="SEP" value="9" />
+        <enum name="OCT" value="10" />
+        <enum name="NOV" value="11" />
+        <enum name="DEC" value="12" />
+    </EnumType>
+
+    <complexType name="Instrument">
+        <sequence>
+            <field name="instrumentName" type="string" />
+            <field name="exchangeCode" type="string" />
+        </sequence>
+    </complexType>
+
+    <complexType name="MaturityTime">
+        <sequence>
+            <field name="year" type="int" />
+            <field name="month" type="Month" />
+        </sequence>
+    </complexType>
+
+    <complexType name="Maturity">
+        <choice>
+            <field name="code" type="string" />
+            <field name="time" type="MaturityTime" />
+        </choice>
+    </complexType>
+
+    <complexType name="Product">
+        <sequence>
+            <field name="symbol" type="string" />
+            <field name="instrument" type="Instrument" />
+            <field name="maturity" type="Maturity" />
+        </sequence>
+    </complexType>
+</schema>

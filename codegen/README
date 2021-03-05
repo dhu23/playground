@@ -1,0 +1,34 @@
+<SimpleType> -- <enum type>
+<AlgebraicType>
+
+<choice>
+<sequence>
+
+----------------------------------------------------------------------
+
+<simpleEnumType name="Weekday">
+  <enum name="Sunday" type="Int" />
+  <enum name="Monday" type="Int" />
+  <enum name="Tuesday" type="Int" />
+  <enum name="Wednesday" type="Int" />
+  <enum name="Thursday" type="Int" />
+  <enum name="Friday" type="Int" />
+  <enum name="Saturday" type="Int" />
+</simpleEnumType>
+
+<ComplexEnumType name="Tenor">
+
+</ComplexEnumType>
+
+===> corresponding C++ class
+
+enum class Weekday : int
+{
+    Sunday = 0,
+    Monday = 1, 
+    Tuesday = 2, 
+    Wednesday = 3, 
+    Thursday = 4, 
+    Friday = 5, 
+    Saturday = 6
+};
