@@ -1,0 +1,83 @@
+https://www.quantshare.com/sa-620-10-new-ways-to-download-historical-stock-quotes-for-free
+
+=========================================================================
+Alpha Vantage
+A leading provider of free APIs for historical and real time data on stocks
+physical and crypto currencies
+
+https://www.alphavantage.co/documentation/
+
+to export historical daily quotes, use
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=[SYMBOL NAME]&apikey=[API KEY]
+
+
+=========================================================================
+Financial Content
+A very popular data provider that is used by several websites and companies
+http://markets.financialcontent.com/stocks/action/gethistoricaldata?Month=12&Symbol=[SYMBOL NAME]&Range=300&Year=2017
+
+
+=========================================================================
+Tiingo
+historical daily data free using their API
+Documentation can be found here:
+https://api.tiingo.com/docs/tiingo/daily#Software
+
+API call format to retrieve EOD data:
+https://api.tiingo.com/tiingo/daily/[SYMBOL NAME]/prices?startDate=2012-1-1&endDate=2016-1-1
+
+
+=========================================================================
+Quotemedia
+A leading provider of financial data. It provides EOD data for US and 
+Canadian securies via this link:
+http://app.quotemedia.com/quotetools/getHistoryDownload.csv?&webmasterId=501&startDay=1&startMonth=1&startYear=1900&endDay=17&endMonth=5
+&endYear=2017&isRanged=true&symbol=[SYMBOL NAME]
+
+
+=========================================================================
+investopedia
+You can get EOD data via this link:
+https://www.investopedia.com/markets/api/partial/historical/?Symbol=[SYMBOL NAME]&Type=Historical+Prices&Timeframe=Daily&StartDate=Nov+28%2C+2017&EndDate=Dec+05%2C+2017
+
+
+========================================================================
+Macrotrends
+Macrotrends is a research platform for long term investors. 
+Via their website, they allow exporting data for several series including U.S. securities.
+Here is the URL to get this data:
+http://download.macrotrends.net/assets/php/stock_data_export.php?t=[SYMBOL NAME]
+
+=========================================================================
+Wall Street Journal
+The Wall Street Journal or WSJ website provides an online corverage of breaking news and current headlines from the United States and around the world.
+Here is the URL to export data from the WSJ website:
+http://quotes.wsj.com/[SYMBOL NAME]/historical-prices/download?MOD_VIEW=page&num_rows=6299.041666666667&range_days=6299.041666666667&startDate=09/06/2000&endDate=12/05/2017
+
+
+=========================================================================
+Nasdaq Website
+The Nasdaq official website allows you to download data for U.S. securities.
+To download data for APAM, browse the following URL then click on the "Download" link at the bottom:
+http://www.nasdaq.com/symbol/apam/historical
+
+
+=========================================================================
+Yahoo Finance
+There has been a lot of discussion about Finance Yahoo recently and how they changed their URL to prevent automatic data download.
+You can now download data manually from Yahoo.
+Example:
+https://finance.yahoo.com/quote/IWM/history?p=IWM
+Then click on the "Download Data" link.
+
+
+=========================================================================
+Stooq
+Stooq is a Poland based company and a financial portal.
+Data download cannot be automated, however you don't have to do that since all you need is download the entire database via a simple link.
+Databases can be found here:
+https://stooq.com/db/h/
+
+You can download data in CSV or Metastock format for several markets including U.S stocks, U.K stocks, bonds, commodities, currencies, indices, macroeconomy data...
+Data is available in daily, hourly and 5 minutes format.
+
