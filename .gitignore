@@ -1,0 +1,6 @@
+.stack-work/
+*.tsk
+*.o
+*.hi
+*.pyc
+*~
