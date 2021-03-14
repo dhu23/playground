@@ -1,0 +1,9 @@
+# find mistakes in the following code
+# unsigned int i;
+# for (i = 100; i >= 0; --i)
+#     printf("%d\n", i);
+
+# i is unsigned int therefore i >= 0 is always true ==> infinite loop
+# change it to i > 0
+# also when it gets in infinite loop, i will wrap around and turn into a
+# huge number, however %d will print them as negative numbers

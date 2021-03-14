@@ -1,0 +1,15 @@
+# how would you test a pen
+
+# who would be using it? writers, students etc. Is this going to be used by
+# some random acrobats?
+
+# within the normal use case by writers
+# 1) write on a paper and other different surfaces
+# 2) put on the cap, take off the cap
+# 3) replace component for certain models
+# 4) ink pen.
+
+# what is the normal usage?
+# 8 hours of writing on paper every day
+# exceptions: drop the pen; leaking
+

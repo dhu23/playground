@@ -1,0 +1,18 @@
+# we have the following method used in a chess game:
+# boolean canMoveTo(int x, int y). This method is part of the piece class and
+# returns whether or not the piece can move to position (x, y).
+# Explain how you would test this method
+
+
+# use case, called by the player to move the piece
+# 1) legal move
+# 2) illegal move
+#    (move to itself, move out side of the board, move to a place taken)
+# 3) plain bad input (negative x, y)
+
+# for each cases, consider the piece at different locations.
+
+# general test cases:
+# assumption to make is that pieces outside of the origin and destination
+# should not affect test result. therefore we can generate test cases for
+# different pieces and different target

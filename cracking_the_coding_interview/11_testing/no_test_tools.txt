@@ -1,0 +1,28 @@
+# how would you load test a webpage without using any test tools
+
+# test without internet
+# test with bad internet connection
+# test with good internet connection but kill the page half way through
+# test with good internet and then drop the connection half way through
+
+# once loaded:
+# 1) normal usage case by targeted users
+# 2) next and prev page test
+# 3) measure speed
+# 4) resize window and see if everything is rendered expectedly
+
+
+
+# load testing - is a process of putting demand on a system and measuring
+# its response
+
+# latency/response time
+# throughput
+# resource usage
+# maximum load that the system can handle
+
+# think of Marc2 oassvc
+# how fast each process is handled
+# how many bonds are processed at the same time
+# CPU usage for the cluster. Are the work evenly distributed across the farm?
+# How much can the system handle

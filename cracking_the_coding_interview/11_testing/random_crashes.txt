@@ -1,0 +1,22 @@
+# random crashes: You are given the source to an application which crashes
+# when it is run. After running it ten times in a debugger, you find it never
+# crashes in the same place. The application is single threaded and uses only
+# the C standard library. What programming errors could be causing this crash?
+# How would you test each one?
+
+# does it always crash? or just crash *very* often? 
+
+# 1) uninitialized parameters
+# 2) array access out of boundary
+# 3) illegal pointer access
+
+# add from reading the answer
+# 4) random variable. is there an internal built-in random behavior?
+# such as user input somehow turned out to be random, or RNG, or user input
+# 5) memory leak at certain level can cause crash when system ran out of memory
+# could be heap overflow?
+
+# who was using it and how it was used?
+# there are tools for runtime uninitialized variable check
+# there might be certain scenarios that are linked to the crash
+# eliminate factors and narrow it done
