@@ -1,0 +1,3 @@
+plots:update ex2:`EMPTY,cl2:`EMPTY from (select ex:first sym2ex[sym],cl:first sym2class[sym],ex2:last sym2ex[sym],cl2:last sym2class[sym],first date,en:(.bal.env),first targetstrat by parentid:`$getalgoparam'[algoparams;8567;"0"] from os where execqty>0,targetstrat=`LEGGER) where ex=ex2,targetstrat=`LEGGER;
+$[((`plots in tables[]) & ("b"$(count plots)));plots:plots upsert (select ex:first sym2ex[sym],cl:first sym2class[sym],ex2:`EMPTY,cl2:`EMPTY,first date,en:(.bal.env),first targetstrat by parentid from os where execqty>0,not targetstrat=`LEGGER);plots:(select ex:first sym2ex[sym],cl:first sym2class[sym],ex2:`EMPTY,cl2:`EMPTY,first date,en:(.bal.env),first targetstrat by parentid from plots where execqty>0,not targetstrat=`LEGGER)];
+
