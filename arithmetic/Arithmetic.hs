@@ -52,18 +52,29 @@ addD d1 d2
   | q == 0 = (D0, dSeq !! r)
   | otherwise = (D1, dSeq !! r)
   where
-  (q, r) = ((toInt d1) + (toInt d2)) `divMod` 10
+    (q, r) = ((toInt d1) + (toInt d2)) `divMod` 10
 
 
-data NInt = NInt (NE.NonEmpty D) -- the most significant digit comes first
+-- the most significant digit comes first. We could use a NonEmpty list
+-- but it is not necessary. Because it has to do certain validation to trim 
+-- down length like "01234" to store as "1234", it might as well not allow
+-- empty list []
+-- the value constructor should not be exported
+data NInt = NInt [D] 
 
 
 instance Show NInt where
-  show (NInt ds) = fmap toChar $ NE.toList ds
+  show (NInt ds) = fmap toChar ds
+
+
+instance Eq NInt where
+  n1 == n2 = undefined
 
 
 mkNInt :: String -> Maybe NInt
-mkNInt cs = fmap NInt (mapM fromChar cs >>= NE.nonEmpty)
+mkNInt cs = fmap (NInt . dropLeadZero) $ mapM fromChar cs >>= NE.nonEmpty
+  where
+    dropLeadZero = NE.dropWhile (== D0)
 
 
 -- least significant digit comes first
@@ -74,17 +85,17 @@ runAdd' (x:xs) (y:ys) = case tens of
   D0 -> single:s'
   otherwise -> runAdd' [single, tens] (D0:s')
   where
-  (tens, single) = addD x y
-  s' = runAdd' xs ys
+    (tens, single) = addD x y
+    s' = runAdd' xs ys
 
 
 
 addNInt :: NInt -> NInt -> NInt
 addNInt (NInt ns) (NInt ms) = NInt $ runAdd ns' ms'
   where
-  ns' = NE.toList $ NE.reverse ns
-  ms' = NE.toList $ NE.reverse ms
+    ns' = reverse ns
+    ms' = reverse ms
 
-  runAdd ns ms = case runAdd' ns ms of
-    [] -> NE.fromList [D0]
-    ret -> NE.reverse $ NE.fromList ret
+    runAdd ns ms = case runAdd' ns ms of
+      [] -> [D0]
+      ret -> reverse ret
