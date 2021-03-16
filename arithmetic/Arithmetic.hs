@@ -36,17 +36,19 @@ toChar D7 = '7'
 toChar D8 = '8'
 toChar D9 = '9'
 
+-- for an init value, increase init while decreasing y to stop 
+addByCount :: D -> D -> D -> D
+addByCount init y stop
+  | y <= stop = init
+  | otherwise = addByCount (succ init) (pred y) stop
+
 
 addDD :: D -> D -> D -> (D, D)
 addDD x y xcomp
   | y == xcomp = (D1, D0)
   | y > xcomp = let d = addByCount D0 y xcomp in (D1, d) --count y down to xcomp
   | otherwise = let d = addByCount x y D0 in (D0, d) --count y down to D0
-  where
-    addByCount :: D -> D -> D -> D
-    addByCount init y stop
-      | y <= stop = init
-      | otherwise = addByCount (succ init) (pred y) stop
+
 
 -- is the best way just mapping everything out by pattern matching exhaustively?
 addD :: D -> D -> (D, D)
@@ -61,10 +63,23 @@ addD D7 x = addDD D7 x D3
 addD D8 x = addDD D8 x D2
 addD D9 x = addDD D9 x D1
 
+subD :: D -> D -> (Bool, D) -- Bool indicates borrow
+subD x y 
+  | x == y = (False, D0)
+  | x > y = (False, addByCount D0 x y) -- increase y to x
+  | otherwise = let (_, ret) = addD x (addByCount D1 D9 y) in (True, ret)
+
+---------------------- Natural number -------------------------
 -- the most significant digit comes first. 
 -- the value constructor should not be exported
 data N = N [D]
 data N' = N' (NE.NonEmpty D)
+
+mkN :: String -> Maybe N
+mkN cs = (N . dropLeadZero) <$> (mapM fromChar cs)
+
+mkN' :: String -> Maybe N'
+mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
 
 instance Show N where
   show (N ds) = fmap toChar ds
@@ -102,21 +117,16 @@ instance Ord N where
 instance Ord N' where
   (N' ds1) `compare` (N' ds2) = (NE.toList ds1) `compare` (NE.toList ds2)
 
-
 dropLeadZero = dropWhile (== D0)
-
-mkN :: String -> Maybe N
-mkN cs = (N . dropLeadZero) <$> (mapM fromChar cs)
-
-mkN' :: String -> Maybe N'
-mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
 
 nzero :: N
 nzero = N [D0]
 
+isNZero :: N -> Bool
+isNZero n = n == nzero
+
 nzero' :: N'
 nzero' = N' $ D0 NE.:| []
-
 
 -- least significant digit comes first
 addDs :: [D] -> [D] -> [D]
@@ -144,11 +154,10 @@ subDs :: [D] -> [D] -> Maybe [D]
 subDs [] [] = Just [D0]
 subDs xs [] = Just xs
 subDs [] ys = Nothing
-subDs n@(x:xs) m@(y:ys)
-  | x >= y = fmap (diff:) (subDs xs ys)
-  | otherwise = fmap (diff:) $ borrowOne xs >>= \n -> subDs n ys
-  where 
-    diff = toEnum $ ((fromEnum x) + 10 - (fromEnum y)) `mod` 10
+subDs (x:xs) (y:ys) = case subD x y of
+  (False, d) -> fmap (d:) (subDs xs ys)
+  (True, d) -> fmap (d:) $ borrowOne xs >>= \n -> subDs n ys
+
 
 nFromList :: [D] -> N
 nFromList xs = N $ dropLeadZero xs
@@ -179,3 +188,69 @@ subN (N ns) (N ms) = (nFromList . reverse) <$> subDs ns' ms'
   where
     ns' = reverse ns
     ms' = reverse ms 
+
+--------------------- Integer Number -------------------------
+data I = I 
+  { iabs :: N 
+  , isign :: Bool -- True means positive, 0 can be either way 
+  }
+
+mkI :: String -> Maybe I
+mkI ('-':cs) = I <$> mkN cs <*> pure False
+mkI cs = I <$> mkN cs <*> pure True
+
+izero :: I
+izero = I nzero True
+
+isIZero :: I -> Bool
+isIZero (I n s) = isNZero n
+
+isIPositive :: I -> Bool
+isIPositive i@(I n s) = not (isIZero i) && s
+
+isINegative :: I -> Bool
+isINegative i@(I n s) = not (isIZero i) && not s
+
+instance Show I where
+  show (I n s)
+    | s = show n
+    | otherwise = if n == nzero then show n else "-" ++ show n
+
+instance Eq I where
+  i1@(I n1 s1) == i2@(I n2 s2)
+    | isZero1 && isZero2 = True
+    | not isZero1 && not isZero2 = if s1 == s2 then n1 == n2 else False 
+    | otherwise = False  
+    where
+      isZero1 = isIZero i1
+      isZero2 = isIZero i2
+
+invertOrd :: Ordering -> Ordering
+invertOrd GT = LT
+invertOrd LT = GT
+invertOrd EQ = EQ
+
+instance Ord I where
+  i1@(I n1 s1) `compare` i2@(I n2 s2)
+    | isZero1 && isZero2 = EQ
+    | not isZero1 && isZero2 = if isPos1 then GT else LT
+    | isZero1 && not isZero2 = if isPos2 then LT else GT
+    | isPos1 && isPos2 = n1 `compare` n2
+    | isPos1 && isNeg2 = GT
+    | isNeg1 && isNeg2 = invertOrd $ n1 `compare` n2
+    | otherwise = LT -- isNeg1 && isPos2
+    where 
+      isZero1 = isIZero i1
+      isZero2 = isIZero i2
+      isPos1 = isIPositive i1
+      isPos2 = isIPositive i2
+      isNeg1 = isIPositive i1
+      isNeg2 = isIPositive i2
+
+instance Num I where
+  i + j = undefined
+  i * j = undefined
+  abs i = undefined
+  signum = undefined
+  fromInteger = undefined
+  negate = undefined
