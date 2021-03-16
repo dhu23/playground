@@ -175,9 +175,7 @@ addN' (N' ns) (N' ms) = nFromList' $ reverse $ addDs ns' ms'
 
 
 subN :: N -> N -> Maybe N
-subN a@(N ns) b@(N ms)
-  | a == b = Just nzero
-  | a < b = Nothing
-  | a > b = runSub ns ms
-  where 
-    runSub ns ms = undefined
+subN (N ns) (N ms) = (nFromList . reverse) <$> subDs ns' ms'
+  where
+    ns' = reverse ns
+    ms' = reverse ms 
