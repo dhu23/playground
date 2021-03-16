@@ -1,9 +1,13 @@
+-- the idea is to build a purely symbolic arithmetic library without relying
+-- on any built-in Int/Integer operations at all. Otherwise, why not just use
+-- Integer type, since it is already a big integer type. 
+
 import Control.Monad (mapM)
-import qualified Data.List.NonEmpty as NE
+import qualified Data.List.NonEmpty as NE 
 
 data D
   = D0 | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 
-  deriving (Enum, Eq, Ord, Show)
+  deriving (Enum, Bounded, Eq, Ord, Show)
 
 
 fromChar :: Char -> Maybe D
@@ -32,70 +36,148 @@ toChar D7 = '7'
 toChar D8 = '8'
 toChar D9 = '9'
 
-toInt :: D -> Int
-toInt D0 = 0
-toInt D1 = 1
-toInt D2 = 2
-toInt D3 = 3
-toInt D4 = 4
-toInt D5 = 5
-toInt D6 = 6
-toInt D7 = 7
-toInt D8 = 8
-toInt D9 = 9
 
-dSeq = iterate succ D0
+addDD :: D -> D -> D -> (D, D)
+addDD x y xcomp
+  | y == xcomp = (D1, D0)
+  | y > xcomp = let d = addByCount D0 y xcomp in (D1, d) --count y down to xcomp
+  | otherwise = let d = addByCount x y D0 in (D0, d) --count y down to D0
+  where
+    addByCount :: D -> D -> D -> D
+    addByCount init y stop
+      | y <= stop = init
+      | otherwise = addByCount (succ init) (pred y) stop
 
--- maybe I can just map the results exhaustively
+-- is the best way just mapping everything out by pattern matching exhaustively?
 addD :: D -> D -> (D, D)
-addD d1 d2
-  | q == 0 = (D0, dSeq !! r)
-  | otherwise = (D1, dSeq !! r)
-  where
-    (q, r) = ((toInt d1) + (toInt d2)) `divMod` 10
+addD D0 x = (D0, x)
+addD D1 x = addDD D1 x D9
+addD D2 x = addDD D2 x D8
+addD D3 x = addDD D3 x D7
+addD D4 x = addDD D4 x D6
+addD D5 x = addDD D5 x D5
+addD D6 x = addDD D6 x D4
+addD D7 x = addDD D7 x D3
+addD D8 x = addDD D8 x D2
+addD D9 x = addDD D9 x D1
 
-
--- the most significant digit comes first. We could use a NonEmpty list
--- but it is not necessary. Because it has to do certain validation to trim 
--- down length like "01234" to store as "1234", it might as well not allow
--- empty list []
+-- the most significant digit comes first. 
 -- the value constructor should not be exported
-data NInt = NInt [D] 
+data N = N [D]
+data N' = N' (NE.NonEmpty D)
+
+instance Show N where
+  show (N ds) = fmap toChar ds
+
+instance Show N' where
+  show (N' ds) = fmap toChar $ NE.toList ds
+
+instance Eq N where
+  (N ds1) == (N ds2) = ds1 == ds2
+
+instance Eq N' where
+  (N' ds1) == (N' ds2) = ds1 == ds2
 
 
-instance Show NInt where
-  show (NInt ds) = fmap toChar ds
+compareDs :: [D] -> [D] -> Ordering
+compareDs ds1 ds2 
+  | len1 > len2 = GT
+  | len1 < len2 = LT
+  | otherwise = comp ds1 ds2
+  where 
+    len1 = length ds1
+    len2 = length ds2
+    comp [] [] = EQ
+    comp [] _ = LT
+    comp _ [] = GT
+    comp (x:xs) (y:ys)
+      | x > y = GT
+      | x < y = LT
+      | otherwise = comp xs ys
 
 
-instance Eq NInt where
-  n1 == n2 = undefined
+instance Ord N where
+  (N ds1) `compare` (N ds2) = ds1 `compare` ds2
+
+instance Ord N' where
+  (N' ds1) `compare` (N' ds2) = (NE.toList ds1) `compare` (NE.toList ds2)
 
 
-mkNInt :: String -> Maybe NInt
-mkNInt cs = fmap (NInt . dropLeadZero) $ mapM fromChar cs >>= NE.nonEmpty
-  where
-    dropLeadZero = NE.dropWhile (== D0)
+dropLeadZero = dropWhile (== D0)
+
+mkN :: String -> Maybe N
+mkN cs = (N . dropLeadZero) <$> (mapM fromChar cs)
+
+mkN' :: String -> Maybe N'
+mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
+
+nzero :: N
+nzero = N [D0]
+
+nzero' :: N'
+nzero' = N' $ D0 NE.:| []
 
 
 -- least significant digit comes first
-runAdd' :: [D] -> [D] -> [D]
-runAdd' [] ys = ys
-runAdd' xs [] = xs -- xs is not []
-runAdd' (x:xs) (y:ys) = case tens of 
+addDs :: [D] -> [D] -> [D]
+addDs [] ys = ys
+addDs xs [] = xs -- xs is not []
+addDs (x:xs) (y:ys) = case tens of 
   D0 -> single:s'
-  otherwise -> runAdd' [single, tens] (D0:s')
+  otherwise -> addDs [single, tens] (D0:s')
   where
     (tens, single) = addD x y
-    s' = runAdd' xs ys
+    s' = addDs xs ys
 
 
+borrowOne :: [D] -> Maybe [D]
+borrowOne [] = Nothing
+borrowOne (d:ds)
+  | d > D0 = Just $ (pred d):ds
+  | otherwise = fmap (D9:) (borrowOne ds)
 
-addNInt :: NInt -> NInt -> NInt
-addNInt (NInt ns) (NInt ms) = NInt $ runAdd ns' ms'
+subOne = borrowOne
+
+-- 3201     319  + 11
+--  879      87  +  9  
+subDs :: [D] -> [D] -> Maybe [D]
+subDs [] [] = Just [D0]
+subDs xs [] = Just xs
+subDs [] ys = Nothing
+subDs n@(x:xs) m@(y:ys)
+  | x >= y = fmap (diff:) (subDs xs ys)
+  | otherwise = fmap (diff:) $ borrowOne xs >>= \n -> subDs n ys
+  where 
+    diff = toEnum $ ((fromEnum x) + 10 - (fromEnum y)) `mod` 10
+
+nFromList :: [D] -> N
+nFromList xs = N $ dropLeadZero xs
+
+
+nFromList' :: [D] -> N'
+nFromList' xs = case dropLeadZero xs of 
+  [] -> N' $ D0 NE.:| []
+  xs -> N' $ NE.fromList xs
+
+
+addN :: N -> N -> N 
+addN (N ns) (N ms) = nFromList $ reverse $ addDs ns' ms'
   where
     ns' = reverse ns
-    ms' = reverse ms
+    ms' = reverse ms'
 
-    runAdd ns ms = case runAdd' ns ms of
-      [] -> [D0]
-      ret -> reverse ret
+
+addN' :: N' -> N' -> N'
+addN' (N' ns) (N' ms) = nFromList' $ reverse $ addDs ns' ms'
+  where
+    ns' = NE.toList $ NE.reverse ns
+    ms' = NE.toList $ NE.reverse ms
+
+
+subN :: N -> N -> Maybe N
+subN a@(N ns) b@(N ms)
+  | a == b = Just nzero
+  | a < b = Nothing
+  | a > b = runSub ns ms
+  where 
+    runSub ns ms = undefined
