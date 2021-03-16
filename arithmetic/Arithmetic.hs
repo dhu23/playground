@@ -43,8 +43,8 @@ addByCount init y stop
   | otherwise = addByCount (succ init) (pred y) stop
 
 
-addDD :: D -> D -> D -> (D, D)
-addDD x y xcomp
+runAddByCount :: D -> D -> D -> (D, D)
+runAddByCount x y xcomp
   | y == xcomp = (D1, D0)
   | y > xcomp = let d = addByCount D0 y xcomp in (D1, d) --count y down to xcomp
   | otherwise = let d = addByCount x y D0 in (D0, d) --count y down to D0
@@ -53,21 +53,79 @@ addDD x y xcomp
 -- is the best way just mapping everything out by pattern matching exhaustively?
 addD :: D -> D -> (D, D)
 addD D0 x = (D0, x)
-addD D1 x = addDD D1 x D9
-addD D2 x = addDD D2 x D8
-addD D3 x = addDD D3 x D7
-addD D4 x = addDD D4 x D6
-addD D5 x = addDD D5 x D5
-addD D6 x = addDD D6 x D4
-addD D7 x = addDD D7 x D3
-addD D8 x = addDD D8 x D2
-addD D9 x = addDD D9 x D1
+addD D1 x = runAddByCount D1 x D9
+addD D2 x = runAddByCount D2 x D8
+addD D3 x = runAddByCount D3 x D7
+addD D4 x = runAddByCount D4 x D6
+addD D5 x = runAddByCount D5 x D5
+addD D6 x = runAddByCount D6 x D4
+addD D7 x = runAddByCount D7 x D3
+addD D8 x = runAddByCount D8 x D2
+addD D9 x = runAddByCount D9 x D1
 
 subD :: D -> D -> (Bool, D) -- Bool indicates borrow
 subD x y 
   | x == y = (False, D0)
   | x > y = (False, addByCount D0 x y) -- increase y to x
   | otherwise = let (_, ret) = addD x (addByCount D1 D9 y) in (True, ret)
+
+addDD :: (D, D) -> (D, D) -> (D, D) -- hundreds are ignored
+addDD (ten1, single1) (ten2, single2) = (ten, single)
+  where
+    (tenCarry, single) = addD single1 single2
+    (_, ten') = addD ten1 ten2
+    (_, ten) = addD ten' tenCarry
+
+
+-- least significant digit comes first
+addDs :: [D] -> [D] -> [D]
+addDs [] ys = ys
+addDs xs [] = xs -- xs is not []
+addDs (x:xs) (y:ys) = case tens of 
+  D0 -> single:s'
+  otherwise -> addDs [single, tens] (D0:s')
+  where
+    (tens, single) = addD x y
+    s' = addDs xs ys
+
+-- least significant digit comes first
+borrowOne :: [D] -> Maybe [D]
+borrowOne [] = Nothing
+borrowOne (d:ds)
+  | d > D0 = Just $ (pred d):ds
+  | otherwise = fmap (D9:) (borrowOne ds)
+
+subOne = borrowOne
+
+-- digits in reversed order, least signficant digit comes first
+subDs :: [D] -> [D] -> Maybe [D]
+subDs [] [] = Just [D0]
+subDs xs [] = Just xs
+subDs [] ys = Nothing
+subDs (x:xs) (y:ys) = case subD x y of
+  (False, d) -> fmap (d:) (subDs xs ys)
+  (True, d) -> fmap (d:) $ borrowOne xs >>= \n -> subDs n ys
+
+mulD :: D -> D -> (D, D)
+mulD D0 _ = (D0, D0)
+mulD D1 x = (D0, x)
+mulD D2 x = addD x x
+mulD D3 x = addDD (mulD D2 x) (mulD D1 x)
+mulD D4 x = let r = mulD D2 x in addDD r r
+mulD D5 x = addDD (mulD D4 x) (mulD D1 x)
+mulD D6 x = let r = mulD D3 x in addDD r r
+mulD D7 x = addDD (mulD D4 x) (mulD D3 x)
+mulD D8 x = let r = mulD D4 x in addDD r r
+mulD D9 x = addDD (mulD D8 x) (mulD D1 x)
+
+-- least significant digit comes first
+mulByD :: [D] -> D -> [D]
+mulByD [] m = []
+mulByD (d:ds) m = case ten of 
+  D0 -> single:(mulByD ds m)
+  _ -> single:(addDs [ten] (mulByD ds m))
+  where
+    (ten, single) = mulD d m
 
 ---------------------- Natural number -------------------------
 -- the most significant digit comes first. 
@@ -127,36 +185,6 @@ isNZero n = n == nzero
 
 nzero' :: N'
 nzero' = N' $ D0 NE.:| []
-
--- least significant digit comes first
-addDs :: [D] -> [D] -> [D]
-addDs [] ys = ys
-addDs xs [] = xs -- xs is not []
-addDs (x:xs) (y:ys) = case tens of 
-  D0 -> single:s'
-  otherwise -> addDs [single, tens] (D0:s')
-  where
-    (tens, single) = addD x y
-    s' = addDs xs ys
-
-
-borrowOne :: [D] -> Maybe [D]
-borrowOne [] = Nothing
-borrowOne (d:ds)
-  | d > D0 = Just $ (pred d):ds
-  | otherwise = fmap (D9:) (borrowOne ds)
-
-subOne = borrowOne
-
--- 3201     319  + 11
---  879      87  +  9  
-subDs :: [D] -> [D] -> Maybe [D]
-subDs [] [] = Just [D0]
-subDs xs [] = Just xs
-subDs [] ys = Nothing
-subDs (x:xs) (y:ys) = case subD x y of
-  (False, d) -> fmap (d:) (subDs xs ys)
-  (True, d) -> fmap (d:) $ borrowOne xs >>= \n -> subDs n ys
 
 
 nFromList :: [D] -> N
