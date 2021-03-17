@@ -77,34 +77,35 @@ addDD (ten1, single1) (ten2, single2) = (ten, single)
     (_, ten) = addD ten' tenCarry
 
 
--- least significant digit comes first
-addDs :: [D] -> [D] -> [D]
-addDs [] ys = ys
-addDs xs [] = xs -- xs is not []
-addDs (x:xs) (y:ys) = case tens of 
+-- least significant digit comes first. Rlist = reversed list
+addDRlist :: [D] -> [D] -> [D]
+addDRlist [] ys = ys
+addDRlist xs [] = xs -- xs is not []
+addDRlist (x:xs) (y:ys) = case tens of 
   D0 -> single:s'
-  otherwise -> addDs [single, tens] (D0:s')
+  otherwise -> addDRlist [single, tens] (D0:s')
   where
     (tens, single) = addD x y
-    s' = addDs xs ys
+    s' = addDRlist xs ys
+
+sumDRlists :: [[D]] -> [D]
+sumDRlists = foldr addDRlist [D0]
 
 -- least significant digit comes first
-borrowOne :: [D] -> Maybe [D]
-borrowOne [] = Nothing
-borrowOne (d:ds)
+subOneRlist :: [D] -> Maybe [D]
+subOneRlist [] = Nothing
+subOneRlist (d:ds)
   | d > D0 = Just $ (pred d):ds
-  | otherwise = fmap (D9:) (borrowOne ds)
-
-subOne = borrowOne
+  | otherwise = fmap (D9:) (subOneRlist ds)
 
 -- digits in reversed order, least signficant digit comes first
-subDs :: [D] -> [D] -> Maybe [D]
-subDs [] [] = Just [D0]
-subDs xs [] = Just xs
-subDs [] ys = Nothing
-subDs (x:xs) (y:ys) = case subD x y of
-  (False, d) -> fmap (d:) (subDs xs ys)
-  (True, d) -> fmap (d:) $ borrowOne xs >>= \n -> subDs n ys
+subDRlist :: [D] -> [D] -> Maybe [D]
+subDRlist [] [] = Just [D0]
+subDRlist xs [] = Just xs
+subDRlist [] ys = Nothing
+subDRlist (x:xs) (y:ys) = case subD x y of
+  (False, d) -> fmap (d:) (subDRlist xs ys)
+  (True, d) -> fmap (d:) $ subOneRlist xs >>= \n -> subDRlist n ys
 
 mulD :: D -> D -> (D, D)
 mulD D0 _ = (D0, D0)
@@ -119,13 +120,32 @@ mulD D8 x = let r = mulD D4 x in addDD r r
 mulD D9 x = addDD (mulD D8 x) (mulD D1 x)
 
 -- least significant digit comes first
-mulByD :: [D] -> D -> [D]
-mulByD [] m = []
-mulByD (d:ds) m = case ten of 
-  D0 -> single:(mulByD ds m)
-  _ -> single:(addDs [ten] (mulByD ds m))
+mulDRlistByD :: [D] -> D -> [D]
+mulDRlistByD [] m = []
+mulDRlistByD (d:ds) m = case ten of 
+  D0 -> single:(mulDRlistByD ds m)
+  _ -> single:(addDRlist [ten] (mulDRlistByD ds m))
   where
     (ten, single) = mulD d m
+
+
+-- least significant digit comes first
+mulDRlist :: [D] -> [D] -> [D]
+mulDRlist ns ms = sumDRlists rows
+  where
+    -- [7, 9, 8] -> [(7, []), (9, [7]), (8, [9, 7])]
+    helper :: [a] -> [(a, [a])] 
+    helper xs = reverse $ helper2 $ reverse xs
+      where 
+        helper2 :: [a] -> [(a, [a])]
+        helper2 [] = []
+        helper2 (a:as) = (a, as):(helper2 as)
+    mul' ms (d, countList) = mulDRlistByTens (mulDRlistByD ms d) countList
+    rows = map (mul' ns) $ helper ms
+    -- the first argument is in least significant digit format
+    mulDRlistByTens :: [D] -> [a] -> [D]
+    mulDRlistByTens x [] = x
+    mulDRlistByTens x (_:rest) = mulDRlistByTens (D0:x) rest
 
 ---------------------- Natural number -------------------------
 -- the most significant digit comes first. 
@@ -198,24 +218,30 @@ nFromList' xs = case dropLeadZero xs of
 
 
 addN :: N -> N -> N 
-addN (N ns) (N ms) = nFromList $ reverse $ addDs ns' ms'
+addN (N ns) (N ms) = nFromList $ reverse $ addDRlist ns' ms'
   where
     ns' = reverse ns
     ms' = reverse ms'
 
 
 addN' :: N' -> N' -> N'
-addN' (N' ns) (N' ms) = nFromList' $ reverse $ addDs ns' ms'
+addN' (N' ns) (N' ms) = nFromList' $ reverse $ addDRlist ns' ms'
   where
     ns' = NE.toList $ NE.reverse ns
     ms' = NE.toList $ NE.reverse ms
 
 
 subN :: N -> N -> Maybe N
-subN (N ns) (N ms) = (nFromList . reverse) <$> subDs ns' ms'
+subN (N ns) (N ms) = (nFromList . reverse) <$> subDRlist ns' ms'
   where
     ns' = reverse ns
     ms' = reverse ms 
+
+mulN :: N -> N -> N
+mulN (N ns) (N ms) = nFromList $ reverse $ mulDRlist ns' ms' 
+  where
+    ns' = reverse ns
+    ms' = reverse ms
 
 --------------------- Integer Number -------------------------
 data I = I 
