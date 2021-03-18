@@ -98,11 +98,12 @@ subOneRlist (d:ds)
   | d > D0 = Just $ (pred d):ds
   | otherwise = fmap (D9:) (subOneRlist ds)
 
--- digits in reversed order, least signficant digit comes first
-subDRlist :: [D] -> [D] -> Maybe [D]
-subDRlist [] [] = Just [D0]
-subDRlist xs [] = Just xs
-subDRlist [] ys = Nothing
+-- digits in reversed order, least signficant digit comes first.
+-- result is at least 0. Otherwise defining integer number subtraction
+-- can be very tricky and ugly
+subDRlist :: [D] -> [D] -> [D]
+subDRlist xs [] = [D0]
+subDRlist [] ys = [D0]
 subDRlist (x:xs) (y:ys) = case subD x y of
   (False, d) -> fmap (d:) (subDRlist xs ys)
   (True, d) -> fmap (d:) $ subOneRlist xs >>= \n -> subDRlist n ys
@@ -301,8 +302,23 @@ instance Ord I where
       isNeg1 = isIPositive i1
       isNeg2 = isIPositive i2
 
+addI :: I -> I -> I
+addI i1@(I n1 s1) i2@(I n2 s2)
+  | isZero1 = i2
+  | isZero2 = i1
+  | isPos1 && isPos2 = I (addN n1 n2) True
+  | isNeg1 && isNeg2 = I (addN n1 n2) False
+  | isPos1 && isNeg2 = if n1 >= n2 then I (subN n1 n2)
+  where
+    isZero1 = isIZero i1
+    isZero2 = isIZero i2
+    isPos1 = isIPositive i1
+    isPos2 = isIPositive i2
+    isNeg1 = isIPositive i1
+    isNeg2 = isIPositive i2
+
 instance Num I where
-  i + j = undefined
+  i + j = addI
   i * j = undefined
   abs i = undefined
   signum = undefined
