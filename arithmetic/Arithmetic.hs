@@ -92,21 +92,23 @@ sumDRlists :: [[D]] -> [D]
 sumDRlists = foldr addDRlist [D0]
 
 -- least significant digit comes first
-subOneRlist :: [D] -> Maybe [D]
-subOneRlist [] = Nothing
+-- the result will be at least zero
+subOneRlist :: [D] -> [D]
+subOneRlist [] = [D0]
+subOneRlist [D0] = [D0]
 subOneRlist (d:ds)
-  | d > D0 = Just $ (pred d):ds
-  | otherwise = fmap (D9:) (subOneRlist ds)
+  | d > D0 = (pred d):ds
+  | otherwise = D9:(subOneRlist ds)
 
 -- digits in reversed order, least signficant digit comes first.
 -- result is at least 0. Otherwise defining integer number subtraction
 -- can be very tricky and ugly
 subDRlist :: [D] -> [D] -> [D]
-subDRlist xs [] = [D0]
+subDRlist xs [] = xs
 subDRlist [] ys = [D0]
 subDRlist (x:xs) (y:ys) = case subD x y of
-  (False, d) -> fmap (d:) (subDRlist xs ys)
-  (True, d) -> fmap (d:) $ subOneRlist xs >>= \n -> subDRlist n ys
+  (False, d) -> d:(subDRlist xs ys)
+  (True, d) -> d:(subDRlist (subOneRlist xs) ys)
 
 mulD :: D -> D -> (D, D)
 mulD D0 _ = (D0, D0)
@@ -232,8 +234,8 @@ addN' (N' ns) (N' ms) = nFromList' $ reverse $ addDRlist ns' ms'
     ms' = NE.toList $ NE.reverse ms
 
 
-subN :: N -> N -> Maybe N
-subN (N ns) (N ms) = (nFromList . reverse) <$> subDRlist ns' ms'
+subN :: N -> N -> N
+subN (N ns) (N ms) = nFromList $ reverse $ subDRlist ns' ms'
   where
     ns' = reverse ns
     ms' = reverse ms 
@@ -249,6 +251,12 @@ data I = I
   { iabs :: N 
   , isign :: Bool -- True means positive, 0 can be either way 
   }
+
+posI :: N -> I
+posI n = I n True
+
+negI :: N -> I
+negI n = I n False
 
 mkI :: String -> Maybe I
 mkI ('-':cs) = I <$> mkN cs <*> pure False
@@ -308,7 +316,8 @@ addI i1@(I n1 s1) i2@(I n2 s2)
   | isZero2 = i1
   | isPos1 && isPos2 = I (addN n1 n2) True
   | isNeg1 && isNeg2 = I (addN n1 n2) False
-  | isPos1 && isNeg2 = if n1 >= n2 then I (subN n1 n2)
+  | isPos1 && isNeg2 = if n1 < n2 then negI (subN n2 n1) else posI (subN n1 n2)
+  | isNeg1 && isPos2 = if n1 > n2 then negI (subN n1 n2) else posI (subN n2 n1)
   where
     isZero1 = isIZero i1
     isZero2 = isIZero i2
@@ -317,10 +326,21 @@ addI i1@(I n1 s1) i2@(I n2 s2)
     isNeg1 = isIPositive i1
     isNeg2 = isIPositive i2
 
+mulI :: I -> I -> I
+mulI (I n1 s1) (I n2 s2)
+  | isNZero n1 || isNZero n2 = izero
+  | s1 == s2 = I (mulN n1 n2) True
+  | otherwise = I (mulN n1 n2) False
+
 instance Num I where
-  i + j = addI
-  i * j = undefined
-  abs i = undefined
-  signum = undefined
+  (+) = addI
+  (*) = mulI
+  abs (I n s) = I n True
+  signum i
+    | isIZero i = izero 
+    | isign i = I (N [D1]) True
+    | otherwise = I (N [D1]) False
   fromInteger = undefined
-  negate = undefined
+  negate (I n s)
+    | isNZero n = izero
+    | otherwise = I n (not s)
