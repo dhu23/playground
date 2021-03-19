@@ -23,6 +23,18 @@ fromChar '8' = Just D8
 fromChar '9' = Just D9
 fromChar _ = Nothing
 
+fromInt :: Integer -> Maybe D
+fromInt 0 = Just D0
+fromInt 1 = Just D1
+fromInt 2 = Just D2
+fromInt 3 = Just D3
+fromInt 4 = Just D4
+fromInt 5 = Just D5
+fromInt 6 = Just D6
+fromInt 7 = Just D7
+fromInt 8 = Just D8
+fromInt 9 = Just D9
+fromInt _ = Nothing
 
 toChar :: D -> Char
 toChar D0 = '0'
@@ -35,6 +47,15 @@ toChar D6 = '6'
 toChar D7 = '7'
 toChar D8 = '8'
 toChar D9 = '9'
+
+-- 
+mkDRlistFromInt :: Integer -> Maybe [D]
+mkDRlistFromInt x
+  | x <= 0 = Just [D0]
+  | x < 10 = sequence [fromInt x] -- Just [D]
+  | otherwise = 
+    let (q, r) = x `divMod` 10
+    in (:) <$> fromInt r <*> mkDRlistFromInt q
 
 -- for an init value, increase init while decreasing y to stop 
 addByCount :: D -> D -> D -> D
@@ -111,16 +132,16 @@ subDRlist (x:xs) (y:ys) = case subD x y of
   (True, d) -> d:(subDRlist (subOneRlist xs) ys)
 
 mulD :: D -> D -> (D, D)
-mulD D0 _ = (D0, D0)
-mulD D1 x = (D0, x)
-mulD D2 x = addD x x
-mulD D3 x = addDD (mulD D2 x) (mulD D1 x)
-mulD D4 x = let r = mulD D2 x in addDD r r
-mulD D5 x = addDD (mulD D4 x) (mulD D1 x)
-mulD D6 x = let r = mulD D3 x in addDD r r
-mulD D7 x = addDD (mulD D4 x) (mulD D3 x)
-mulD D8 x = let r = mulD D4 x in addDD r r
-mulD D9 x = addDD (mulD D8 x) (mulD D1 x)
+mulD D0 _ = (D0, D0)  -- 0 addition
+mulD D1 x = (D0, x)   -- 0 addition
+mulD D2 x = addD x x  -- 1
+mulD D3 x = addDD (mulD D2 x) (mulD D1 x)  -- 2 additions
+mulD D4 x = let r = mulD D2 x in addDD r r -- 2 additions
+mulD D5 x = addDD (mulD D4 x) (mulD D1 x)  -- 3 additions
+mulD D6 x = let r = mulD D3 x in addDD r r -- 3 additions
+mulD D7 x = addDD (mulD D6 x) (mulD D1 x)  -- 4 additions
+mulD D8 x = let r = mulD D4 x in addDD r r -- 3 additions
+mulD D9 x = addDD (mulD D8 x) (mulD D1 x)  -- 4 additions
 
 -- least significant digit comes first
 mulDRlistByD :: [D] -> D -> [D]
@@ -340,7 +361,12 @@ instance Num I where
     | isIZero i = izero 
     | isign i = I (N [D1]) True
     | otherwise = I (N [D1]) False
-  fromInteger = undefined
+  fromInteger i
+    | i == 0 = izero
+    | i > 0 = case mkDRlistFromInt i of
+      Just n -> I (N $ reverse n) True
+      Nothing -> izero
+    | otherwise = negate $ fromInteger $ abs i
   negate (I n s)
     | isNZero n = izero
     | otherwise = I n (not s)
