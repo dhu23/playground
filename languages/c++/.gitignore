@@ -6,6 +6,7 @@ variant
 t
 example
 thread_test
+thread_test_unsafe
 utils_ut
 mb
 pub

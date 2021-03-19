@@ -59,6 +59,15 @@ int main(int argc, char* argv[])
     std::vector<std::thread> ts;
     for (int i = 0; i < 100; ++i)
     {
+        ts.push_back(std::thread(threadUnsafeLocalTime));
+    }
+    for (int i = 0; i < 100; ++i)
+    {
+        ts[i].join();
+    }
+    std::cout << "------------------------------------" << std::endl;
+    for (int i = 0; i < 100; ++i)
+    {
         ts.push_back(std::thread(threadSafeLocalTime));
     }
     for (int i = 0; i < 100; ++i)
