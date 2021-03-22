@@ -1,6 +1,9 @@
 htons() => host to network short
+
 htonl() => host to network long
+
 ntohs() => network to host short
+
 ntohl() => network to host long
 
 
@@ -36,6 +39,7 @@ struct sockaddr_in {
 }
 ```
 
+more structures
 ```
 // (IPv4 only -- see struct in6_addr for IPv6)
 
@@ -43,10 +47,7 @@ struct sockaddr_in {
 struct in_addr {
     uint32_t s_addr; // that's a  32-bit int (4 bytes)
 }
-```
 
-
-```
 // (IPv6 only -- see struct sockaddr_in and struct in_addr for IPv4)
 
 struct sockaddr_in6 {
@@ -62,3 +63,30 @@ struct in6_addr {
 }
 
 ```
+
+`poll()` usage. The signature is:
+```
+#include <poll.h>
+int poll(struct pollfd fds[], nfds_t nfds, int timeout);
+```
+timeout is a timeout in milliseconds. It returns of elements in the array
+that have had an event occur. You can specify a negative timeout to wait 
+forever.
+
+```
+// let's have a look at that struct:
+struct pollfd {
+    int fd; // the socket descriptor
+    short events; //bitmap of events we're interested in
+    short revents; // when poll() returns, bitmap of events that occurred
+};
+```
+
+The `events` field is the bitwise-OR of the following:
+
+POLLIN - Alert me when data is ready to recv() on this socket
+POLLOUT - Alert me when I can send() data to this socket without blocking
+
+On
+
+
