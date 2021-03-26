@@ -25,7 +25,34 @@ class Resource(Enum):
     Mana = auto()
 
 
-class Attribute(Enum):
+############### generic value modifiers in functional forms ################
+def identity(x):
+    return x
+
+
+def limit(val, floor=None, cap=None):
+    if cap is not None and val > cap:
+        return cap
+    if floor is not None and val < floor:
+        return floor
+    return val
+
+
+def add_by(val, floor=None, cap=None):
+    def inner(x):
+        return limit(x + val, floor=floor, cap=cap)
+    return inner
+
+
+def mul_by(val, floor=None, cap=None):
+    def inner(x):
+        return limit(x * val, floor=floor, cap=cap)
+    return inner
+
+
+
+#####################   Attribute and their modifiers    ###################
+class Attr(Enum):
     Strength = auto()
     Dexterity = auto()
     Intelligence = auto()
@@ -41,82 +68,106 @@ class Attribute(Enum):
     LifePerKill = auto()
 
 
-ATTRIBUTE_DEFAULT_VAL_FUNCS = {
-    Attribute.Strength : int,
-    Attribute.Dexterity: int, 
-    Attribute.Intelligence: int,
-    Attribute.Vitality: int, 
-    Attribute.Armor: int, 
-    Attribute.WeaponDamage: int, 
-    Attribute.Dodge : float,
-    Attribute.Block : float,
-    Attribute.BlockAmount : int,
-    Attribute.LifeBonus : float,
-    Attribute.LifePerRound : int,
-    Attribute.LifePerHit : int,
-    Attribute.LifePerKill : int,
+AttrInfo = namedtuple('AttrInfo', ['init', 'conv'])
+
+int_type_info = AttrInfo(init=int, conv=int)
+
+float_type_info = AttrInfo(init=float, conv=lambda x : round(float(x), 2))
+
+_ATTRIBUTE_DEFAULT_VAL_FUNCS = {
+    Attr.Strength : int_type_info,
+    Attr.Dexterity : int_type_info,
+    Attr.Intelligence : int_type_info,
+    Attr.Vitality : int_type_info,
+    Attr.Armor : int_type_info,
+    Attr.WeaponDamage : int_type_info,
+    Attr.Dodge : float_type_info,
+    Attr.Block : float_type_info,
+    Attr.BlockAmount : int_type_info,
+    Attr.LifeBonus : float_type_info,
+    Attr.LifePerRound : int_type_info,
+    Attr.LifePerHit : int_type_info,
+    Attr.LifePerKill : int_type_info,
 }
 
+def attr_func(stat_type):
+    if stat_type not in _ATTRIBUTE_DEFAULT_VAL_FUNCS:
+        raise UnknownAttr(stat_type)
+    return _ATTRIBUTE_DEFAULT_VAL_FUNCS[stat_type]
 
-class UnknownAttribute(RuntimeError):
+
+class UnknownAttr(RuntimeError):
     def __repr__(self):
         return "UnknownStat(s): %s" % str(self.args)
 
 
-class RoleAttributes(UserDict):
 
-    @staticmethod
-    def default_val(stat_type):
-        if stat_type not in ATTRIBUTE_DEFAULT_VAL_FUNCS:
-            raise UnknownAttribute(stat_type)
-        return ATTRIBUTE_DEFAULT_VAL_FUNCS[stat_type]()
+class RoleAttrs(UserDict):
+
+    def __str__(self):
+        return str(self.data)
 
 
     def __init__(self, data):
-        data_keys = set(data.key())
-        all_attributes = set(Attribute)
+        # would fail on bad attributes
+        _data = dict(
+            (k, attr_func(k)[1](v)) 
+            for k, v in data.items())
 
-        unknown_attributes = data_keys - all_attributes
-        if unknown_attributes:
-            raise UnknownAttribute(unknown_attributes)
+        for k in list(Attr):
+            if k not in _data:
+                _data[k] = attr_func(k)[0]()
 
-        _data = dict(data)
-        for attri in all_attributes - data_keys:
-            _data[attri] = RoleAttributes.default_val(attri)
-
-        super(RoleStats, self).__init__(_data)
+        super(RoleAttrs, self).__init__(_data)
 
 
     def get_stat(self, stat_type):
-        assert stat_type in list(Attribute), \
+        assert stat_type in list(Attr), \
             'unknown stat type %s' % str(stat_type)
         return self[stat_type]
-        
+
+
+    def __eq__(self, other):
+        assert isinstance(other, RoleAttrs), \
+            'cannot use __eq__ between RoleAttrs and %s' % type(other)    
+        for k in list(Attr):
+            if self[k] != other[k]: 
+                return False
+        return True
+
+
+    def __iadd__(self, other):
+        assert isinstance(other, RoleAttrs), \
+            'cannot add RoleAttrs and %s' % type(other)
+        for k in list(Attr):
+            self[k] += other[k]
+        return self
+
 
     def __add__(self, other):
-
-        @singledispatch
-        def add_attribute(x, ra):
-            raise RuntimeError(
-                'does not support adding by RoleAttributes for type %s' % type(x))
-
-        @add_attribute(RoleAttributes)
-        def add_attribute(x, ra):
-            for attri in list(Attribute):
-                ra[attri] += x[attri]
-
-        @add_attribute(dict)
-        def _(x, ra):
-            add_attribute(RoleAttributes(x), ra)
-
-        self += other
+        ret = RoleAttrs({})
+        ret += self
+        ret += other
+        return ret
 
 
-class Role(object):
-    
-    def __init__(self, skills, gears):
-        self.skills = skills
-        self.gears = gears
+class AttrMod(UserDict):
+    def __init__(self, data):
+        # would fail on bad attr
+        _data = {}
+        for k, v in data.items():
+            _ = attr_func(k) # for attr validation
+            _data[k] = v
+        super(AttrMod, self).__init__(_data)
+
+
+def mod_attr(role_attrs, attr_mod):
+    ret_dict = {}
+    for k, v in role_attrs.items():
+        mod_func = attr_mod.get(k, identity)
+        ret_dict[k] = mod_func(v)
+    return RoleAttrs(ret_dict)
+
 
 
 Character = namedtuple('Character', ['name', 'role'])
