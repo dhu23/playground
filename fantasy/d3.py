@@ -80,6 +80,16 @@ class Attr(Enum):
     HolyRes = auto() # by Int
 
 
+class UnknownAttr(RuntimeError):
+    def __repr__(self):
+        return "UnknownAttr(s): %s" % str(self.args)
+
+
+def assert_attr(attr):
+    if attr not in list(Attr):
+        raise UnknownAttr(attr)
+
+
 AttrInfo = namedtuple('AttrInfo', ['init', 'conv'])
 
 
@@ -92,20 +102,6 @@ _float_type = AttrInfo(init=float, conv=two_decimal_float)
 
 
 _ATTRIBUTE_INFO_MAP = {
-
-    # basic attributes
-    Attr.Strength : _int_type,
-    Attr.Dexterity : _int_type,
-    Attr.Intelligence : _int_type,
-    Attr.Vitality : _int_type,
-    Attr.LifeBonus : AttrInfo(init=const(1.0), conv=two_decimal_float),
-    Attr.CritChance : _float_type,
-    Attr.CritDamage : AttrInfo(init=const(1.0), conv=two_decimal_float),
-    Attr.Block : _float_type,
-    Attr.BlockAmount : _int_type, 
-    Attr.LifePerRound : _int_type,
-    Attr.LifePerHit : _int_type,
-    Attr.LifePerKill : _int_type,
 
     # derived attributes (affected by other attributes)
     Attr.HP : _int_type, # modifed by BaseHP and Vitality and LifeBonus
@@ -122,31 +118,14 @@ _ATTRIBUTE_INFO_MAP = {
 }
 
 
-class UnknownAttr(RuntimeError):
-    def __repr__(self):
-        return "UnknownAttr(s): %s" % str(self.args)
-
-
-def attr_func(attr):
-    if attr not in _ATTRIBUTE_INFO_MAP:
-        raise UnknownAttr(attr)
-    return _ATTRIBUTE_INFO_MAP[attr]
-
-
-_BASIC_ATTRS = {
-    Attr.Strength, 
-    Attr.Dexterity,
-    Attr.Intelligence,
-    Attr.Vitality,
-    Attr.LifeBonus,
-    Attr.CritChance,
-    Attr.CritDamage,
-    Attr.Block,
-    Attr.BlockAmount, 
-    Attr.LifePerRound,
-    Attr.LifePerHit,
-    Attr.LifePerKill,
-}
+class AttrMod(UserDict):
+    def __init__(self, data):
+        # would fail on bad attr
+        _data = {}
+        for attr, v in data.items():
+            assert_attr(attr)
+            _data[attr] = v
+        super(AttrMod, self).__init__(_data)
 
 
 class UnknownBasicAttr(RuntimeError):
@@ -154,25 +133,37 @@ class UnknownBasicAttr(RuntimeError):
         return "UnknownBasicAttr(s): %s" % str(self.args)
 
 
-def assert_basic_attr(attr):
-    if attr not in _BASIC_ATTRS:
-        raise UnknownBasicAttr(attr)
-
-
-class AttrMod(UserDict):
-    def __init__(self, data):
-        # would fail on bad attr
-        _data = {}
-        for attr, v in data.items():
-            _ = attr_func(attr) # for attr validation
-            _data[attr] = v
-        super(AttrMod, self).__init__(_data)
-
-
 class BasicAttrs(UserDict):
     '''
     it tracks basic attributes and has getter functions for derived attributes
     '''
+    INFO = {
+        # basic attributes
+        Attr.Strength : _int_type,
+        Attr.Dexterity : _int_type,
+        Attr.Intelligence : _int_type,
+        Attr.Vitality : _int_type,
+        Attr.LifeBonus : AttrInfo(init=const(1.0), conv=two_decimal_float),
+        Attr.CritChance : _float_type,
+        Attr.CritDamage : AttrInfo(init=const(1.0), conv=two_decimal_float),
+        Attr.Block : _float_type,
+        Attr.BlockAmount : _int_type, 
+        Attr.LifePerRound : _int_type,
+        Attr.LifePerHit : _int_type,
+        Attr.LifePerKill : _int_type,
+    }
+
+    @staticmethod
+    def assert_attr(attr):
+        if attr not in BasicAttrs.INFO:
+            raise UnknownBasicAttr(attr)
+
+    @staticmethod
+    def get_func(attr):
+        ret = BasicAttrs.INFO.get(attr)
+        if ret is None:
+            raise UnknownBasicAttr(attr)
+        return ret
 
     def __str__(self):
         return str(self.data)
@@ -181,32 +172,51 @@ class BasicAttrs(UserDict):
         # would fail on bad attributes
         _data = {}
         for attr, v in data.items():
-            assert_basic_attr(attr)
-            _data[attr] = attr_func(attr).conv(v)
+            _data[attr] = BasicAttrs.get_func(attr).conv(v)
 
-        for attr in _BASIC_ATTRS:
+        for attr in BasicAttrs.INFO:
             if attr not in _data:
-                _data[attr] = attr_func(attr).init()
+                _data[attr] = BasicAttrs.get_func(attr).init()
 
         super(BasicAttrs, self).__init__(_data)
 
+    def copy(self):
+        return BasicAttrs(dict(self.data))
+
     def __getitem__(self, attr):
-        assert_basic_attr(attr)
+        BasicAttrs.assert_attr(attr)
         return self.data[attr]
 
     def __eq__(self, other):
         assert isinstance(other, BasicAttrs), \
-            'cannot use __eq__ between BasicAttrs and %s' % type(other)    
-        for attr in _BASIC_ATTRS:
+            'cannot use __eq__ between BasicAttrs and %s' % type(other)
+        for attr in BasicAttrs.INFO:
             if self[attr] != other[attr]: 
                 return False
         return True
 
-    def mod_by(self, attr_mod):
-        for attr, f in attr_mod.items():
-            assert_basic_attr(attr)
-            self.data[attr] = f(self.data[attr])
+    def update_one(self, attr, mod_func):
+        try:
+            _, conv = BasicAttrs.get_func(attr)
+        except:
+            return self
+        self.data[attr] = conv(mod_func(self.data[attr]))
         return self
+
+    def update_many(self, attr_mod):
+        for attr, f in attr_mod.items():
+            self.update_one(attr, f)
+        return self
+
+    def mod_one(self, attr, mod_func):
+        ret = self.copy()
+        ret.update_one(attr, mod_func)
+        return ret
+
+    def mod_many(self, attr_mod):
+        ret = self.copy()
+        ret.update_many(attr_mod)
+        return ret
 
 
     #def __iadd__(self, other):
