@@ -219,22 +219,6 @@ class BasicAttrs(UserDict):
         return ret
 
 
-    #def __iadd__(self, other):
-    #    assert isinstance(other, BasicAttrs), \
-    #        'cannot add BasicAttrs and %s' % type(other)
-    #    for k in list(Attr):
-    #        self[k] += other[k]
-    #    return self
-
-
-    #def __add__(self, other):
-    #    ret = BasicAttrs()
-    #    ret += self
-    #    ret += other
-    #    return ret
-
-
-
 class Resource(Enum):
     ArcanePower = auto()
     Rage = auto()
@@ -245,36 +229,92 @@ class Resource(Enum):
     Mana = auto()
 
 
-class Role(Enum):
-    Barbarian = auto()
-    Crusader = auto()
-    Wizard = auto()
-    Monk = auto()
-    WitchDoctor = auto()
-    Necromancer = auto()
-    DemonHunter = auto()
+########################### Gear ##################################
+# Gear is basically just a group of Attribute modifiers
+# in this perfect world, every piece of equipment is indestructable 
+Gear = namedtuple('Gear', ['name', 'stats', 'slot', 'gtype'])
 
 
-class UnknownRole(RuntimeError):
-    def __repr__(self):
-        return 'Unknown role %s' % str(self.args)
+class GearSlot(Enum):
+    MainHand = auto()
+    OffHand = auto()
+    OneHand = auto()
+    TwoHand = auto()
+    Head = auto()
+    Shoulder = auto()
+    Amulet = auto()
+    Torso = auto()
+    Waist = auto()
+    Hand = auto()
+    Foot = auto()
+    Leg = auto()
+    Ring = auto()
+    
+
+class GearType(Enum):
+    OneHandedAxe = auto()
+    OneHandedSword = auto()
+    # many more to add
+
+Fulminator = Gear(
+    name='Fulminator',
+    stats=AttrMod({
+    }),
+    slot=GearSlot.MainHand,
+    gtype=GearType.OneHandedSword,
+)
 
 
-def assert_role(role):
-    if role not in set(Role):
-        raise UnknownRole(role)
+################## Class and Role specification ###################
+MainAttrGain = namedtuple('MainAttrGain', ['s', 'd', 'i', 'v'])
 
+def make_attr_mod(mag):
+    return AttrMod({
+        Attr.Strength: mag.s,
+        Attr.Dexterity : mag.d,
+        Attr.Intelligence : mag.i,
+        Attr.Vitality : mag.v
+    })
+    
 
 class Role(ABC):
 
-    def __init__(self, basic_attrs, level=1):
-
+    def __init__(
+        self,
+        basic_attrs,
+        mag_upto60,
+        mag_upto65,
+        mag_upto70,
+        level,
+    ):
         self.basic_attrs = basic_attrs
-        self.level = level
+        self.attr_mod_upto60 = make_attr_mod(mag_upto60)
+        self.attr_mod_upto65 = make_attr_mod(mag_upto65)
+        self.attr_mod_upto70 = make_attr_mod(mag_upto70)
+        self.level = 1
+
+        while self.level < level:
+            self.level_up()
+
+
+    def level_up(self):
+        if self.level < 70:
+            if 1 <= self.level <= 60:
+                self.basic_attrs.update_many(self.attr_mod_upto60)
+            elif 61 <= self.level <= 65:
+                self.basic_attrs.update_many(self.attr_mod_upto65)
+            else:
+                self.basic_attrs.update_many(self.attr_mod_upto70)
+            return True
+        return False
 
     @abstractmethod
-    def level_up(self):
+    def role(self):
         pass
+
+    @property
+    def level(self):
+        return self.level
 
     # getters for attributes
     @property
@@ -326,6 +366,26 @@ class Role(ABC):
         return self.basic_attrs[Attr.LifePerKill]
     
 
+class RClass(Enum):
+    Barbarian = auto()
+    Crusader = auto()
+    Wizard = auto()
+    Monk = auto()
+    WitchDoctor = auto()
+    Necromancer = auto()
+    DemonHunter = auto()
+
+
+class UnknownRole(RuntimeError):
+    def __repr__(self):
+        return 'Unknown role %s' % str(self.args)
+
+
+def assert_role(role):
+    if role not in set(Role):
+        raise UnknownRole(role)
+
+
 class Barbarian(Role):
 
     INIT_STATS = BasicAttrs({
@@ -335,11 +395,75 @@ class Barbarian(Role):
         Attr.Vitality : 25,
     })
 
-    def __init__(self):
-        super(Barbarian, self).__init__(Role.INIT_STATS)
+    UPTO60 = MainAttrGain(s=4, d=1, i=1, v=5)
+    UPTO65 = MainAttrGain(s=8, d=2, i=1, v=7)
+    UPTO70 = MainAttrGain(s=10, d=2, i=1, v=9)
 
-    def level_up(self):
-        self
-    
+    def __init__(self, level=1):
+        super(Barbarian, self).__init__(
+            Barbarian.INIT_STATS, 
+            Barbarian.UPTO60,
+            Barbarian.UPTO65,
+            Barbarian.UPTO70,
+            level,
+        )
+
+    @property
+    def role(self):
+        return RClass.Barbarian
+
+
+class DemonHunter(Role):
+
+    INIT_STATS = BasicAttrs({
+        Attr.Strength : 20, 
+        Attr.Dexterity: 30,
+        Attr.Intelligence: 15,
+        Attr.Vitality : 20
+    })
+
+    UPTO60 = MainAttrGain(s=2, d=4, i=1, v=3)
+    UPTO65 = MainAttrGain(s=3, d=8, i=2, v=5)
+    UPTO70 = MainAttrGain(s=4, d=10, i=2, v=7)
+
+    def __init__(self, level=1):
+        super(DemonHunter, self).__init__(
+            DemonHunter.INIT_STATS,
+            DemonHunter.UPTO60,
+            DemonHunter.UPTO65,
+            DemonHunter.UPTO70,
+            level,
+        )
+
+    @property
+    def role(self):
+        return RClass.DemonHunter
+
+
+class Wizard(Role):
+
+    INIT_STATS = BasicAttrs({
+        Attr.Strength : 10, 
+        Attr.Dexterity : 10,
+        Attr.Intelligence : 40,
+        Attr.Vitality : 15
+    })
+
+    UPTO60 = MainAttrGain(s=1, d=2, i=4, v=2)
+    UPTO65 = MainAttrGain(s=2, d=2, i=7, v=3)
+    UPTO70 = MainAttrGain(s=2, d=3, i=12, v=5)
+
+    def __init__(self, level=1):
+        super(Wizard, self).__init__(
+            Wizard.INIT_STATS,
+            Wizard.UPTO60,
+            Wizard.UPTO65,
+            Wizard.UPTO70,
+            level,
+        )
+
+    @property
+    def role(self):
+        return RClass.Wizard
 
 Character = namedtuple('Character', ['name', 'role'])
