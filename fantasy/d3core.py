@@ -321,13 +321,65 @@ WConfig = namedtuple('WConfig', ['wtype', 'handle'])
 # iconfig should be either WConfig or AType
 Item = namedtuple('Item', ['name', 'stats', 'iconfig'])
 
-# weapon wielding setup
+
+AttrAdd = namedtuple('AttrAdd', ['attr', 'val'])
+AttrMul = namedtuple('AttrMul', ['attr', 'val'])
+ItemAttrMod = namedtuple('ItemAttrMod', ['add', 'mul'])
+
+
+@singledispatch
+def accumulate_item_attr_mod(x, ret): # populate the data in ret
+    raise RuntimeError('does not support basic attr mod:%s' % type(x))
+
+
+@accumulate_item_attr_mod.register(AttrAdd)
+def _(x, ret):
+    if x.attr in ret:
+        add, mul = ret[x.attr]
+        addnew = x.val if add is None else x.val + add
+        ret[x.attr] = ItemAttrMod(add=addnew, mul=mul)
+    else:
+        ret[x.attr] = ItemAttrMod(add=x.val, mul=None)
+
+
+@accumulate_item_attr_mod.register(AttrMul)
+def _(x, ret):
+    if x.attr in ret:
+        add, mul = ret[x.attr]
+        mulnew = x.val if mul is None else x.val + mul
+        ret[x.attr] = ItemAttrMod(add=add, mul=mulnew)
+    else:
+        ret[x.attr] = ItemAttrMod(add=None, mul=x.val)
+
+
+@accumulate_item_attr_mod.register(Item)
+def _(x, ret):
+    if x.stats:
+        for each in x.stats:
+            accumulate_item_attr_mod(each, ret)
+
+
+# WeaponSetup instances
 TwoHandedSetup = namedtuple('TwoHandedSetup', ['weapon'])
 DualWielding = namedtuple('DualWielding', ['main', 'off'])
 OneHandedSetup = namedtuple('OneHandedSetup', ['weapon', 'off'])
 
 
+@accumulate_item_attr_mod.register(TwoHandedSetup)
+def _(x, ret):
+    accumulate_item_attr_mod(x.weapon, ret)
 
+
+@accumulate_item_attr_mod.register(DualWielding)
+def _(x, ret):
+    accumulate_item_attr_mod(x.main, ret)
+    accumulate_item_attr_mod(x.off, ret)
+
+
+@accumulate_item_attr_mod.register(OneHandedSetup)
+def _(x, ret):
+    accumulate_item_attr_mod(x.weapon, ret)
+    accumulate_item_attr_mod(x.off, ret)
 
 
 def _assert_two_handed_weapon(weapon):
@@ -368,6 +420,8 @@ def one_handed_and_sheild_setup(weapon, offhand):
     return OneHandedSetup(weapon=weapon, off=offhand)
 
 
+JewelrySetup = namedtuple('JewelrySetup', ['amulet', 'left', 'right'])
+
 def _assert_amulet(amulet):
     assert amulet.itype == AType.Amulet
 
@@ -376,7 +430,6 @@ def _assert_ring(ring):
     assert ring.itype == AType.Ring
 
 
-JewelrySetUp = namedtuple('JewelrySetUp', ['amulet', 'left', 'right'])
 def jewelry_setup(amulet=None, left_ring=None, right_ring=None):
     if amulet is not None:
         _assert_amulet(amulet)
@@ -387,8 +440,18 @@ def jewelry_setup(amulet=None, left_ring=None, right_ring=None):
     return JewelrySetUp(amulet=amulet, left=left_ring, right=right_ring)
 
 
+@accumulate_item_attr_mod.register(JewelrySetup)
+def _(x, ret):
+    if x.amulet:
+        accumulate_item_attr_mod(x.amulet, ret)
+    if x.left:
+        accumulate_item_attr_mod(x.left, ret)
+    if x.right:
+        accumulate_item_attr_mod(x.right, ret)
+
+
 class Equipment(object):
-    def __init__(self, weapon_setup=None, armor_setup=None, jewelry=None):
+    def __init__(self, weapon_setup=None, armor_setup=None, jewelry_setup=None):
         # NOTE in the future we can just support infinitely large inventory
         if weapon_setup is not None:
             assert isinstance(
@@ -406,6 +469,17 @@ class Equipment(object):
         for k in list(ASlot):
             if k not in self.armor_setup:
                 self.armor_setup[k] = None
+
+        self.jewelry_setup = jewelry_setup
+
+
+@accumulate_item_attr_mod.register(Equipment)
+def _(x, ret):
+    accumulate_item_attr_mod(x.weapon_setup, ret)
+    for _, armor_piece in x.armor_setup.items():
+        if armor_piece is not None:
+            accumulate_item_attr_mod(armor_piece, ret)
+    accumulate_item_attr_mod(x.jewelry_setup, ret)
 
 
 ################# Damage, DoT, effects(buffs/debuffs)  ##################
@@ -467,6 +541,7 @@ class Character(ABC):
         mag_upto60,
         mag_upto65,
         mag_upto70,
+        # equipment,
         # skill_set,
     ):
         self._level = 1
@@ -474,6 +549,7 @@ class Character(ABC):
         self.attr_mod_upto60 = make_attr_mod(mag_upto60)
         self.attr_mod_upto65 = make_attr_mod(mag_upto65)
         self.attr_mod_upto70 = make_attr_mod(mag_upto70)
+        # self.equipment = equipment
         # self.skill_set = skill_set
         # self.effects = {}
         # self.equipments = None

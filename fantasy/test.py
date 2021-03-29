@@ -103,35 +103,40 @@ class BasicAttrsTest(unittest.TestCase):
 
 
 class EquipmentTests(unittest.TestCase):
-    
-    def test_equipment_ctor(self):
 
-        two_handed_sword = Item(
+    def setUp(self):
+        self.TWO_HANDED_SWORD = Item(
             name='Scottish Claymore',
-            stats=AttrMod({
-                Attr.WeaponDamage : const(15),
-                Attr.Strength : add_by(12), 
-            }),
+            stats=[
+                AttrAdd(attr=Attr.WeaponDamage, val=15),
+                AttrAdd(attr=Attr.Strength, val=12),
+            ],
             iconfig=WConfig(wtype=WType.Sword, handle=WHandle.TwoHanded),
         )
 
-        leather_hood = Item(
+        self.LEATHER_HOOD = Item(
             name='Leather Hood',
-            stats=AttrMod({
-                Attr.Armor : add_by(20),
-                Attr.Strength : add_by(10),
-                Attr.Vitality : add_by(5),
-            }),
+            stats=[
+                AttrAdd(attr=Attr.Armor, val=20),
+                AttrAdd(attr=Attr.Strength, val=10),
+                AttrAdd(attr=Attr.Vitality, val=5),
+            ],
             iconfig=AType.Helm,
         )
 
-        e = Equipment(
-            weapon_setup=TwoHandedSetup(weapon=two_handed_sword),
+        self.EQUIPMENT = Equipment(
+            weapon_setup=TwoHandedSetup(weapon=self.TWO_HANDED_SWORD),
             armor_setup={
-                ASlot.Head : leather_hood,
+                ASlot.Head : self.LEATHER_HOOD,
             },
-            jewelry=JewelrySetUp(amulet=None, left=None, right=None),
+            jewelry_setup=JewelrySetup(amulet=None, left=None, right=None),
         )
+
+    def test_attr_mod_accumulation(self):
+        ret = {}
+        accumulate_item_attr_mod(self.EQUIPMENT, ret)
+        print(ret)
+
 
 
 
