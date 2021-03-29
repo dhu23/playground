@@ -105,29 +105,12 @@ class BasicAttrsTest(unittest.TestCase):
 class EquipmentTests(unittest.TestCase):
 
     def setUp(self):
-        self.TWO_HANDED_SWORD = Item(
-            name='Scottish Claymore',
-            stats=[
-                AttrAdd(attr=Attr.WeaponDamage, val=15),
-                AttrAdd(attr=Attr.Strength, val=12),
-            ],
-            iconfig=WConfig(wtype=WType.Sword, handle=WHandle.TwoHanded),
-        )
-
-        self.LEATHER_HOOD = Item(
-            name='Leather Hood',
-            stats=[
-                AttrAdd(attr=Attr.Armor, val=20),
-                AttrAdd(attr=Attr.Strength, val=10),
-                AttrAdd(attr=Attr.Vitality, val=5),
-            ],
-            iconfig=AType.Helm,
-        )
-
         self.EQUIPMENT = Equipment(
-            weapon_setup=TwoHandedSetup(weapon=self.TWO_HANDED_SWORD),
+            weapon_setup=TwoHandedSetup(test_two_handed_sword0),
             armor_setup={
-                ASlot.Head : self.LEATHER_HOOD,
+                ASlot.Head : test_leather_hood0,
+                ASlot.Torso : test_cloth_tunic,
+                ASlot.Legs : test_mystery_pants,
             },
             jewelry_setup=JewelrySetup(amulet=None, left=None, right=None),
         )
@@ -135,9 +118,14 @@ class EquipmentTests(unittest.TestCase):
     def test_attr_mod_accumulation(self):
         ret = {}
         accumulate_item_attr_mod(self.EQUIPMENT, ret)
-        print(ret)
-
-
+        self.assertEqual(
+            ret[Attr.WeaponDamage], ItemAttrMod(add=15, mul=None, compound=None))
+        self.assertEqual(
+            ret[Attr.Strength], ItemAttrMod(add=22, mul=None, compound=None))
+        self.assertEqual(
+            ret[Attr.Armor], ItemAttrMod(add=45, mul=0.3, compound=None))
+        self.assertEqual(
+            ret[Attr.Vitality], ItemAttrMod(add=5, mul=None, compound=None))
 
 
 class CharacterBasicTests(unittest.TestCase):

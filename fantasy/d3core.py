@@ -324,7 +324,9 @@ Item = namedtuple('Item', ['name', 'stats', 'iconfig'])
 
 AttrAdd = namedtuple('AttrAdd', ['attr', 'val'])
 AttrMul = namedtuple('AttrMul', ['attr', 'val'])
-ItemAttrMod = namedtuple('ItemAttrMod', ['add', 'mul'])
+CompoundingMul = namedtuple('CompoundingMul', ['attr', 'val'])
+
+ItemAttrMod = namedtuple('ItemAttrMod', ['add', 'mul', 'compound'])
 
 
 @singledispatch
@@ -335,21 +337,31 @@ def accumulate_item_attr_mod(x, ret): # populate the data in ret
 @accumulate_item_attr_mod.register(AttrAdd)
 def _(x, ret):
     if x.attr in ret:
-        add, mul = ret[x.attr]
+        add, mul, compound = ret[x.attr]
         addnew = x.val if add is None else x.val + add
-        ret[x.attr] = ItemAttrMod(add=addnew, mul=mul)
+        ret[x.attr] = ItemAttrMod(add=addnew, mul=mul, compound=compound)
     else:
-        ret[x.attr] = ItemAttrMod(add=x.val, mul=None)
+        ret[x.attr] = ItemAttrMod(add=x.val, mul=None, compound=None)
 
 
 @accumulate_item_attr_mod.register(AttrMul)
 def _(x, ret):
     if x.attr in ret:
-        add, mul = ret[x.attr]
-        mulnew = x.val if mul is None else x.val + mul
-        ret[x.attr] = ItemAttrMod(add=add, mul=mulnew)
+        add, mul, compound = ret[x.attr]
+        mulnew = x.val if mul is None else two_decimal_float(x.val + mul)
+        ret[x.attr] = ItemAttrMod(add=add, mul=mulnew, compound=compound)
     else:
-        ret[x.attr] = ItemAttrMod(add=None, mul=x.val)
+        ret[x.attr] = ItemAttrMod(add=None, mul=x.val, compound=None)
+
+
+@accumulate_item_attr_mod.register(CompoundingMul)
+def _(x, ret):
+    if x.attr in ret:
+        add, mul, compound = ret[x.attr]
+        compnew = x.val if compound is None else two_decimal_float(x.val * compound)
+        ret[x.attr] = ItemAttrMod(add=add, mul=mul, compound=compnew)
+    else:
+        ret[x.attr] = ItemAttrMod(add=None, mul=None, compound=x.val)
 
 
 @accumulate_item_attr_mod.register(Item)
