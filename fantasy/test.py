@@ -1,6 +1,7 @@
 import unittest
-from d3 import *
-
+from d3core import *
+from items import *
+from classes import *
 
 class BasicAttrsTest(unittest.TestCase):
 
@@ -99,6 +100,51 @@ class BasicAttrsTest(unittest.TestCase):
         self.assertNotEqual(a0, a1)
         self.assertEqual(a0, a1.update_many(m))
         self.assertEqual(a0, a1)
+
+
+class EquipmentTests(unittest.TestCase):
+    
+    def test_equipment_ctor(self):
+
+        two_handed_sword = Item(
+            name='Scottish Claymore',
+            stats=AttrMod({
+                Attr.WeaponDamage : const(15),
+                Attr.Strength : add_by(12), 
+            }),
+            iconfig=WConfig(wtype=WType.Sword, handle=WHandle.TwoHanded),
+        )
+
+        leather_hood = Item(
+            name='Leather Hood',
+            stats=AttrMod({
+                Attr.Armor : add_by(20),
+                Attr.Strength : add_by(10),
+                Attr.Vitality : add_by(5),
+            }),
+            iconfig=AType.Helm,
+        )
+
+        e = Equipment(
+            weapon_setup=TwoHandedSetup(weapon=two_handed_sword),
+            armor_setup={
+                ASlot.Head : leather_hood,
+            },
+            jewelry=JewelrySetUp(amulet=None, left=None, right=None),
+        )
+
+
+
+class CharacterBasicTests(unittest.TestCase):
+    def test_attr_level_up(self):
+
+        b1 = Barbarian('Koric', level=10)
+        self.assertEqual(b1.strength, 71)
+        self.assertEqual(b1.dexterity, 21)
+        self.assertEqual(b1.intelligence, 19)
+        self.assertEqual(b1.vitality, 70)
+
+
 
 
 if __name__ == '__main__':
