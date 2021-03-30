@@ -47,15 +47,13 @@ class BasicAttrsTest(unittest.TestCase):
             Attr.Strength : 20
         })
 
-        a0.update_one(Attr.Strength, add_by(5))
+        a0.update_one(Attr.Strength, make_attr_mod(5))
         self.assertEqual(a0[Attr.Strength], 25)
 
-        a0.update_many(
-            AttrMod({
-                Attr.Strength : add_by(5),
-                Attr.Dexterity : add_by(1),
-            })
-        )
+        a0.update_many({
+            Attr.Strength : make_attr_mod(5),
+            Attr.Dexterity : make_attr_mod(1),
+        })
 
         self.assertEqual(a0[Attr.Strength], 30)
         self.assertEqual(a0[Attr.Dexterity], 1)
@@ -64,8 +62,8 @@ class BasicAttrsTest(unittest.TestCase):
     def test_attr_mod(self):
 
         a0 = BasicAttrs({
-            Attr.Strength : 20, # 5 * 5.1215 -> 20(cap)
-            Attr.Dexterity: 6, # 6.72906 -> 6
+            Attr.Strength : 27,
+            Attr.Dexterity: 6, # 6 * 1.12 -> 6
             Attr.Intelligence : 30, # 0 + 30
             Attr.Vitality : 0, 
             Attr.LifeBonus : 0.21, # 0.1 + 0.11
@@ -74,8 +72,8 @@ class BasicAttrsTest(unittest.TestCase):
             Attr.Block : 0.0,
             Attr.BlockAmount : 0, 
             Attr.LifePerRound : 0, 
-            Attr.LifePerHit : 4, # 2 + 5 -> 4 (cap)
-            Attr.LifePerKill : 0, # 4 - 10 -> 0 (floor)
+            Attr.LifePerHit : 7, # 2 + 5 -> 7
+            Attr.LifePerKill : -6, # 4 - 10 -> -6
         })
 
         a1 = BasicAttrs({
@@ -87,15 +85,18 @@ class BasicAttrsTest(unittest.TestCase):
             Attr.LifePerKill : 4,
         })
 
-        m = AttrMod({
-            Attr.Strength : mul_by(5.1215, cap=20),
-            Attr.Dexterity : mul_by(1.12151),
-            Attr.Intelligence : add_by(30),
-            Attr.LifeBonus : add_by(0.1),
-            Attr.LifePerHit : add_by(5, cap=4),
-            Attr.LifePerKill : add_by(-10, floor=0),
-        })
+        m = {
+            Attr.Strength : make_attr_mod(compound=5.5), # 550%
+            Attr.Dexterity : make_attr_mod(compound=1.12), # 112%
+            Attr.Intelligence : make_attr_mod(add=30),
+            Attr.LifeBonus : make_attr_mod(add=0.1),
+            Attr.LifePerHit : make_attr_mod(add=5),
+            Attr.LifePerKill : make_attr_mod(add=-10),
+        }
         
+        # print(repr(a0))
+        # print(repr(a1.mod_many(m)))
+
         self.assertEqual(a0, a1.mod_many(m))
         self.assertNotEqual(a0, a1)
         self.assertEqual(a0, a1.update_many(m))
@@ -119,13 +120,13 @@ class EquipmentTests(unittest.TestCase):
         ret = {}
         accumulate_item_attr_mod(self.EQUIPMENT, ret)
         self.assertEqual(
-            ret[Attr.WeaponDamage], ItemAttrMod(add=15, mul=None, compound=None))
+            ret[Attr.WeaponDamage], AttrMod(add=15, mul=None, compound=None))
         self.assertEqual(
-            ret[Attr.Strength], ItemAttrMod(add=22, mul=None, compound=None))
+            ret[Attr.Strength], AttrMod(add=22, mul=None, compound=None))
         self.assertEqual(
-            ret[Attr.Armor], ItemAttrMod(add=45, mul=0.3, compound=None))
+            ret[Attr.Armor], AttrMod(add=45, mul=0.3, compound=None))
         self.assertEqual(
-            ret[Attr.Vitality], ItemAttrMod(add=5, mul=None, compound=None))
+            ret[Attr.Vitality], AttrMod(add=5, mul=None, compound=None))
 
 
 class CharacterBasicTests(unittest.TestCase):

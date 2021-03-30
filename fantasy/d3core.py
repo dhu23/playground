@@ -5,6 +5,7 @@ from enum import (
 from collections import namedtuple, UserDict
 from functools import singledispatch
 from abc import ABC, abstractproperty
+from pprint import pformat
 
 
 ############### generic value modifiers in functional forms ################
@@ -71,15 +72,6 @@ class Attr(Enum):
     HolyRes = auto() # by Int
 
 
-class UnknownAttr(RuntimeError):
-    def __repr__(self):
-        return "UnknownAttr(s): %s" % str(self.args)
-
-
-def assert_attr(attr):
-    if attr not in list(Attr):
-        raise UnknownAttr(attr)
-
 
 BasicAttrInfo = namedtuple('BasicAttrInfo', ['init', 'conv'])
 
@@ -92,24 +84,63 @@ _int_type = BasicAttrInfo(init=int, conv=int)
 _float_type = BasicAttrInfo(init=float, conv=two_decimal_float)
 
 
-class AttrMod(UserDict):
-    def __init__(self, data):
-        # would fail on bad attr
-        _data = {}
-        for attr, v in data.items():
-            assert_attr(attr)
-            _data[attr] = v
-        super(AttrMod, self).__init__(_data)
+# for an attribute x, 
+# and a list of AttrAdd values, a1, a2, ...
+# and a list of AttrMul values, b1, b2, ...
+# and a list of CompoundingMul values, c1, c2, ...
+# the final attribute would be 
+# (x + a1 + a2 + ... ) * (1 + b1 + b2 + ... ) * c1 * c2 * ... 
+AttrAdd = namedtuple('AttrAdd', ['attr', 'val'])
+AttrMul = namedtuple('AttrMul', ['attr', 'val'])
+CompoundingMul = namedtuple('CompoundingMul', ['attr', 'val'])
+
+AttrMod = namedtuple('AttrMod', ['add', 'mul', 'compound'])
+
+def make_attr_mod(add=None, mul=None, compound=None):
+    return AttrMod(add=add, mul=mul, compound=compound)
 
 
-class UnknownBasicAttr(RuntimeError):
-    def __repr__(self):
-        return "UnknownBasicAttr(s): %s" % str(self.args)
+@singledispatch
+def accumulate_item_attr_mod(x, ret): # populate the data in ret with AttrMod
+    raise RuntimeError('does not support basic attr mod:%s' % type(x))
+
+
+@accumulate_item_attr_mod.register(AttrAdd)
+def _(x, ret):
+    if x.attr in ret:
+        add, mul, compound = ret[x.attr]
+        addnew = x.val if add is None else x.val + add
+        ret[x.attr] = AttrMod(add=addnew, mul=mul, compound=compound)
+    else:
+        ret[x.attr] = AttrMod(add=x.val, mul=None, compound=None)
+
+
+@accumulate_item_attr_mod.register(AttrMul)
+def _(x, ret):
+    if x.attr in ret:
+        add, mul, compound = ret[x.attr]
+        mulnew = x.val if mul is None else two_decimal_float(x.val + mul)
+        ret[x.attr] = AttrMod(add=add, mul=mulnew, compound=compound)
+    else:
+        ret[x.attr] = AttrMod(add=None, mul=x.val, compound=None)
+
+
+@accumulate_item_attr_mod.register(CompoundingMul)
+def _(x, ret):
+    if x.attr in ret:
+        add, mul, compound = ret[x.attr]
+        compnew = x.val if compound is None else two_decimal_float(x.val * compound)
+        ret[x.attr] = AttrMod(add=add, mul=mul, compound=compnew)
+    else:
+        ret[x.attr] = AttrMod(add=None, mul=None, compound=x.val)
 
 
 class BasicAttrs(UserDict):
     '''
-    it tracks basic attributes and has getter functions for derived attributes
+    it tracks basic attributes and has getter functions for derived attributes.
+    This class does not apply capping/flooring logic to the atributes. Instead
+    all the capping/flooring are done at Character level so that we retain the 
+    flexibility of different 
     '''
     INFO = {
         # basic attributes
@@ -129,19 +160,14 @@ class BasicAttrs(UserDict):
     }
 
     @staticmethod
-    def assert_attr(attr):
-        if attr not in BasicAttrs.INFO:
-            raise UnknownBasicAttr(attr)
-
-    @staticmethod
     def get_func(attr):
-        ret = BasicAttrs.INFO.get(attr)
-        if ret is None:
-            raise UnknownBasicAttr(attr)
-        return ret
+        return BasicAttrs.INFO[attr]
 
     def __str__(self):
         return str(self.data)
+
+    def __repr__(self):
+        return 'BasicAttrs\n' + pformat(self.data, indent=2)
 
     def __init__(self, data):
         # would fail on bad attributes
@@ -159,7 +185,6 @@ class BasicAttrs(UserDict):
         return BasicAttrs(dict(self.data))
 
     def __getitem__(self, attr):
-        BasicAttrs.assert_attr(attr)
         return self.data[attr]
 
     def __eq__(self, other):
@@ -170,17 +195,27 @@ class BasicAttrs(UserDict):
                 return False
         return True
 
-    def update_one(self, attr, mod_func):
+    def update_one(self, attr, attr_mod):
         try:
             _, conv = BasicAttrs.get_func(attr)
         except:
             return self
-        self.data[attr] = conv(mod_func(self.data[attr]))
+        # print(attr_mod)
+        add, mul, comp = attr_mod
+        ret = self.data[attr]
+        if add is not None:
+            ret += add
+        if mul is not None:
+            ret *= (1+mul)
+        if comp is not None:
+            ret *= comp
+
+        self.data[attr] = conv(ret)
         return self
 
-    def update_many(self, attr_mod):
-        for attr, f in attr_mod.items():
-            self.update_one(attr, f)
+    def update_many(self, attr_mod_dict):
+        for attr, attr_mod in attr_mod_dict.items():
+            self.update_one(attr, attr_mod)
         return self
 
     def mod_one(self, attr, mod_func):
@@ -188,9 +223,9 @@ class BasicAttrs(UserDict):
         ret.update_one(attr, mod_func)
         return ret
 
-    def mod_many(self, attr_mod):
+    def mod_many(self, attr_mod_dict):
         ret = self.copy()
-        ret.update_many(attr_mod)
+        ret.update_many(attr_mod_dict)
         return ret
 
 
@@ -322,48 +357,6 @@ WConfig = namedtuple('WConfig', ['wtype', 'handle'])
 Item = namedtuple('Item', ['name', 'stats', 'iconfig'])
 
 
-AttrAdd = namedtuple('AttrAdd', ['attr', 'val'])
-AttrMul = namedtuple('AttrMul', ['attr', 'val'])
-CompoundingMul = namedtuple('CompoundingMul', ['attr', 'val'])
-
-ItemAttrMod = namedtuple('ItemAttrMod', ['add', 'mul', 'compound'])
-
-
-@singledispatch
-def accumulate_item_attr_mod(x, ret): # populate the data in ret
-    raise RuntimeError('does not support basic attr mod:%s' % type(x))
-
-
-@accumulate_item_attr_mod.register(AttrAdd)
-def _(x, ret):
-    if x.attr in ret:
-        add, mul, compound = ret[x.attr]
-        addnew = x.val if add is None else x.val + add
-        ret[x.attr] = ItemAttrMod(add=addnew, mul=mul, compound=compound)
-    else:
-        ret[x.attr] = ItemAttrMod(add=x.val, mul=None, compound=None)
-
-
-@accumulate_item_attr_mod.register(AttrMul)
-def _(x, ret):
-    if x.attr in ret:
-        add, mul, compound = ret[x.attr]
-        mulnew = x.val if mul is None else two_decimal_float(x.val + mul)
-        ret[x.attr] = ItemAttrMod(add=add, mul=mulnew, compound=compound)
-    else:
-        ret[x.attr] = ItemAttrMod(add=None, mul=x.val, compound=None)
-
-
-@accumulate_item_attr_mod.register(CompoundingMul)
-def _(x, ret):
-    if x.attr in ret:
-        add, mul, compound = ret[x.attr]
-        compnew = x.val if compound is None else two_decimal_float(x.val * compound)
-        ret[x.attr] = ItemAttrMod(add=add, mul=mul, compound=compnew)
-    else:
-        ret[x.attr] = ItemAttrMod(add=None, mul=None, compound=x.val)
-
-
 @accumulate_item_attr_mod.register(Item)
 def _(x, ret):
     if x.stats:
@@ -433,6 +426,7 @@ def one_handed_and_sheild_setup(weapon, offhand):
 
 
 JewelrySetup = namedtuple('JewelrySetup', ['amulet', 'left', 'right'])
+
 
 def _assert_amulet(amulet):
     assert amulet.itype == AType.Amulet
@@ -520,15 +514,6 @@ DoT = namedtuple('DoT', ['name', 'duration', 'dmg'])
 ################## Class and Role specification ###################
 MainAttrGain = namedtuple('MainAttrGain', ['s', 'd', 'i', 'v'])
 
-def make_attr_mod(mag):
-    return AttrMod({
-        Attr.Strength: add_by(mag.s),
-        Attr.Dexterity : add_by(mag.d),
-        Attr.Intelligence : add_by(mag.i),
-        Attr.Vitality : add_by(mag.v),
-    })
-    
-
 class Character(ABC):
     _ATTRIBUTE_INFO_MAP = {
     
@@ -556,11 +541,19 @@ class Character(ABC):
         # equipment,
         # skill_set,
     ):
+        def make_attr_mods(mag):
+            return {
+                Attr.Strength : make_attr_mod(add=mag.s),
+                Attr.Dexterity : make_attr_mod(add=mag.d),
+                Attr.Intelligence : make_attr_mod(add=mag.i),
+                Attr.Vitality : make_attr_mod(add=mag.v),
+            }
+
         self._level = 1
         self.basic_attrs = basic_attrs
-        self.attr_mod_upto60 = make_attr_mod(mag_upto60)
-        self.attr_mod_upto65 = make_attr_mod(mag_upto65)
-        self.attr_mod_upto70 = make_attr_mod(mag_upto70)
+        self.attr_mod_upto60 = make_attr_mods(mag_upto60)
+        self.attr_mod_upto65 = make_attr_mods(mag_upto65)
+        self.attr_mod_upto70 = make_attr_mods(mag_upto70)
         # self.equipment = equipment
         # self.skill_set = skill_set
         # self.effects = {}
@@ -696,16 +689,6 @@ class RClass(Enum):
     WitchDoctor = auto()
     Necromancer = auto()
     DemonHunter = auto()
-
-
-class UnknownRClass(RuntimeError):
-    def __repr__(self):
-        return 'Unknown role %s' % str(self.args)
-
-
-def assert_rclass(role):
-    if role not in set(RClass):
-        raise UnknownRClass(role)
 
 
 class Resource(Enum):

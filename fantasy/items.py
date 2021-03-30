@@ -41,19 +41,19 @@ test_mystery_pants = Item(
 ############################ Unique items ###########################
 Fulminator = Item(
     name='Fulminator',
-    stats=AttrMod({
-        Attr.WeaponDamage : const(40),
-        Attr.Strength : add_by(100),
-    }),
+    stats=[
+        AttrAdd(attr=Attr.WeaponDamage, val=40),
+        AttrAdd(attr=Attr.Strength, val=100),
+    ],
     iconfig=WConfig(wtype=WType.Sword, handle=WHandle.OneHanded),
 )
 
 LeoricsCrown = Item(
     name="Leoric's Crown",
-    stats=AttrMod({
-        Attr.Armor : add_by(230),
-        Attr.Strength : add_by(20),
-        Attr.Vitality : add_by(15),
-    }),
+    stats=[
+        AttrAdd(attr=Attr.Armor, val=230),
+        AttrAdd(attr=Attr.Strength, val=20),
+        AttrAdd(attr=Attr.Vitality, val=15),
+    ],
     iconfig=AType.Helm,
 )
