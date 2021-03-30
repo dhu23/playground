@@ -12,7 +12,7 @@ class BasicAttrsTest(unittest.TestCase):
             Attr.Dexterity: 6, 
             Attr.Intelligence : 0, 
             Attr.Vitality : 0,
-            Attr.LifeBonus : 1.0,
+            Attr.LifeBonus : 0.0,
             Attr.CritChance : 0.0,
             Attr.CritDamage : 1.0,
             Attr.Block : 0.11,
@@ -130,14 +130,23 @@ class EquipmentTests(unittest.TestCase):
 
 
 class CharacterBasicTests(unittest.TestCase):
-    def test_attr_level_up(self):
+    def setUp(self):
+        self.b1 = Barbarian('Koric', level=10)
 
-        b1 = Barbarian('Koric', level=10)
-        self.assertEqual(b1.strength, 71)
-        self.assertEqual(b1.dexterity, 21)
-        self.assertEqual(b1.intelligence, 19)
-        self.assertEqual(b1.vitality, 70)
+    def test_basic_attr(self):
+        self.assertEqual(self.b1.strength, 71)
+        self.assertEqual(self.b1.dexterity, 21)
+        self.assertEqual(self.b1.intelligence, 19)
+        self.assertEqual(self.b1.vitality, 70)
+        self.assertEqual(self.b1.max_hp, 2450)
+        self.assertEqual(self.b1.armor, 71)
+        self.assertEqual(self.b1.dodge, 0.021)
+        self.assertEqual(self.b1.hp, 2450)
 
+        # armor mitigation = 71/(500+71)
+        self.assertEqual(self.b1.armor_mitigation, 0.1243)
+        self.assertEqual(self.b1.res_mitigation(School.Physical), 0.0)
+        self.assertEqual(self.b1.mitigate_damage(School.Physical), 0.1243)
 
 
 

@@ -39,7 +39,7 @@ def mul_by(val, floor=None, cap=None):
     return inner
 
 
-#################   Attribute, Role and their modifiers    ###############
+###################### Attributes and their modifiers #######################
 class Attr(Enum):
 
     # basic attributes
@@ -79,6 +79,8 @@ BasicAttrInfo = namedtuple('BasicAttrInfo', ['init', 'conv'])
 def two_decimal_float(x):
     return round(float(x), 2)
 
+def four_decimal_float(x):
+    return round(float(x), 4)
 
 _int_type = BasicAttrInfo(init=int, conv=int)
 _float_type = BasicAttrInfo(init=float, conv=two_decimal_float)
@@ -98,6 +100,22 @@ AttrMod = namedtuple('AttrMod', ['add', 'mul', 'compound'])
 
 def make_attr_mod(add=None, mul=None, compound=None):
     return AttrMod(add=add, mul=mul, compound=compound)
+
+
+def apply_attr_mod(attr_mod, val):
+    if attr_mod is None:
+        return val
+
+    add, mul, comp = attr_mod
+    ret = val
+    if add is not None:
+        ret += add
+    if mul is not None:
+        ret *= (1+mul)
+    if comp is not None:
+        ret *= comp
+    return ret
+    
 
 
 @singledispatch
@@ -149,7 +167,7 @@ class BasicAttrs(UserDict):
         Attr.Intelligence : _int_type,
         Attr.Vitality : _int_type,
         Attr.WeaponDamage : _int_type, 
-        Attr.LifeBonus : BasicAttrInfo(init=const(1.0), conv=two_decimal_float),
+        Attr.LifeBonus : BasicAttrInfo(init=const(0.0), conv=two_decimal_float),
         Attr.CritChance : _float_type,
         Attr.CritDamage : BasicAttrInfo(init=const(1.0), conv=two_decimal_float),
         Attr.Block : _float_type,
@@ -201,16 +219,7 @@ class BasicAttrs(UserDict):
         except:
             return self
         # print(attr_mod)
-        add, mul, comp = attr_mod
-        ret = self.data[attr]
-        if add is not None:
-            ret += add
-        if mul is not None:
-            ret *= (1+mul)
-        if comp is not None:
-            ret *= comp
-
-        self.data[attr] = conv(ret)
+        self.data[attr] = conv(apply_attr_mod(attr_mod, self.data[attr]))
         return self
 
     def update_many(self, attr_mod_dict):
@@ -488,7 +497,7 @@ def _(x, ret):
     accumulate_item_attr_mod(x.jewelry_setup, ret)
 
 
-################# Damage, DoT, effects(buffs/debuffs)  ##################
+############################ Damage/Heal #############################
 class School(Enum):
     Physical = auto()
     Fire = auto()
@@ -499,19 +508,18 @@ class School(Enum):
     Holy = auto()
 
 
-Damage = namedtuple('Damage', ['name', 'amount', 'school'])
+Dmg = namedtuple('Dmg', ['amount', 'school'])
 
+def mk_dmg(val, school):
+    if val is None:
+        return None
+    else:
+        return Dmg(amount=val, school=school)
 
-class EffectType(Enum):
-    DoT = auto()
-    Buff = auto()
-    Debuff = auto()
+DamageResult = namedtuple('DamageResult', ['caused', 'overkill'])
+HealResult = namedtuple('HeadResult', ['healed', 'overheal'])
 
-DoT = namedtuple('DoT', ['name', 'duration', 'dmg'])
-
-
-
-################## Class and Role specification ###################
+##################### Character and Role specification ####################
 MainAttrGain = namedtuple('MainAttrGain', ['s', 'd', 'i', 'v'])
 
 class Character(ABC):
@@ -531,6 +539,16 @@ class Character(ABC):
         Attr.HolyRes : _float_type, # modified by Int
     }
 
+    SCHOOL_MAPPING = {
+        School.Physical : Attr.PhysicalRes,
+        School.Fire: Attr.FireRes,
+        School.Cold : Attr.ColdRes,
+        School.Lightning : Attr.LightningRes,
+        School.Arcane : Attr.ArcaneRes,
+        School.Poison : Attr.PoisonRes,
+        School.Holy : Attr.HolyRes,
+    }
+
     def __init__(
         self,
         level,
@@ -538,7 +556,7 @@ class Character(ABC):
         mag_upto60,
         mag_upto65,
         mag_upto70,
-        # equipment,
+        equipment=None,
         # skill_set,
     ):
         def make_attr_mods(mag):
@@ -554,12 +572,22 @@ class Character(ABC):
         self.attr_mod_upto60 = make_attr_mods(mag_upto60)
         self.attr_mod_upto65 = make_attr_mods(mag_upto65)
         self.attr_mod_upto70 = make_attr_mods(mag_upto70)
-        # self.equipment = equipment
-        # self.skill_set = skill_set
-        # self.effects = {}
-        # self.equipments = None
-
         self.level_to(level)
+
+        self.equipment = equipment
+        self.hp = self.max_hp
+
+    def equip(self, equipment):
+        self.equipment = equipment
+        if self.hp > self.max_hp:
+            self.hp = self.max_hp
+
+    @property
+    def attr_mod_dict(self):
+        ret = {}
+        if self.equipment:
+            accumulate_item_attr_mod(self.equipment, ret)
+        return ret
 
     def level_up(self):
         if self.level < 70:
@@ -579,125 +607,254 @@ class Character(ABC):
         while self.level < level:
             self.level_up()
 
+    def reduce_hp(self, delta):
+        if delta > 0: # receiving damage
+            hp = self.hp
+            dmg = abs(delta)
+            if hp <= delta:
+                self.hp = 0
+                return (hp, dmg-hp)
+            else:
+                self.hp = hp-dmg
+                return (dmg, None)
+        return None
+
+    def take_damage(self, dmg):
+        amt, school = dmg
+        delta = int(amt * (1-self.mitigate(school)))
+        _caused, _overkill = self.reduce_hp(-delta)
+
+        return DamageResult(
+            caused=mk_dmg(_caused, school),
+            overkill=mk_dmg(_overkill, school),
+        )
+
+    @property
+    def is_alive(self):
+        return self.hp > 0
+
     @abstractproperty
     def role(self):
         pass
 
     @abstractproperty
-    def hp(self):
+    def resource(self):
         pass
 
-    @abstractproperty
+    @property
+    def max_hp(self):
+        '''
+        hp value depends on vitality and lifeBonus
+        '''
+        if 1 <= self.level <= 60:
+            _hp_per_vit = 35
+        elif 61 <= self.level <= 65:
+            _hp_per_vit = 55
+        else:
+            _hp_per_vit = 100
+        return int((self.vitality * _hp_per_vit) * (1 + self.lifeBonus))
+
+    @property
     def armor(self):
-        pass
+        ret = apply_attr_mod(
+            self.attr_mod_dict.get(Attr.Armor, None),
+            self.strength)
+        return int(ret)
 
-    @abstractproperty
+    def mitigate(self, protection):
+        return four_decimal_float(protection / (protection + 50*self.level))
+
+    @property
+    def armor_mitigation(self):
+        return self.mitigate(self.armor)
+
+    @property
     def dodge(self):
-        pass
 
-    @abstractproperty
-    def enhance_damage(self):
-        pass
+        def _dodge_pct_from_dex(dex):
+            if dex <= 100:
+                return dex*0.1
+            elif dex <= 500:
+                return 100*0.1 + (dex-100)*0.025
+            elif dex <= 1000:
+                return 100*0.1 + 400*0.025 + (dex-500)*0.02
+            else:
+                return 100*0.1 + 400*0.025 + 500*0.02 + (dex-1000)*0.01
 
-    @abstractproperty
+        ret = apply_attr_mod(
+            self.attr_mod_dict.get(Attr.Dodge, None),
+            _dodge_pct_from_dex(self.dexterity)*0.01)
+        return four_decimal_float(ret)
+
+    def _get_res(self, res_attr):
+        ret = apply_attr_mod(self.attr_mod_dict.get(res_attr, None), 0)
+        return int(ret)
+
+    def mitigate_damage(self, school):
+        '''
+        both armor and school resistance apply to mitigate incoming damage
+        assume the mitigation is armor% and res%, 
+        then the amount damage taken can be calculated as 
+        taken%=(1-armor%)*(1-res%)
+        therefore the migitation is 1-taken% = armor% + res% - armor%*res%
+        '''
+        _armor = self.armor_mitigation
+        _res = self.res_mitigation(school)
+        return four_decimal_float(_armor + _res - _armor * _res)
+
+    def school_res(self, school):
+        res_attr = Character.SCHOOL_MAPPING[school]
+        return self._get_res(res_attr)
+
+    @property
     def physical_res(self):
-        pass
+        return self._get_res(Attr.PhysicalRes)
 
-    @abstractproperty
+    @property
     def fire_res(self):
-        pass
+        return self._get_res(Attr.FireRes)
 
-    @abstractproperty
+    @property
     def cold_res(self):
-        pass
+        return self._get_res(Attr.ColdRes)
 
-    @abstractproperty
+    @property
     def lightning_res(self):
-        pass
+        return self._get_res(Attr.LightningRes)
 
-    @abstractproperty
+    @property
     def arcane_res(self):
-        pass
+        return self._get_res(Attr.ArcaneRes)
 
-    @abstractproperty
+    @property
     def poison_res(self):
-        pass
+        return self._get_res(Attr.PoisonRes)
 
-    @abstractproperty
+    @property
     def holy_res(self):
-        pass
+        return self._get_res(Attr.HolyRes)
+
+    def res_mitigation(self, school):
+        return self.mitigate(self.school_res(school))
+
+    @property
+    def physical_mitigation(self):
+        return self.mitigate(self.physical_res)
+
+    @property
+    def fire_mitigation(self):
+        return self.mitigate(self.fire_res)
+
+    @property
+    def cold_mitigation(self):
+        return self.mitigate(self.cold_res)
+
+    @property
+    def lightning_mitigation(self):
+        return self.mitigate(self.lightning_res)
+
+    @property
+    def arcane_mitigation(self):
+        return self.mitigate(self.arcane_res)
+
+    @property
+    def poison_mitigation(self):
+        return self.mitigate(self.poison_res)
+
+    @property
+    def holy_mitigation(self):
+        return self.mitigate(self.holy_res)
 
     @property
     def level(self):
         return self._level
 
-    # getters for attributes
+    # getters for basic attributes
+    def _get_basic_attr(self, attr):
+        ret = apply_attr_mod(
+            self.attr_mod_dict.get(attr, None),
+            self.basic_attrs[attr])
+        return BasicAttrs.get_func(attr).conv(ret)
+
     @property
     def strength(self):
-        return self.basic_attrs[Attr.Strength]
+        return self._get_basic_attr(Attr.Strength)
 
     @property
     def dexterity(self):
-        return self.basic_attrs[Attr.Dexterity]
+        return self._get_basic_attr(Attr.Dexterity)
 
     @property
     def intelligence(self):
-        return self.basic_attrs[Attr.Intelligence]
+        return self._get_basic_attr(Attr.Intelligence)
 
     @property
     def vitality(self):
-        return self.basic_attrs[Attr.Vitality]
+        return self._get_basic_attr(Attr.Vitality)
 
     @property
     def lifeBonus(self):
-        return self.basic_attrs[Attr.LifeBonus]
+        return self._get_basic_attr(Attr.LifeBonus)
 
     @property
     def critChance(self):
-        return self.basic_attrs[Attr.CritChance]
+        return self._get_basic_attr(Attr.CritChance)
 
     @property
     def critDamage(self):
-        return self.basic_attrs[Attr.CritDamage]
+        return self._get_basic_attr(Attr.CritDamage)
 
     @property
     def block(self):
-        return self.basic_attrs[Attr.Block]
+        return self._get_basic_attr(Attr.Block)
 
     @property
     def blockAmount(self):
-        return self.basic_attrs[Attr.BlockAmount]
+        return self._get_basic_attr(Attr.BlockAmount)
 
     @property
     def lifePerRound(self):
-        return self.basic_attrs[Attr.LifePerRound]
+        return self._get_basic_attr(Attr.LifePerRound)
 
     @property
     def lifePerHit(self):
-        return self.basic_attrs[Attr.LifePerHit]
+        return self._get_basic_attr(Attr.LifePerHit)
 
     @property
     def lifePerKill(self):
-        return self.basic_attrs[Attr.LifePerKill]
+        return self._get_basic_attr(Attr.LifePerKill)
     
 
-class RClass(Enum):
-    Barbarian = auto()
-    Crusader = auto()
-    Wizard = auto()
-    Monk = auto()
-    WitchDoctor = auto()
-    Necromancer = auto()
-    DemonHunter = auto()
+########################## Game/World mechanism ###########################
+# tracking effects, such as DoTs, debuffs and anything timed outside of 
+# characters, so that Character can provide a more functional definition of 
+# the game rule and timed effects (that might involves the external world),
+# are all tracked at this one place. This can make concurrency easier.
+
+class EffectType(Enum):
+    DoT = auto()
+    Buff = auto()
+    Debuff = auto()
+
+Damage = namedtuple('Dmg', ['name', 'dmg'])
+DoT = namedtuple('DoT', ['name', 'duration', 'dmg'])
+
+class ElapsingInstance(ABC):
+    '''
+    An instance manages characters and any related timing/round based effects.
+    You can have multiple instances in the entire game world. For example, 
+    players in different game zones would be playing in different instances
+    '''
+    def __init__(self):
+        self.objects = {}
+
+    def tick(self):
+        pass
 
 
-class Resource(Enum):
-    ArcanePower = auto()
-    Rage = auto()
-    Wrath = auto()
-    Hatred = auto()
-    Discipline = auto()
-    Spirit = auto()
-    Mana = auto()
+class RoundBasedInstance(ElapsingInstance):
+    '''round based game instance'''
 
 
+class RealTimeInstance(ElapsingInstance):
+    '''real time based game instance'''

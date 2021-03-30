@@ -1,5 +1,25 @@
 from d3core import *
 
+class RClass(Enum):
+    Barbarian = auto()
+    Crusader = auto()
+    Wizard = auto()
+    Monk = auto()
+    WitchDoctor = auto()
+    Necromancer = auto()
+    DemonHunter = auto()
+
+
+class Resource(Enum):
+    ArcanePower = auto()
+    Rage = auto()
+    Wrath = auto()
+    Hatred = auto()
+    Discipline = auto()
+    Spirit = auto()
+    Mana = auto()
+
+
 class Barbarian(Character):
 
     INIT_STATS = BasicAttrs({
@@ -26,39 +46,8 @@ class Barbarian(Character):
     def role(self):
         return RClass.Barbarian
 
-    def hp(self):
-        return None
-
-    def armor(self):
-        return None
-
-    def dodge(self):
-        return None
-
-    def enhance_damage(self):
-        return None
-
-    def physical_res(self):
-        return None
-
-    def fire_res(self):
-        return None
-
-    def cold_res(self):
-        return None
-
-    def lightning_res(self):
-        return None
-
-    def arcane_res(self):
-        return None
-
-    def poison_res(self):
-        return None
-
-    def holy_res(self):
-        return None
-
+    def resource(self):
+        return Resource.Rage
 
 
 #class DemonHunter(Character):
