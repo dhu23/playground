@@ -1,52 +1,5 @@
 from d3core import *
 
-########################## test items ################################
-test_two_handed_sword0 = Item(
-    name='Scottish Claymore',
-    stats=[
-        AttrAdd(attr=Attr.WeaponDamage, val=15),
-        AttrAdd(attr=Attr.Strength, val=12),
-    ],
-    iconfig=WConfig(wtype=WType.Sword, handle=WHandle.TwoHanded),
-)
-
-test_leather_hood0 = Item(
-    name='Leather Hood',
-    stats=[
-        AttrAdd(attr=Attr.Armor, val=20),
-        AttrAdd(attr=Attr.Strength, val=10),
-        AttrAdd(attr=Attr.Vitality, val=5),
-    ],
-    iconfig=AType.Helm,
-)
-
-test_cloth_tunic = Item(
-    name='Cloth Tunic',
-    stats=[
-        AttrAdd(attr=Attr.Armor, val=15),
-        AttrMul(attr=Attr.Armor, val=0.1),
-    ],
-    iconfig=AType.ChestArmor,
-)
-
-test_mystery_pants = Item(
-    name='Mystery Pants',
-    stats=[
-        AttrAdd(attr=Attr.Armor, val=10),
-        AttrMul(attr=Attr.Armor, val=0.2),
-    ],
-    iconfig=AType.Pants,
-)
-
-test_mighty_weapon = Item(
-    name='Mighty weapon one',
-    stats=[
-        AttrAdd(attr=Attr.WeaponDamage, val=15),
-        AttrAdd(attr=Attr.RageBonus, val=7),
-    ],
-    iconfig=WConfig(wtype=WType.MightWeapon, handle=WHandle.TwoHanded)
-)
-
 
 ############################ Unique items ###########################
 Fulminator = Item(

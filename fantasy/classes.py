@@ -44,6 +44,10 @@ class Barbarian(Character):
     def resource_types(self):
         return [Resource.Rage]
 
+    @property
+    def enhanced_damage(self):
+        return four_decimal_float(self.strength/100)
+
 
 #class DemonHunter(Character):
 #

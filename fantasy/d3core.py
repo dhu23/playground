@@ -4,7 +4,7 @@ from enum import (
 )
 from collections import namedtuple, UserDict
 from functools import singledispatch
-from abc import ABC, abstractproperty, abstractmethod
+from abc import ABC, abstractmethod
 from pprint import pformat
 
 
@@ -420,7 +420,7 @@ def _assert_offhand(armor):
         AType.Orb,
         AType.Quiver,
         AType.Phylactery,
-    ], 'not an offhand item %s' % armor
+    ], 'not an offhand item %s' % str(armor)
 
 
 def two_handed_setup(weapon):
@@ -447,49 +447,47 @@ def switch_main_weapon(x, weapon):
 
 @switch_main_weapon.register(TwoHandedSetup)
 def _(x, weapon):
-    if weapon.iconfig.whandle == WHandle.TwoHanded:
+    if weapon.iconfig.handle == WHandle.TwoHanded:
         return two_handed_setup(weapon)
-    if weapon.iconfig.whandle == WHandle.OneHanded:
-        return dual_wielding_setup(main=weapon, off=None)
+    if weapon.iconfig.handle == WHandle.OneHanded:
+        return dual_wielding_setup(mainhand=weapon, offhand=None)
     raise RuntimeError('cannot switch two handed setup to %s' % type(weapon))
 
 
 @switch_main_weapon.register(DualWieldingSetup)
 def _(x, weapon):
-    if weapon.iconfig.whandle == WHandle.TwoHanded:
+    if weapon.iconfig.handle == WHandle.TwoHanded:
         return two_handed_setup(weapon)
-    if weapon.iconfig.whandle == WHandle.OneHanded:
-        return dual_wielding_setup(main=weapon, off=x.off)
+    if weapon.iconfig.handle == WHandle.OneHanded:
+        return dual_wielding_setup(mainhand=weapon, offhand=x.off)
     raise RuntimeError('cannot switch dual wielding setup to %s' % type(weapon))
 
 
 @singledispatch
-def switch_off_weapon(x, offhand):
+def switch_offhand(x, offhand):
     raise RuntimeError(
         'cannot switch weapon from %s to %s' % (type(x), type(weapon)))
 
 
-@switch_off_weapon.register(TwoHandedSetup)
+@switch_offhand.register(TwoHandedSetup)
 def _(x, offhand):
-    _assert_offhand(offhand)
-    return dual_wielding_setup(main=None, off=offhand)
+    return dual_wielding_setup(mainhand=None, offhand=offhand)
 
 
-@switch_off_weapon.register(DualWieldingSetup)
+@switch_offhand.register(DualWieldingSetup)
 def _(x, offhand):
-    _assert_offhand(offhand)
-    return dual_wielding_setup(main=x.main, off=offhand)
+    return dual_wielding_setup(mainhand=x.main, offhand=offhand)
 
 
 JewelrySetup = namedtuple('JewelrySetup', ['amulet', 'left', 'right'])
 
 
 def _assert_amulet(amulet):
-    assert amulet.itype == AType.Amulet
+    assert amulet.iconfig == AType.Amulet
 
 
 def _assert_ring(ring):
-    assert ring.itype == AType.Ring
+    assert ring.iconfig == AType.Ring
 
 
 def jewelry_setup(amulet=None, left_ring=None, right_ring=None):
@@ -499,7 +497,7 @@ def jewelry_setup(amulet=None, left_ring=None, right_ring=None):
         _assert_ring(left_ring)
     if right_ring is not None:
         _assert_ring(right_ring)
-    return JewelrySetUp(amulet=amulet, left=left_ring, right=right_ring)
+    return JewelrySetup(amulet=amulet, left=left_ring, right=right_ring)
 
 
 @accumulate_item_attr_mod.register(JewelrySetup)
@@ -532,7 +530,10 @@ class Equipment(object):
             if k not in self.armor_setup:
                 self.armor_setup[k] = None
 
-        self.jewelry_setup = jewelry_setup
+        if jewelry_setup is None:
+            self.jewelry_setup = JewelrySetup(amulet=None, left=None, right=None)
+        else:
+            self.jewelry_setup = jewelry_setup 
 
     def equip_mainhand(self, weapon):
         try:
@@ -544,7 +545,7 @@ class Equipment(object):
 
     def equip_offhand(self, offhand):
         try:
-            self.weapon_setup = switch_off_weapon(self.weapon_setup, weapon)
+            self.weapon_setup = switch_offhand(self.weapon_setup, weapon)
             return True
         except:
             print('failed to switch to %s' % str(offhand))
@@ -554,14 +555,23 @@ class Equipment(object):
         self.armor_setup[armor_piece.iconfig] = armor_piece
         return True
 
+    def equip_amulet(self, amulet):
+        _assert_amulet(amulet)
+        _, left, right = self.jewelry_setup
+        self.jewelry_setup = JewelrySetup(amulet=amulet, left=left, right=right)
+        return True
+
     def equip_left_ring(self, ring):
-        pass
+        _assert_ring(ring)
+        amu, _, right = self.jewelry_setup
+        self.jewelry_setup = JewelrySetup(amulet=amu, left=ring, right=right)
+        return True
 
     def equip_right_ring(self, ring):
-        pass
-
-    def equip_amulet(self, amulet):
-        pass
+        _assert_ring(ring)
+        amu, left, _ = self.jewelry_setup
+        self.jewelry_setup = JewelrySetup(amulet=amu, left=left, right=ring)
+        return True
 
 
 @accumulate_item_attr_mod.register(Equipment)
@@ -573,7 +583,7 @@ def _(x, ret):
     accumulate_item_attr_mod(x.jewelry_setup, ret)
 
 
-############################ Damage/Heal #############################
+########## skill/runes, resource management, damage/heal, effects  #########
 class School(Enum):
     Physical = auto()
     Fire = auto()
@@ -595,18 +605,17 @@ def mk_dmg(val, school):
 DamageResult = namedtuple('DamageResult', ['caused', 'overkill'])
 HealResult = namedtuple('HeadResult', ['healed', 'overheal'])
 
-################# skill/runes and resource management  ###################
-#class Skill(Enum):
-#    Bash = auto()
-#
-#
-#class Rune(Enum):
-#    # Bash
-#    Frostbite = auto()
-#    Onslaught = auto()
-#    Punish = auto()
-#    Instigation = auto()
-#    Pulverize = auto()
+## effects, including buffs and debuffs
+class Stackable(object):
+    def __init__(self, f, limit):
+        pass
+    
+
+Frozen = namedtuple('Frozen', ['duration', 'stacklimit'])
+CritChanceVunerable = namedtuple(
+    'CritChanceVunerable', ['duration', 'stacklimit', 'bonus'])
+DamageBonus = namedtuple('DamageBonus', ['duration', 'stacklimit', 'bonus'])
+
 
 class Resource(Enum):
     ArcanePower = auto()
@@ -618,18 +627,61 @@ class Resource(Enum):
     Mana = auto()
 
 
+# After some object-oriented and functional based back-and-forth, I decided to
+# go with a more message based solution to manage the outbound of a skill 
+# and how the messages are to be applied. This approach goes well with both
+# object-oriented and functional programming style and makes the logic easy
+# to express. 
+
+# polymorphic data can be put in this structure to track cost, dmg, buff etc
+SkillOutcome = namedtuple('SkillOutcome', ['data'])
+
+SelfApplication = namedtuple('SelfApplication', ['data'])
+TeamApplication = namedtuple('TeamApplication', ['data'])
+
+# if enemy is True, apply to enemies, otherwise to friendly targets
+LocApplication = namedtuple('LocApplication', ['data', 'enemy'])
+
+ResourceCost = namedtuple('ResourceCost', ['rtype', 'val'])
+ResourceGen = namedtuple('ResourceGen', ['rtype', 'val'])
+
 class Skill(ABC):
 
-    @abstractproperty
+    '''base class for all skills'''
+    # there are multiple ways of going for this
+    # 1. we can keep runes outside of the object so that the user needs to 
+    # pass it in when calling use(). OR..
+    # 2. we can keep runes as the internal state of this class, then this 
+    # class needs to provide an interface to change runes setting
+
+    def __init__(self, runes, stackable=False):
+        self._runes = set(runes)
+        self._stackable = stackable
+        self.runeless()
+
+    def add_rune(self, rune):
+        assert rune in self._runes
+        self.active.add(rune)
+
+    def runeless(self):
+        self.active = set()
+
+    def just_rune(self, rune):
+        '''just choose one rune'''
+        assert rune in self._runes
+        self.active = {rune}
+
+    @property
+    def runes(self):
+        return self._runes
+
+    @property
+    @abstractmethod
     def name(self):
-        pass
-    
-    @abstractproperty
-    def cost(self):
         pass
 
     @abstractmethod
-    def use(self, character):
+    def use(self, character, target):
         pass
 
 
@@ -694,7 +746,7 @@ class Character(ABC):
             }
 
         self._level = 1
-        self.basic_attrs = basic_attrs
+        self.basic_attrs = basic_attrs.copy() # avoid sharing between players
         self.baseline_resource = baseline_resource # never changes
 
         self.attr_mod_upto60 = make_attr_mods(mag_upto60)
@@ -702,7 +754,7 @@ class Character(ABC):
         self.attr_mod_upto70 = make_attr_mods(mag_upto70)
         self.level_to(level)
 
-        self.equipment = equipment
+        self.equipment = Equipment() if equipment is None else equipment
         self.effects = effects
         
         # full hp at character construction
@@ -725,9 +777,27 @@ class Character(ABC):
                 self._resource[res] = max_res
         
     def equip(self, equipment):
-        self.equipment = equipment
+        self.equipment = Equipment() if equipment is None else equipment
         self._cap_hp()
         self._cap_resource()
+
+    def equip_mainhand(self, weapon):
+        return self.equipment.equip_mainhand(weapon)
+
+    def equip_offhand(self, offhand):
+        return self.equipment.equip_offhand(offhand)
+
+    def equip_armor(self, armor_piece):
+        return self.equipment.equip_armor(armor_piece)
+
+    def equip_amulet(self, amulet):
+        return self.equipment.equip_amulet(amulet)
+
+    def equip_left_ring(self, ring):
+        return self.equipment.equip_left_ring(ring)
+
+    def equip_right_ring(self, ring):
+        return self.equipment.equip_right_ring(ring)
 
     @property
     def attr_mod_dict(self):
@@ -739,6 +809,7 @@ class Character(ABC):
         return ret
 
     def level_up(self):
+        # print('leveling...from %d' % self.level)
         if self.level < 70:
             #print(self.attr_mod_upto60)
             if 1 <= self.level <= 60:
@@ -782,13 +853,31 @@ class Character(ABC):
     def is_alive(self):
         return self._hp > 0
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def role(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def resource_types(self):
         pass
+
+    @property
+    @abstractmethod
+    def enhanced_damage(self):
+        pass
+
+    @property
+    def weapon_damage(self):
+        ret = apply_attr_mod(
+            self.attr_mod_dict.get(Attr.WeaponDamage, None), 
+            0)
+        return int(ret)
+
+    @property
+    def actual_damage(self):
+        return int((self.enhanced_damage+1.0) * self.weapon_damage)
 
     @property
     def hp(self):
@@ -1001,7 +1090,8 @@ class Character(ABC):
             raise RuntimeError('cannot use the skill')
         else:
             # use skill 
-            self.update_resource(_skill.resource, _cost)
+            # negative cost generates resource
+            self.update_resource(_skill.resource, -_cost) 
             return _skill.use(self)
 
 

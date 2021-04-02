@@ -3,6 +3,79 @@ from d3core import *
 from items import *
 from classes import *
 
+
+########################## test items ################################
+test_claymore = Item(
+    name='Claymore',
+    stats=[
+        AttrAdd(attr=Attr.WeaponDamage, val=15),
+        AttrAdd(attr=Attr.Strength, val=12),
+    ],
+    iconfig=WConfig(wtype=WType.Sword, handle=WHandle.TwoHanded),
+)
+
+test_leather_hood0 = Item(
+    name='Leather Hood',
+    stats=[
+        AttrAdd(attr=Attr.Armor, val=20),
+        AttrAdd(attr=Attr.Strength, val=10),
+        AttrAdd(attr=Attr.Vitality, val=5),
+    ],
+    iconfig=AType.Helm,
+)
+
+test_cloth_tunic = Item(
+    name='Cloth Tunic',
+    stats=[
+        AttrAdd(attr=Attr.Armor, val=15),
+        AttrMul(attr=Attr.Armor, val=0.1),
+    ],
+    iconfig=AType.ChestArmor,
+)
+
+test_mystery_pants = Item(
+    name='Mystery Pants',
+    stats=[
+        AttrAdd(attr=Attr.Armor, val=10),
+        AttrMul(attr=Attr.Armor, val=0.2),
+    ],
+    iconfig=AType.Pants,
+)
+
+test_mighty_weapon = Item(
+    name='Mighty weapon1',
+    stats=[
+        AttrAdd(attr=Attr.WeaponDamage, val=15),
+        AttrAdd(attr=Attr.RageBonus, val=7),
+    ],
+    iconfig=WConfig(wtype=WType.MightWeapon, handle=WHandle.TwoHanded)
+)
+
+test_long_sword = Item(
+    name='Long Sword',
+    stats=[
+        AttrAdd(attr=Attr.WeaponDamage, val=5),
+    ],
+    iconfig=WConfig(wtype=WType.Sword, handle=WHandle.OneHanded),
+)
+
+test_short_sword = Item(
+    name='Short Sword',
+    stats=[
+        AttrAdd(attr=Attr.WeaponDamage, val=3),
+    ],
+    iconfig=WConfig(wtype=WType.Sword, handle=WHandle.OneHanded),
+)
+
+test_kite_shield = Item(
+    name='Kite Shield',
+    stats=[
+        AttrAdd(attr=Attr.Armor, val=10),
+    ],
+    iconfig=AType.Shield,
+)
+
+
 class BasicAttrsTest(unittest.TestCase):
 
     def test_eq(self):
@@ -107,7 +180,7 @@ class EquipmentTests(unittest.TestCase):
 
     def setUp(self):
         self.EQUIPMENT = Equipment(
-            weapon_setup=TwoHandedSetup(test_two_handed_sword0),
+            weapon_setup=TwoHandedSetup(test_claymore),
             armor_setup={
                 ASlot.Head : test_leather_hood0,
                 ASlot.Torso : test_cloth_tunic,
@@ -115,6 +188,28 @@ class EquipmentTests(unittest.TestCase):
             },
             jewelry_setup=None,
         )
+
+    def test_switch_two_handed(self):
+        claymore_setup = two_handed_setup(test_claymore)
+        
+        mighty_setup = switch_main_weapon(claymore_setup, test_mighty_weapon)
+        self.assertEqual(mighty_setup.weapon, test_mighty_weapon)
+
+        sword_no_shield_setup = switch_main_weapon(claymore_setup, test_long_sword)
+        self.assertEqual(sword_no_shield_setup.main, test_long_sword)
+        self.assertEqual(sword_no_shield_setup.off, None)
+
+        dual_sword_setup = switch_offhand(sword_no_shield_setup, test_short_sword)
+        self.assertEqual(dual_sword_setup.main, test_long_sword)
+        self.assertEqual(dual_sword_setup.off, test_short_sword)
+
+        sword_board_setup = switch_offhand(dual_sword_setup, test_kite_shield)
+        self.assertEqual(sword_board_setup.main, test_long_sword)
+        self.assertEqual(sword_board_setup.off, test_kite_shield)
+
+        back_claymore_setup = switch_main_weapon(sword_board_setup, test_claymore)
+        self.assertEqual(back_claymore_setup, claymore_setup)
+
 
     def test_attr_mod_accumulation(self):
         ret = {}
@@ -157,6 +252,43 @@ class CharacterBasicTests(unittest.TestCase):
         )
         self.b1.equip(_equipment)
         self.assertEqual(self.b1.max_resource(Resource.Rage), 107)
+
+        self.assertEqual(self.b1.strength, 71)
+        self.assertEqual(self.b1.enhanced_damage, 0.71)
+        self.assertEqual(self.b1.weapon_damage, 15)
+        self.assertEqual(self.b1.actual_damage, 25) # 1.71 * 15 -> 25.65
+
+        test_ring = Item(
+            name='Test Ring 1',
+            stats=[
+                AttrAdd(attr=Attr.Strength, val=29),
+            ],
+            iconfig=AType.Ring,
+        )
+
+        self.b1.equip_right_ring(test_ring)
+        self.assertEqual(self.b1.strength, 100)
+        self.assertEqual(self.b1.enhanced_damage, 1.0)
+        self.assertEqual(self.b1.weapon_damage, 15)
+        self.assertEqual(self.b1.actual_damage, 30)
+
+        test_ring2 = Item(
+            name='Test Ring 2',
+            stats=[
+                AttrAdd(attr=Attr.WeaponDamage, val=14),
+            ],
+            iconfig=AType.Ring,
+        )
+
+        self.b1.equip_right_ring(test_ring2) # test_ring is taken off
+        self.assertEqual(self.b1.strength, 71)
+        self.assertEqual(self.b1.weapon_damage, 29)
+
+        self.b1.equip_left_ring(test_ring) # wearing both rings
+        self.assertEqual(self.b1.strength, 100)
+        self.assertEqual(self.b1.weapon_damage, 29)
+        self.assertEqual(self.b1.actual_damage, 58)
+
 
 
 if __name__ == '__main__':
