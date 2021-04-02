@@ -10,16 +10,6 @@ class RClass(Enum):
     DemonHunter = auto()
 
 
-class Resource(Enum):
-    ArcanePower = auto()
-    Rage = auto()
-    Wrath = auto()
-    Hatred = auto()
-    Discipline = auto()
-    Spirit = auto()
-    Mana = auto()
-
-
 class Barbarian(Character):
 
     INIT_STATS = BasicAttrs({
@@ -33,6 +23,10 @@ class Barbarian(Character):
     UPTO65 = MainAttrGain(s=8, d=2, i=1, v=7)
     UPTO70 = MainAttrGain(s=10, d=2, i=1, v=9)
 
+    RESOURCES = {
+        Resource.Rage : 100,
+    }
+
     def __init__(self, name, level=1):
         super(Barbarian, self).__init__(
             level,
@@ -40,14 +34,15 @@ class Barbarian(Character):
             Barbarian.UPTO60,
             Barbarian.UPTO65,
             Barbarian.UPTO70,
+            Barbarian.RESOURCES,
         )
         self.name = name
 
     def role(self):
         return RClass.Barbarian
 
-    def resource(self):
-        return Resource.Rage
+    def resource_types(self):
+        return [Resource.Rage]
 
 
 #class DemonHunter(Character):

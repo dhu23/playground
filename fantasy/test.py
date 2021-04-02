@@ -113,7 +113,7 @@ class EquipmentTests(unittest.TestCase):
                 ASlot.Torso : test_cloth_tunic,
                 ASlot.Legs : test_mystery_pants,
             },
-            jewelry_setup=JewelrySetup(amulet=None, left=None, right=None),
+            jewelry_setup=None,
         )
 
     def test_attr_mod_accumulation(self):
@@ -147,7 +147,16 @@ class CharacterBasicTests(unittest.TestCase):
         self.assertEqual(self.b1.armor_mitigation, 0.1243)
         self.assertEqual(self.b1.res_mitigation(School.Physical), 0.0)
         self.assertEqual(self.b1.mitigate_damage(School.Physical), 0.1243)
+        self.assertEqual(self.b1.max_resource(Resource.Rage), 100)
 
+    def test_with_equipments(self):
+        _equipment = Equipment(
+            weapon_setup=TwoHandedSetup(test_mighty_weapon),
+            armor_setup=None,
+            jewelry_setup=None,
+        )
+        self.b1.equip(_equipment)
+        self.assertEqual(self.b1.max_resource(Resource.Rage), 107)
 
 
 if __name__ == '__main__':

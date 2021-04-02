@@ -1,5 +1,6 @@
 from d3core import *
 
+########################## test items ################################
 test_two_handed_sword0 = Item(
     name='Scottish Claymore',
     stats=[
@@ -35,6 +36,15 @@ test_mystery_pants = Item(
         AttrMul(attr=Attr.Armor, val=0.2),
     ],
     iconfig=AType.Pants,
+)
+
+test_mighty_weapon = Item(
+    name='Mighty weapon one',
+    stats=[
+        AttrAdd(attr=Attr.WeaponDamage, val=15),
+        AttrAdd(attr=Attr.RageBonus, val=7),
+    ],
+    iconfig=WConfig(wtype=WType.MightWeapon, handle=WHandle.TwoHanded)
 )
 
 

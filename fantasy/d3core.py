@@ -4,7 +4,7 @@ from enum import (
 )
 from collections import namedtuple, UserDict
 from functools import singledispatch
-from abc import ABC, abstractproperty
+from abc import ABC, abstractproperty, abstractmethod
 from pprint import pformat
 
 
@@ -71,6 +71,14 @@ class Attr(Enum):
     PoisonRes = auto() # by Int
     HolyRes = auto() # by Int
 
+    # class-related attributes
+    RageBonus = auto()
+    WrathBonus = auto()
+    SpiritBonus = auto()
+    HatredBonus = auto()
+    DisciplineBonus = auto()
+    ArcanePowerBonus = auto()
+    ManaBonus = auto()
 
 
 BasicAttrInfo = namedtuple('BasicAttrInfo', ['init', 'conv'])
@@ -372,11 +380,15 @@ def _(x, ret):
         for each in x.stats:
             accumulate_item_attr_mod(each, ret)
 
+def _accumulate_none(x, ret):
+    return ret
+
+accumulate_item_attr_mod.register(type(None), _accumulate_none)
 
 # WeaponSetup instances
 TwoHandedSetup = namedtuple('TwoHandedSetup', ['weapon'])
-DualWielding = namedtuple('DualWielding', ['main', 'off'])
-OneHandedSetup = namedtuple('OneHandedSetup', ['weapon', 'off'])
+# dual wielding includes sword+board setup
+DualWieldingSetup = namedtuple('DualWieldingSetup', ['main', 'off'])
 
 
 @accumulate_item_attr_mod.register(TwoHandedSetup)
@@ -384,15 +396,9 @@ def _(x, ret):
     accumulate_item_attr_mod(x.weapon, ret)
 
 
-@accumulate_item_attr_mod.register(DualWielding)
+@accumulate_item_attr_mod.register(DualWieldingSetup)
 def _(x, ret):
     accumulate_item_attr_mod(x.main, ret)
-    accumulate_item_attr_mod(x.off, ret)
-
-
-@accumulate_item_attr_mod.register(OneHandedSetup)
-def _(x, ret):
-    accumulate_item_attr_mod(x.weapon, ret)
     accumulate_item_attr_mod(x.off, ret)
 
 
@@ -422,16 +428,57 @@ def two_handed_setup(weapon):
     return TwoHandedSetup(weapon=weapon)
 
 
-def dual_wielding_setup(mainhand, offhand):
-    _assert_one_handed_weapon(mainhand)
-    _assert_two_handed_weapon(offhand)
-    return DualWielding(main=mainhand, off=offhand)
+def dual_wielding_setup(mainhand=None, offhand=None):
+    if mainhand is not None:
+        _assert_one_handed_weapon(mainhand)
+    if offhand is not None:
+        try:
+            _assert_one_handed_weapon(offhand)
+        except:
+            _assert_offhand(offhand)
+    return DualWieldingSetup(main=mainhand, off=offhand)
 
 
-def one_handed_and_sheild_setup(weapon, offhand):
-    _assert_one_handed_weapon(weapon)
+@singledispatch
+def switch_main_weapon(x, weapon):
+    raise RuntimeError(
+        'cannot switch weapon from %s to %s' % (type(x), type(weapon)))
+
+
+@switch_main_weapon.register(TwoHandedSetup)
+def _(x, weapon):
+    if weapon.iconfig.whandle == WHandle.TwoHanded:
+        return two_handed_setup(weapon)
+    if weapon.iconfig.whandle == WHandle.OneHanded:
+        return dual_wielding_setup(main=weapon, off=None)
+    raise RuntimeError('cannot switch two handed setup to %s' % type(weapon))
+
+
+@switch_main_weapon.register(DualWieldingSetup)
+def _(x, weapon):
+    if weapon.iconfig.whandle == WHandle.TwoHanded:
+        return two_handed_setup(weapon)
+    if weapon.iconfig.whandle == WHandle.OneHanded:
+        return dual_wielding_setup(main=weapon, off=x.off)
+    raise RuntimeError('cannot switch dual wielding setup to %s' % type(weapon))
+
+
+@singledispatch
+def switch_off_weapon(x, offhand):
+    raise RuntimeError(
+        'cannot switch weapon from %s to %s' % (type(x), type(weapon)))
+
+
+@switch_off_weapon.register(TwoHandedSetup)
+def _(x, offhand):
     _assert_offhand(offhand)
-    return OneHandedSetup(weapon=weapon, off=offhand)
+    return dual_wielding_setup(main=None, off=offhand)
+
+
+@switch_off_weapon.register(DualWieldingSetup)
+def _(x, offhand):
+    _assert_offhand(offhand)
+    return dual_wielding_setup(main=x.main, off=offhand)
 
 
 JewelrySetup = namedtuple('JewelrySetup', ['amulet', 'left', 'right'])
@@ -470,7 +517,7 @@ class Equipment(object):
         # NOTE in the future we can just support infinitely large inventory
         if weapon_setup is not None:
             assert isinstance(
-                weapon_setup, (TwoHandedSetup, DualWielding, OneHandedSetup)), \
+                weapon_setup, (TwoHandedSetup, DualWieldingSetup)), \
                 'weapon setup %s is not accepted' % type(weapon_setup)
         self.weapon_setup = weapon_setup
 
@@ -487,12 +534,41 @@ class Equipment(object):
 
         self.jewelry_setup = jewelry_setup
 
+    def equip_mainhand(self, weapon):
+        try:
+            self.weapon_setup = switch_main_weapon(weapon)
+            return True
+        except:
+            print('failed to switch to %s' % str(weapon))
+            return False
+
+    def equip_offhand(self, offhand):
+        try:
+            self.weapon_setup = switch_off_weapon(self.weapon_setup, weapon)
+            return True
+        except:
+            print('failed to switch to %s' % str(offhand))
+            return False
+
+    def equip_armor(self, armor_piece):
+        self.armor_setup[armor_piece.iconfig] = armor_piece
+        return True
+
+    def equip_left_ring(self, ring):
+        pass
+
+    def equip_right_ring(self, ring):
+        pass
+
+    def equip_amulet(self, amulet):
+        pass
+
 
 @accumulate_item_attr_mod.register(Equipment)
 def _(x, ret):
     accumulate_item_attr_mod(x.weapon_setup, ret)
-    for _, armor_piece in x.armor_setup.items():
-        if armor_piece is not None:
+    if x.armor_setup:
+        for _, armor_piece in x.armor_setup.items():
             accumulate_item_attr_mod(armor_piece, ret)
     accumulate_item_attr_mod(x.jewelry_setup, ret)
 
@@ -518,6 +594,44 @@ def mk_dmg(val, school):
 
 DamageResult = namedtuple('DamageResult', ['caused', 'overkill'])
 HealResult = namedtuple('HeadResult', ['healed', 'overheal'])
+
+################# skill/runes and resource management  ###################
+#class Skill(Enum):
+#    Bash = auto()
+#
+#
+#class Rune(Enum):
+#    # Bash
+#    Frostbite = auto()
+#    Onslaught = auto()
+#    Punish = auto()
+#    Instigation = auto()
+#    Pulverize = auto()
+
+class Resource(Enum):
+    ArcanePower = auto()
+    Rage = auto()
+    Wrath = auto()
+    Hatred = auto()
+    Discipline = auto()
+    Spirit = auto()
+    Mana = auto()
+
+
+class Skill(ABC):
+
+    @abstractproperty
+    def name(self):
+        pass
+    
+    @abstractproperty
+    def cost(self):
+        pass
+
+    @abstractmethod
+    def use(self, character):
+        pass
+
 
 ##################### Character and Role specification ####################
 MainAttrGain = namedtuple('MainAttrGain', ['s', 'd', 'i', 'v'])
@@ -549,6 +663,16 @@ class Character(ABC):
         School.Holy : Attr.HolyRes,
     }
 
+    RESOURCE_BONUS_MAPPING = {
+        Resource.Rage : Attr.RageBonus,
+        Resource.Wrath : Attr.WrathBonus,
+        Resource.Spirit : Attr.SpiritBonus,
+        Resource.Hatred : Attr.HatredBonus,
+        Resource.Discipline : Attr.DisciplineBonus,
+        Resource.ArcanePower : Attr.ArcanePowerBonus, 
+        Resource.Mana : Attr.ManaBonus,
+    }
+
     def __init__(
         self,
         level,
@@ -556,7 +680,9 @@ class Character(ABC):
         mag_upto60,
         mag_upto65,
         mag_upto70,
+        baseline_resource,
         equipment=None,
+        effects=None,
         # skill_set,
     ):
         def make_attr_mods(mag):
@@ -569,24 +695,47 @@ class Character(ABC):
 
         self._level = 1
         self.basic_attrs = basic_attrs
+        self.baseline_resource = baseline_resource # never changes
+
         self.attr_mod_upto60 = make_attr_mods(mag_upto60)
         self.attr_mod_upto65 = make_attr_mods(mag_upto65)
         self.attr_mod_upto70 = make_attr_mods(mag_upto70)
         self.level_to(level)
 
         self.equipment = equipment
-        self.hp = self.max_hp
+        self.effects = effects
+        
+        # full hp at character construction
+        self._hp = self.max_hp
+        
+        self._resource = {}
+        for _res_type, val in self.baseline_resource.items():
+            # full resource at character construction
+            self._resource[_res_type] = self.max_resource(_res_type)
+        
 
+    def _cap_hp(self):
+        if self._hp > self.max_hp:
+            self._hp = self.max_hp
+
+    def _cap_resource(self):
+        for res, _ in self.baseline_resource.items():
+            max_res = self.max_resource(res)
+            if self._resource[res] > max_res:
+                self._resource[res] = max_res
+        
     def equip(self, equipment):
         self.equipment = equipment
-        if self.hp > self.max_hp:
-            self.hp = self.max_hp
+        self._cap_hp()
+        self._cap_resource()
 
     @property
     def attr_mod_dict(self):
         ret = {}
         if self.equipment:
             accumulate_item_attr_mod(self.equipment, ret)
+        if self.effects:
+            accumulate_item_attr_mod(self.effects, ret)
         return ret
 
     def level_up(self):
@@ -609,13 +758,13 @@ class Character(ABC):
 
     def reduce_hp(self, delta):
         if delta > 0: # receiving damage
-            hp = self.hp
+            hp = self._hp
             dmg = abs(delta)
             if hp <= delta:
-                self.hp = 0
+                self._hp = 0
                 return (hp, dmg-hp)
             else:
-                self.hp = hp-dmg
+                self._hp = hp-dmg
                 return (dmg, None)
         return None
 
@@ -631,15 +780,19 @@ class Character(ABC):
 
     @property
     def is_alive(self):
-        return self.hp > 0
+        return self._hp > 0
 
     @abstractproperty
     def role(self):
         pass
 
     @abstractproperty
-    def resource(self):
+    def resource_types(self):
         pass
+
+    @property
+    def hp(self):
+        return self._hp
 
     @property
     def max_hp(self):
@@ -823,7 +976,37 @@ class Character(ABC):
     @property
     def lifePerKill(self):
         return self._get_basic_attr(Attr.LifePerKill)
-    
+
+    def max_resource(self, resource_type):
+        resource_bonus_type = Character.RESOURCE_BONUS_MAPPING[resource_type]
+        ret = apply_attr_mod(
+            self.attr_mod_dict.get(resource_bonus_type, None),
+            self.baseline_resource[resource_type])
+        return int(ret)
+
+    def update_resource(self, resource_type, delta):
+        _res = self._resource[resource_type] + delta
+        if _res < 0:
+            self._resource[resource_type] = 0
+        elif _res >= self.max_resource(resource_type):
+            self._resource[resource_type] = self.max_resource(resource_type)
+        else:
+            self._resource[resource_type] = _res
+
+    def cast(self, skill_name):
+        _skill = self.skill_set(skill_name)
+        _cost = _skill.cost
+        if _cost > self._resource[_skill.resource]:
+            # cannot use the skill due to insufficient resource
+            raise RuntimeError('cannot use the skill')
+        else:
+            # use skill 
+            self.update_resource(_skill.resource, _cost)
+            return _skill.use(self)
+
+
+# use :: Skill -> Character -> [Runes] -> Effects
+
 
 ########################## Game/World mechanism ###########################
 # tracking effects, such as DoTs, debuffs and anything timed outside of 
@@ -839,22 +1022,12 @@ class EffectType(Enum):
 Damage = namedtuple('Dmg', ['name', 'dmg'])
 DoT = namedtuple('DoT', ['name', 'duration', 'dmg'])
 
-class ElapsingInstance(ABC):
-    '''
-    An instance manages characters and any related timing/round based effects.
-    You can have multiple instances in the entire game world. For example, 
-    players in different game zones would be playing in different instances
-    '''
+
+class RoundBasedInstance(object):
+    '''round based game instance'''
     def __init__(self):
         self.objects = {}
 
-    def tick(self):
-        pass
 
-
-class RoundBasedInstance(ElapsingInstance):
-    '''round based game instance'''
-
-
-class RealTimeInstance(ElapsingInstance):
+class RealTimeInstance(object):
     '''real time based game instance'''
