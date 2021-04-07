@@ -108,6 +108,13 @@ instance Traversable Q where
     sequenceA (QAtom fa) = fmap QAtom fa
     sequenceA (QList qfas) = fmap QList $ sequenceA $ fmap sequenceA qfas
     sequenceA (QDict kfvs) = fmap QDict $ sequenceA $ fmap (sequenceA . fmap sequenceA) kfvs
+    -- kfvs is of type [(Q BaseData, Q f a)]
+    -- each element is of type (Q BaseData, Q f a), which is a functor (,)
+    -- sequenceA $ Q f a = f Q a
+    -- fmap sequenceA $ (Q BaseData, Q f a) = (Q BaseData, f Q a)
+    -- (,) is also a traversable data type
+    -- sequenceA $ (Q BaseData, f Q a) = f (Q BaseData, Q a)
+    -- this explains (sequenceA . fmap sequenceA) part, the trickiest part
 
 data QErr 
     = TypeErr
