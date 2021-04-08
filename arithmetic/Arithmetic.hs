@@ -2,9 +2,14 @@
 -- on any built-in Int/Integer operations at all. Otherwise, why not just use
 -- Integer type, since it is already a big integer type. 
 
+module Arithmetic
+  (
+  ) where
+
 import Control.Monad (mapM)
 import qualified Data.List.NonEmpty as NE 
 import qualified Data.Bifunctor as Bf (bimap)
+import qualified Data.Function as F (on)
 
 data D
   = D0 | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 
@@ -182,19 +187,12 @@ compareDs :: [D] -> [D] -> Ordering
 compareDs ds1 ds2 
   | len1 > len2 = GT
   | len1 < len2 = LT
-  | otherwise = comp ds1' ds2'
+  | otherwise = ds1' `compare` ds2' -- use list lexicographical comparison
   where 
     ds1' = dropLeadZero ds1
     ds2' = dropLeadZero ds2
     len1 = length ds1'
     len2 = length ds2'
-    comp [] [] = EQ
-    comp [] _ = LT
-    comp _ [] = GT
-    comp (x:xs) (y:ys)
-      | x > y = GT
-      | x < y = LT
-      | otherwise = comp xs ys
 
 -- most significant digit comes first
 divModDlist :: [D] -> [D] -> Maybe ([D], [D])
@@ -242,13 +240,17 @@ instance Show N' where
   show (N' ds) = fmap toChar $ NE.toList ds
 
 instance Eq N where
-  (N ds1) == (N ds2) = ds1 == ds2
+  (N ds1) == (N ds2) = ds1 `eq` ds2
+    where
+      eq = (==) `F.on` dropLeadZero
 
 instance Eq N' where
   (N' ds1) == (N' ds2) = ds1 == ds2
 
 instance Ord N where
-  (N ds1) `compare` (N ds2) = ds1 `compareDs` ds2
+  (N ds1) `compare` (N ds2) = ds1 `comp` ds2
+    where
+      comp = compareDs `F.on` dropLeadZero
 
 instance Ord N' where
   (N' ds1) `compare` (N' ds2) = (NE.toList ds1) `compare` (NE.toList ds2)
@@ -256,12 +258,8 @@ instance Ord N' where
 nzero :: N
 nzero = N [D0]
 
-isNZero :: N -> Bool
-isNZero n = n == nzero
-
 nzero' :: N'
 nzero' = N' $ D0 NE.:| []
-
 
 nFromList :: [D] -> N
 nFromList xs = N $ dropLeadZero xs
@@ -302,7 +300,7 @@ mulN (N ns) (N ms) = nFromList $ reverse $ mulDRlist ns' ms'
 divModN :: N -> N -> Maybe (N, N)
 divModN (N ns) (N ms) = Bf.bimap toN toN <$> divModDlist ns ms
   where 
-    toN = N . dropLeadZero . reverse
+    toN = nFromList . dropLeadZero . reverse
 
 --------------------- Integer Number -------------------------
 data I = I 
@@ -323,15 +321,6 @@ mkI cs = I <$> mkN cs <*> pure True
 izero :: I
 izero = I nzero True
 
-isIZero :: I -> Bool
-isIZero (I n s) = isNZero n
-
-isIPositive :: I -> Bool
-isIPositive i@(I n s) = not (isIZero i) && s
-
-isINegative :: I -> Bool
-isINegative i@(I n s) = not (isIZero i) && not s
-
 instance Show I where
   show (I n s)
     | s = show n
@@ -343,50 +332,37 @@ instance Eq I where
     | not isZero1 && not isZero2 = if s1 == s2 then n1 == n2 else False 
     | otherwise = False  
     where
-      isZero1 = isIZero i1
-      isZero2 = isIZero i2
-
-invertOrd :: Ordering -> Ordering
-invertOrd GT = LT
-invertOrd LT = GT
-invertOrd EQ = EQ
+      isZero1 = izero == i1
+      isZero2 = izero == i2
 
 instance Ord I where
   i1@(I n1 s1) `compare` i2@(I n2 s2)
     | isZero1 && isZero2 = EQ
-    | not isZero1 && isZero2 = if isPos1 then GT else LT
-    | isZero1 && not isZero2 = if isPos2 then LT else GT
-    | isPos1 && isPos2 = n1 `compare` n2
-    | isPos1 && isNeg2 = GT
-    | isNeg1 && isNeg2 = invertOrd $ n1 `compare` n2
-    | otherwise = LT -- isNeg1 && isPos2
+    | not isZero1 && isZero2 = if s1 then GT else LT
+    | isZero1 && not isZero2 = if s2 then LT else GT
+    | s1 && s2 = n1 `compare` n2
+    | s1 && not s2 = GT
+    | not s1 && not s2 = invertOrd $ n1 `compare` n2
+    | otherwise = LT --not s1 && s2
     where 
-      isZero1 = isIZero i1
-      isZero2 = isIZero i2
-      isPos1 = isIPositive i1
-      isPos2 = isIPositive i2
-      isNeg1 = isIPositive i1
-      isNeg2 = isIPositive i2
+      isZero1 = i1 == izero
+      isZero2 = i2 == izero
+      invertOrd GT = LT
+      invertOrd LT = GT
+      invertOrd EQ = EQ
 
 addI :: I -> I -> I
 addI i1@(I n1 s1) i2@(I n2 s2)
-  | isZero1 = i2
-  | isZero2 = i1
-  | isPos1 && isPos2 = I (addN n1 n2) True
-  | isNeg1 && isNeg2 = I (addN n1 n2) False
-  | isPos1 && isNeg2 = if n1 < n2 then negI (subN n2 n1) else posI (subN n1 n2)
-  | isNeg1 && isPos2 = if n1 > n2 then negI (subN n1 n2) else posI (subN n2 n1)
-  where
-    isZero1 = isIZero i1
-    isZero2 = isIZero i2
-    isPos1 = isIPositive i1
-    isPos2 = isIPositive i2
-    isNeg1 = isIPositive i1
-    isNeg2 = isIPositive i2
+  | i1 == izero = i2
+  | i2 == izero = i1
+  | s1 && s2 = I (addN n1 n2) True
+  | not s1 && not s2 = I (addN n1 n2) False
+  | s1 && not s2 = if n1 < n2 then negI (subN n2 n1) else posI (subN n1 n2)
+  | not s1 && s2 = if n1 > n2 then negI (subN n1 n2) else posI (subN n2 n1)
 
 mulI :: I -> I -> I
 mulI (I n1 s1) (I n2 s2)
-  | isNZero n1 || isNZero n2 = izero
+  | n1 == nzero || n2 == nzero = izero
   | s1 == s2 = I (mulN n1 n2) True
   | otherwise = I (mulN n1 n2) False
 
@@ -395,7 +371,7 @@ instance Num I where
   (*) = mulI
   abs (I n s) = I n True
   signum i
-    | isIZero i = izero 
+    | i == izero = izero 
     | isign i = I (N [D1]) True
     | otherwise = I (N [D1]) False
   fromInteger i
@@ -405,5 +381,5 @@ instance Num I where
       Nothing -> izero
     | otherwise = negate $ fromInteger $ abs i
   negate (I n s)
-    | isNZero n = izero
+    | n == nzero = izero
     | otherwise = I n (not s)
