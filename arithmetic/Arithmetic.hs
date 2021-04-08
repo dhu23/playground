@@ -3,7 +3,16 @@
 -- Integer type, since it is already a big integer type. 
 
 module Arithmetic
-  (
+  ( D
+  , N
+  , mkN
+  , nzero
+  , nFromList
+  , I
+  , posI
+  , negI
+  , mkI
+  , izero
   ) where
 
 import Control.Monad (mapM)
@@ -327,16 +336,16 @@ instance Show I where
     | otherwise = if n == nzero then show n else "-" ++ show n
 
 instance Eq I where
-  i1@(I n1 s1) == i2@(I n2 s2)
+  (I n1 s1) == (I n2 s2)
     | isZero1 && isZero2 = True
     | not isZero1 && not isZero2 = if s1 == s2 then n1 == n2 else False 
     | otherwise = False  
     where
-      isZero1 = izero == i1
-      isZero2 = izero == i2
+      isZero1 = nzero == n1
+      isZero2 = nzero == n2
 
 instance Ord I where
-  i1@(I n1 s1) `compare` i2@(I n2 s2)
+  (I n1 s1) `compare` (I n2 s2)
     | isZero1 && isZero2 = EQ
     | not isZero1 && isZero2 = if s1 then GT else LT
     | isZero1 && not isZero2 = if s2 then LT else GT
@@ -345,16 +354,16 @@ instance Ord I where
     | not s1 && not s2 = invertOrd $ n1 `compare` n2
     | otherwise = LT --not s1 && s2
     where 
-      isZero1 = i1 == izero
-      isZero2 = i2 == izero
+      isZero1 = n1 == nzero
+      isZero2 = n2 == nzero
       invertOrd GT = LT
       invertOrd LT = GT
       invertOrd EQ = EQ
 
 addI :: I -> I -> I
 addI i1@(I n1 s1) i2@(I n2 s2)
-  | i1 == izero = i2
-  | i2 == izero = i1
+  | n1 == nzero = i2
+  | n2 == nzero = i1
   | s1 && s2 = I (addN n1 n2) True
   | not s1 && not s2 = I (addN n1 n2) False
   | s1 && not s2 = if n1 < n2 then negI (subN n2 n1) else posI (subN n1 n2)
