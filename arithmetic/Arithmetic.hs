@@ -4,6 +4,7 @@
 
 import Control.Monad (mapM)
 import qualified Data.List.NonEmpty as NE 
+import qualified Data.Bifunctor as Bf (bimap)
 
 data D
   = D0 | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 
@@ -48,7 +49,9 @@ toChar D7 = '7'
 toChar D8 = '8'
 toChar D9 = '9'
 
--- 
+
+----------------- Helper functions for type N ------------------------
+
 mkDRlistFromInt :: Integer -> Maybe [D]
 mkDRlistFromInt x
   | x <= 0 = Just [D0]
@@ -171,6 +174,54 @@ mulDRlist ns ms = sumDRlists rows
     mulDRlistByTens x [] = x
     mulDRlistByTens x (_:rest) = mulDRlistByTens (D0:x) rest
 
+dropLeadZero = dropWhile (== D0)
+
+dropTrailZero = reverse . dropLeadZero . reverse
+
+compareDs :: [D] -> [D] -> Ordering
+compareDs ds1 ds2 
+  | len1 > len2 = GT
+  | len1 < len2 = LT
+  | otherwise = comp ds1' ds2'
+  where 
+    ds1' = dropLeadZero ds1
+    ds2' = dropLeadZero ds2
+    len1 = length ds1'
+    len2 = length ds2'
+    comp [] [] = EQ
+    comp [] _ = LT
+    comp _ [] = GT
+    comp (x:xs) (y:ys)
+      | x > y = GT
+      | x < y = LT
+      | otherwise = comp xs ys
+
+-- most significant digit comes first
+divModDlist :: [D] -> [D] -> Maybe ([D], [D])
+divModDlist _ [] = Nothing
+divModDlist [] _ = Just ([D0], [D0])
+divModDlist ds1 ds2 = Just $ foldl runDiv ([], []) ds1 
+  where 
+    ds2' = reverse ds2
+    runDiv :: ([D], [D]) -> D -> ([D], [D]) 
+    runDiv (qr, n) d = (q:qr, dropTrailZero rr)
+      where
+        (q, rr) = divModRlistForD (d:n) ds2'
+
+-- least signficant digit comes first
+-- the quotient will be a single largest possible digit
+-- remainder will be produced in a most signficant first format
+-- the results also follows least significant first format
+divModRlistForD :: [D] -> [D] -> (D, [D])
+divModRlistForD num denom = case dropWhile greaterThanNum attempts of
+  [] -> (D0, num)
+  ((i, val):_) -> (i, subDRlist num val)
+  where 
+    mul' = mulDRlistByD denom 
+    attempts = fmap (\x -> (x, mul' x)) $ reverse [D1 .. D9]
+    greaterThanNum (_, x) = (reverse x) `compareDs` (reverse num) == GT
+
+
 ---------------------- Natural number -------------------------
 -- the most significant digit comes first. 
 -- the value constructor should not be exported
@@ -184,6 +235,7 @@ mkN' :: String -> Maybe N'
 mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
 
 instance Show N where
+  show (N []) = "0"
   show (N ds) = fmap toChar ds
 
 instance Show N' where
@@ -195,31 +247,11 @@ instance Eq N where
 instance Eq N' where
   (N' ds1) == (N' ds2) = ds1 == ds2
 
-
-compareDs :: [D] -> [D] -> Ordering
-compareDs ds1 ds2 
-  | len1 > len2 = GT
-  | len1 < len2 = LT
-  | otherwise = comp ds1 ds2
-  where 
-    len1 = length ds1
-    len2 = length ds2
-    comp [] [] = EQ
-    comp [] _ = LT
-    comp _ [] = GT
-    comp (x:xs) (y:ys)
-      | x > y = GT
-      | x < y = LT
-      | otherwise = comp xs ys
-
-
 instance Ord N where
-  (N ds1) `compare` (N ds2) = ds1 `compare` ds2
+  (N ds1) `compare` (N ds2) = ds1 `compareDs` ds2
 
 instance Ord N' where
   (N' ds1) `compare` (N' ds2) = (NE.toList ds1) `compare` (NE.toList ds2)
-
-dropLeadZero = dropWhile (== D0)
 
 nzero :: N
 nzero = N [D0]
@@ -266,6 +298,11 @@ mulN (N ns) (N ms) = nFromList $ reverse $ mulDRlist ns' ms'
   where
     ns' = reverse ns
     ms' = reverse ms
+
+divModN :: N -> N -> Maybe (N, N)
+divModN (N ns) (N ms) = Bf.bimap toN toN <$> divModDlist ns ms
+  where 
+    toN = N . dropLeadZero . reverse
 
 --------------------- Integer Number -------------------------
 data I = I 
