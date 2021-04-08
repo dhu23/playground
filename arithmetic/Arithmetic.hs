@@ -38,7 +38,7 @@ fromChar '8' = Just D8
 fromChar '9' = Just D9
 fromChar _ = Nothing
 
-fromInt :: Integer -> Maybe D
+fromInt :: Integral a => a -> Maybe D
 fromInt 0 = Just D0
 fromInt 1 = Just D1
 fromInt 2 = Just D2
@@ -63,10 +63,12 @@ toChar D7 = '7'
 toChar D8 = '8'
 toChar D9 = '9'
 
+horner :: Num a => a -> a -> a
+horner acc d = acc*10 + d
 
 ----------------- Helper functions for type N ------------------------
 
-mkDRlistFromInt :: Integer -> Maybe [D]
+mkDRlistFromInt :: Integral a => a -> Maybe [D]
 mkDRlistFromInt x
   | x <= 0 = Just [D0]
   | x < 10 = sequence [fromInt x] -- Just [D]
@@ -248,6 +250,21 @@ instance Show N where
 instance Show N' where
   show (N' ds) = fmap toChar $ NE.toList ds
 
+instance Enum N where
+  fromEnum (N []) = 0
+  fromEnum (N ds) = foldl horner 0 $ fmap fromEnum ds
+
+  -- unfortunately due to the function type dictated by the standard library
+  -- we have to write this partial function
+  toEnum d
+    | d > 0 = case (dropLeadZero . reverse) <$> mkDRlistFromInt d of
+      Nothing -> undefined
+      Just [] -> undefined
+      Just ds -> N ds
+    | d == 0 = nzero
+    | otherwise = undefined
+    
+
 instance Eq N where
   (N ds1) == (N ds2) = ds1 `eq` ds2
     where
@@ -334,6 +351,13 @@ instance Show I where
   show (I n s)
     | s = show n
     | otherwise = if n == nzero then show n else "-" ++ show n
+
+instance Enum I where
+  fromEnum (I n s) = let val = fromEnum n in if s then val else -val
+  toEnum d 
+    | d == 0 = izero
+    | d > 0 = posI $ (toEnum d)
+    | otherwise = negI $ toEnum (-d)
 
 instance Eq I where
   (I n1 s1) == (I n2 s2)
