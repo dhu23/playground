@@ -39,17 +39,9 @@ fromChar '9' = Just D9
 fromChar _ = Nothing
 
 fromInt :: Integral a => a -> Maybe D
-fromInt 0 = Just D0
-fromInt 1 = Just D1
-fromInt 2 = Just D2
-fromInt 3 = Just D3
-fromInt 4 = Just D4
-fromInt 5 = Just D5
-fromInt 6 = Just D6
-fromInt 7 = Just D7
-fromInt 8 = Just D8
-fromInt 9 = Just D9
-fromInt _ = Nothing
+fromInt d
+  | d >= 0 && d <= 9 = Just $ toEnum $ fromIntegral d
+  | otherwise = Nothing
 
 toChar :: D -> Char
 toChar D0 = '0'
@@ -128,6 +120,13 @@ addDRlist (x:xs) (y:ys) = case tens of
     (tens, single) = addD x y
     s' = addDRlist xs ys
 
+
+--most significant digit first
+addDlist :: [D] -> [D] -> [D]
+addDlist ds1 ds2 = reverse $ ds1 `add'` ds2
+  where
+    add' = addDRlist `F.on` reverse
+
 sumDRlists :: [[D]] -> [D]
 sumDRlists = foldr addDRlist [D0]
 
@@ -149,6 +148,12 @@ subDRlist [] ys = [D0]
 subDRlist (x:xs) (y:ys) = case subD x y of
   (False, d) -> d:(subDRlist xs ys)
   (True, d) -> d:(subDRlist (subOneRlist xs) ys)
+
+--most significant digit first
+subDlist :: [D] -> [D] -> [D]
+subDlist ds1 ds2 = reverse $ ds1 `sub'` ds2
+  where
+    sub' = subDRlist `F.on` reverse
 
 mulD :: D -> D -> (D, D)
 mulD D0 _ = (D0, D0)  -- 0 addition
@@ -189,6 +194,12 @@ mulDRlist ns ms = sumDRlists rows
     mulDRlistByTens :: [D] -> [a] -> [D]
     mulDRlistByTens x [] = x
     mulDRlistByTens x (_:rest) = mulDRlistByTens (D0:x) rest
+
+-- most significant digit first
+mulDlist :: [D] -> [D] -> [D]
+mulDlist ds1 ds2 = reverse $ ds1 `mul'` ds2
+  where
+    mul' = mulDRlist `F.on` reverse
 
 dropLeadZero = dropWhile (== D0)
 
@@ -298,10 +309,7 @@ nFromList' xs = case dropLeadZero xs of
 
 
 addN :: N -> N -> N 
-addN (N ns) (N ms) = nFromList $ reverse $ addDRlist ns' ms'
-  where
-    ns' = reverse ns
-    ms' = reverse ms'
+addN (N ns) (N ms) = nFromList $ addDlist ns ms
 
 
 addN' :: N' -> N' -> N'
@@ -312,27 +320,21 @@ addN' (N' ns) (N' ms) = nFromList' $ reverse $ addDRlist ns' ms'
 
 
 subN :: N -> N -> N
-subN (N ns) (N ms) = nFromList $ reverse $ subDRlist ns' ms'
-  where
-    ns' = reverse ns
-    ms' = reverse ms 
+subN (N ns) (N ms) = nFromList $ subDlist ns ms
 
 mulN :: N -> N -> N
-mulN (N ns) (N ms) = nFromList $ reverse $ mulDRlist ns' ms' 
-  where
-    ns' = reverse ns
-    ms' = reverse ms
+mulN (N ns) (N ms) = nFromList $ mulDlist ns ms
 
 divModN :: N -> N -> Maybe (N, N)
 divModN (N ns) (N ms) = Bf.bimap toN toN <$> divModDlist ns ms
   where 
     toN = nFromList . dropLeadZero . reverse
 
+gcdN :: N -> N -> N
+gcdN = undefined
+
 --------------------- Integer Number -------------------------
-data I = I 
-  { iabs :: N 
-  , isign :: Bool -- True means positive, 0 can be either way 
-  }
+data I = I N Bool -- True means positive, 0 can be either way 
 
 posI :: N -> I
 posI n = I n True
@@ -404,8 +406,8 @@ instance Num I where
   (*) = mulI
   abs (I n s) = I n True
   signum i
-    | i == izero = izero 
-    | isign i = I (N [D1]) True
+    | i == 0 = izero
+    | i > 0 = I (N [D1]) True
     | otherwise = I (N [D1]) False
   fromInteger i
     | i == 0 = izero
@@ -416,3 +418,5 @@ instance Num I where
   negate (I n s)
     | n == nzero = izero
     | otherwise = I n (not s)
+
+data F = F N N Bool
