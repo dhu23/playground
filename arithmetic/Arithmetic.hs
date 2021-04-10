@@ -330,8 +330,28 @@ divModN (N ns) (N ms) = Bf.bimap toN toN <$> divModDlist ns ms
   where 
     toN = nFromList . dropLeadZero . reverse
 
+
+-- when n > 0 and m > 0, gcd(n, m) gives the greatest common divisor
+-- when n > 0, gcd(n, 0) = n
+-- when both are zero, the above defintion is not enough. 
+-- it is commonly defined gcd(0, 0) = 0 to preserve usual identities for GCD
 gcdN :: N -> N -> N
-gcdN = undefined
+gcdN n m
+  | n == nzero || m == nzero = nzero
+  | n == m = n -- n > 0 and m > 0 and n = m
+  | n > m = gcdN (subN n m) m -- Euclid's algorithm
+  | otherwise = gcdN (subN m n) n
+
+-- A = a * gcd(A, B)
+-- B = b * gcd(A, B)
+-- lcm = a * b * gcd(A, B)
+-- lcm(0, a) = 0 for all a
+lcmN :: N -> N -> N
+lcmN n m
+  | n == nzero || m == nzero = nzero
+  | otherwise = case divModN (mulN n m) (gcdN n m) of
+    Nothing -> nzero -- this means both n and m are zero, won't happen
+    Just (q, _) -> q
 
 --------------------- Integer Number -------------------------
 data I = I N Bool -- True means positive, 0 can be either way 
