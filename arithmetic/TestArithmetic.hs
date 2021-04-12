@@ -49,6 +49,9 @@ prop_DCharConversion d = d' == Just d
 prop_NDivMod0 :: N -> Bool
 prop_NDivMod0 n = n `divModN` nzero == Nothing
 
+prop_NDivMod1 :: N -> Bool
+prop_NDivMod1 n = n `divModN` nOne == Just (n, nzero)
+
 prop_NDivMod :: N -> N -> N -> Bool
 prop_NDivMod n1 n2 n3 = case0 && case1 && case2
   where
@@ -74,6 +77,9 @@ prop_NDivMod n1 n2 n3 = case0 && case1 && case2
 
 prop_IAddUnit :: I -> Bool
 prop_IAddUnit i = i + izero == i
+
+prop_ISubUnit :: I -> Bool
+prop_ISubUnit i = i - izero == i
 
 prop_IMulUnit :: I -> Bool
 prop_IMulUnit i = i * ipos1 == i
@@ -103,3 +109,23 @@ prop_ICompareSub i1 i2
   | otherwise = diff < izero
   where 
     diff = i1 - i2
+
+-- I noticed that running this compiled is much faster than in ghci
+main = do
+  quickCheck prop_NEnum
+  quickCheck prop_NShow'
+  quickCheck prop_IEnum
+  quickCheck prop_DCharConversion
+  quickCheck prop_NDivMod0
+  quickCheck prop_NDivMod
+  quickCheck prop_IAddUnit
+  quickCheck prop_ISubUnit
+  quickCheck prop_IMulUnit
+  quickCheck prop_IAddCommutativeLaw
+  quickCheck prop_IMulCommutativeLaw
+  quickCheck prop_IAddAssociativeLaw
+  quickCheck prop_IMulAssociativeLaw
+  quickCheck prop_IMulDistributiveLaw
+  quickCheck prop_ISubAddDuality
+  quickCheck prop_ICompareSub
+  

@@ -13,6 +13,7 @@ module Arithmetic
   , mulN
   , divModN
   , nzero
+  , nOne
   , nFromList
   , I
   , posI
@@ -303,6 +304,9 @@ instance Ord N' where
 
 nzero :: N
 nzero = N [D0]
+
+nOne :: N
+nOne = N [D1]
 
 nzero' :: N'
 nzero' = N' $ D0 NE.:| []
