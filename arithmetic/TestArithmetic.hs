@@ -1,6 +1,7 @@
 import Test.QuickCheck
 import Arithmetic
 import qualified Control.Monad as M (replicateM)
+import qualified Data.List as L (sort)
 
 -- based off integer conversion
 prop_NEnum :: Int -> Bool
@@ -22,7 +23,7 @@ prop_IEnum i = fromEnum i' == i
   where
     i' = toEnum i :: I
 
-
+-- innate property based
 instance Arbitrary D where
   arbitrary = elements [minBound .. maxBound]
 
@@ -44,3 +45,61 @@ prop_DCharConversion :: D -> Bool
 prop_DCharConversion d = d' == Just d
   where
     d' = fromChar (toChar d) 
+
+prop_NDivMod0 :: N -> Bool
+prop_NDivMod0 n = n `divModN` nzero == Nothing
+
+prop_NDivMod :: N -> N -> N -> Bool
+prop_NDivMod n1 n2 n3 = case0 && case1 && case2
+  where
+    (minn:midn:maxn:[]) = L.sort [n1, n2, n3]
+    case0 = 
+      let v = ((maxn `mulN` midn) `addN` minn) `divModN` maxn
+      in 
+        if maxn > nzero 
+          then v == Just (midn, minn)
+          else v == Nothing
+    case1 = 
+      let v = ((maxn `mulN` midn) `addN` minn) `divModN` midn
+      in 
+        if midn > nzero 
+          then v == Just (maxn, minn)
+          else v == Nothing
+    case2 = 
+      let v = ((maxn `mulN` minn) `addN` midn) `divModN` maxn
+      in 
+        if maxn > nzero 
+          then v == Just (minn, midn) 
+          else v == Nothing
+
+prop_IAddUnit :: I -> Bool
+prop_IAddUnit i = i + izero == i
+
+prop_IMulUnit :: I -> Bool
+prop_IMulUnit i = i * ipos1 == i
+
+prop_IAddCommutativeLaw :: I -> I -> Bool
+prop_IAddCommutativeLaw i1 i2 = i1 + i2 == i2 + i1
+
+prop_IMulCommutativeLaw :: I -> I -> Bool
+prop_IMulCommutativeLaw i1 i2 = i1 * i2 == i2 * i1
+
+prop_IAddAssociativeLaw :: I -> I -> I -> Bool
+prop_IAddAssociativeLaw i1 i2 i3 = (i1 + i2) + i3 == i1 + (i2 + i3)
+
+prop_IMulAssociativeLaw :: I -> I -> I -> Bool
+prop_IMulAssociativeLaw i1 i2 i3 = (i1 * i2) * i3 == i1 * (i2 * i3)
+
+prop_IMulDistributiveLaw :: I -> I -> I -> Bool
+prop_IMulDistributiveLaw i1 i2 i3 = i1 * (i2 + i3) == i1 * i2 + i1 * i3
+
+prop_ISubAddDuality :: I -> I -> Bool
+prop_ISubAddDuality i1 i2 = i1 - i2 == i1 + (negate i2)
+
+prop_ICompareSub :: I -> I -> Bool
+prop_ICompareSub i1 i2
+  | i1 == i2 = diff == izero
+  | i1 > i2 = diff > izero
+  | otherwise = diff < izero
+  where 
+    diff = i1 - i2

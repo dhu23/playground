@@ -8,6 +8,10 @@ module Arithmetic
   , fromChar
   , N
   , mkN
+  , addN
+  , subN
+  , mulN
+  , divModN
   , nzero
   , nFromList
   , I
@@ -15,6 +19,8 @@ module Arithmetic
   , negI
   , mkI
   , izero
+  , ipos1
+  , ineg1
   ) where
 
 import Control.Monad (mapM)
@@ -370,6 +376,18 @@ mkI cs = I <$> mkN cs <*> pure True
 
 izero :: I
 izero = I nzero True
+
+iPosFromList :: [D] -> I
+iPosFromList = posI . nFromList
+
+iNegFromList :: [D] -> I
+iNegFromList = negI . nFromList
+
+ipos1 :: I
+ipos1 = iPosFromList [D1]
+
+ineg1 :: I
+ineg1 = iNegFromList [D1]
 
 instance Show I where
   show (I n s)
