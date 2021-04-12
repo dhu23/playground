@@ -4,6 +4,8 @@
 
 module Arithmetic
   ( D
+  , toChar
+  , fromChar
   , N
   , mkN
   , nzero
@@ -38,11 +40,6 @@ fromChar '8' = Just D8
 fromChar '9' = Just D9
 fromChar _ = Nothing
 
-fromInt :: Integral a => a -> Maybe D
-fromInt d
-  | d >= 0 && d <= 9 = Just $ toEnum $ fromIntegral d
-  | otherwise = Nothing
-
 toChar :: D -> Char
 toChar D0 = '0'
 toChar D1 = '1'
@@ -54,6 +51,11 @@ toChar D6 = '6'
 toChar D7 = '7'
 toChar D8 = '8'
 toChar D9 = '9'
+
+fromInt :: Integral a => a -> Maybe D
+fromInt d
+  | d >= 0 && d <= 9 = Just $ toEnum $ fromIntegral d
+  | otherwise = Nothing
 
 horner :: Num a => a -> a -> a
 horner acc d = acc*10 + d
