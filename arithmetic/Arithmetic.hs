@@ -3,7 +3,7 @@
 -- Integer type, since it is already a big integer type. 
 
 module Arithmetic
-  ( D
+  ( D(..)
   , toChar
   , fromChar
   , N
@@ -62,6 +62,7 @@ horner acc d = acc*10 + d
 
 ----------------- Helper functions for type N ------------------------
 
+-- least significant digit first
 mkDRlistFromInt :: Integral a => a -> Maybe [D]
 mkDRlistFromInt x
   | x <= 0 = Just [D0]
@@ -270,10 +271,9 @@ instance Enum N where
   -- unfortunately due to the function type dictated by the standard library
   -- we have to write this partial function
   toEnum d
-    | d > 0 = case (dropLeadZero . reverse) <$> mkDRlistFromInt d of
+    | d > 0 = case (nFromList . dropLeadZero . reverse) <$> mkDRlistFromInt d of
       Nothing -> undefined
-      Just [] -> undefined
-      Just ds -> N ds
+      Just n -> n
     | d == 0 = nzero
     | otherwise = undefined
     
