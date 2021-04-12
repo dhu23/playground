@@ -1,17 +1,8 @@
 import Test.QuickCheck
 import Arithmetic
+import qualified Control.Monad as M (replicateM)
 
-instance Arbitrary D where
-  arbitrary = elements [minBound .. maxBound]
-
-instance Arbitrary N where
-  arbitrary = undefined
-
-prop_DCharConversion :: D -> Bool
-prop_DCharConversion d = d' == Just d
-  where
-    d' = fromChar (toChar d) 
-
+-- based off integer conversion
 prop_NEnum :: Int -> Bool
 prop_NEnum i
   | i < 0 = True -- no need to test it
@@ -30,3 +21,26 @@ prop_IEnum :: Int -> Bool
 prop_IEnum i = fromEnum i' == i
   where
     i' = toEnum i :: I
+
+
+instance Arbitrary D where
+  arbitrary = elements [minBound .. maxBound]
+
+instance Arbitrary N where
+  arbitrary = do 
+    l <- getSize
+    ds <- M.replicateM l arbitrary
+    return $ nFromList ds
+
+instance Arbitrary I where
+  arbitrary = do
+    n <- arbitrary
+    sign <- arbitrary
+    if sign 
+      then return $ posI n
+      else return $ negI n
+
+prop_DCharConversion :: D -> Bool
+prop_DCharConversion d = d' == Just d
+  where
+    d' = fromChar (toChar d) 
