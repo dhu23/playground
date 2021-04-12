@@ -227,7 +227,8 @@ compareDs ds1 ds2
 
 -- most significant digit comes first
 divModDlist :: [D] -> [D] -> Maybe ([D], [D])
-divModDlist _ [] = Nothing
+divModDlist _ ds2
+  | length (dropLeadZero ds2) == 0 = Nothing
 divModDlist [] _ = Just ([D0], [D0])
 divModDlist ds1 ds2 = Just $ foldl runDiv ([], []) ds1 
   where 
