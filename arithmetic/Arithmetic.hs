@@ -8,9 +8,7 @@ module Arithmetic
   , fromChar
   , N
   , mkN
-  , addN
   , subN
-  , mulN
   , divModN
   , nZero
   , nOne
@@ -317,6 +315,9 @@ instance Num N where
     | otherwise = undefined
   negate = undefined
 
+instance Real N where
+  toRational (N ds)= foldl horner 0 $ fmap (fromIntegral . fromEnum) ds
+
 nZero :: N
 nZero = N [D0]
 
@@ -475,5 +476,10 @@ instance Num I where
   negate (I n s)
     | n == nZero = iZero
     | otherwise = I n (not s)
+
+instance Real I where
+  toRational (I n s)
+    | n >= nZero = toRational n
+    | otherwise = negate $ toRational n
 
 data F = F N N Bool

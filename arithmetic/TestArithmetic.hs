@@ -57,19 +57,19 @@ prop_NDivMod n1 n2 n3 = case0 && case1 && case2
   where
     (minn:midn:maxn:[]) = L.sort [n1, n2, n3]
     case0 = 
-      let v = ((maxn `mulN` midn) `addN` minn) `divModN` maxn
+      let v = (maxn * midn + minn) `divModN` maxn
       in 
         if maxn > nZero 
           then v == Just (midn, minn)
           else v == Nothing
     case1 = 
-      let v = ((maxn `mulN` midn) `addN` minn) `divModN` midn
+      let v = (maxn * midn + minn) `divModN` midn
       in 
         if midn > nZero 
           then v == Just (maxn, minn)
           else v == Nothing
     case2 = 
-      let v = ((maxn `mulN` minn) `addN` midn) `divModN` maxn
+      let v = (maxn * minn + midn) `divModN` maxn
       in 
         if maxn > nZero 
           then v == Just (minn, midn) 
