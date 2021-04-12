@@ -47,10 +47,10 @@ prop_DCharConversion d = d' == Just d
     d' = fromChar (toChar d) 
 
 prop_NDivMod0 :: N -> Bool
-prop_NDivMod0 n = n `divModN` nzero == Nothing
+prop_NDivMod0 n = n `divModN` nZero == Nothing
 
 prop_NDivMod1 :: N -> Bool
-prop_NDivMod1 n = n `divModN` nOne == Just (n, nzero)
+prop_NDivMod1 n = n `divModN` nOne == Just (n, nZero)
 
 prop_NDivMod :: N -> N -> N -> Bool
 prop_NDivMod n1 n2 n3 = case0 && case1 && case2
@@ -59,30 +59,30 @@ prop_NDivMod n1 n2 n3 = case0 && case1 && case2
     case0 = 
       let v = ((maxn `mulN` midn) `addN` minn) `divModN` maxn
       in 
-        if maxn > nzero 
+        if maxn > nZero 
           then v == Just (midn, minn)
           else v == Nothing
     case1 = 
       let v = ((maxn `mulN` midn) `addN` minn) `divModN` midn
       in 
-        if midn > nzero 
+        if midn > nZero 
           then v == Just (maxn, minn)
           else v == Nothing
     case2 = 
       let v = ((maxn `mulN` minn) `addN` midn) `divModN` maxn
       in 
-        if maxn > nzero 
+        if maxn > nZero 
           then v == Just (minn, midn) 
           else v == Nothing
 
 prop_IAddUnit :: I -> Bool
-prop_IAddUnit i = i + izero == i
+prop_IAddUnit i = i + iZero == i
 
 prop_ISubUnit :: I -> Bool
-prop_ISubUnit i = i - izero == i
+prop_ISubUnit i = i - iZero == i
 
 prop_IMulUnit :: I -> Bool
-prop_IMulUnit i = i * ipos1 == i
+prop_IMulUnit i = i * iOne == i
 
 prop_IAddCommutativeLaw :: I -> I -> Bool
 prop_IAddCommutativeLaw i1 i2 = i1 + i2 == i2 + i1
@@ -104,9 +104,9 @@ prop_ISubAddDuality i1 i2 = i1 - i2 == i1 + (negate i2)
 
 prop_ICompareSub :: I -> I -> Bool
 prop_ICompareSub i1 i2
-  | i1 == i2 = diff == izero
-  | i1 > i2 = diff > izero
-  | otherwise = diff < izero
+  | i1 == i2 = diff == iZero
+  | i1 > i2 = diff > iZero
+  | otherwise = diff < iZero
   where 
     diff = i1 - i2
 

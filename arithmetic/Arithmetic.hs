@@ -12,16 +12,16 @@ module Arithmetic
   , subN
   , mulN
   , divModN
-  , nzero
+  , nZero
   , nOne
   , nFromList
   , I
   , posI
   , negI
   , mkI
-  , izero
-  , ipos1
-  , ineg1
+  , iZero
+  , iOne
+  , iMinusOne
   ) where
 
 import Control.Monad (mapM)
@@ -282,7 +282,7 @@ instance Enum N where
     | d > 0 = case (nFromList . dropLeadZero . reverse) <$> mkDRlistFromInt d of
       Nothing -> undefined
       Just n -> n
-    | d == 0 = nzero
+    | d == 0 = nZero
     | otherwise = undefined
     
 
@@ -302,18 +302,32 @@ instance Ord N where
 instance Ord N' where
   (N' ds1) `compare` (N' ds2) = (NE.toList ds1) `compare` (NE.toList ds2)
 
-nzero :: N
-nzero = N [D0]
+instance Num N where
+  (+) = addN
+  (*) = mulN
+  abs = id
+  signum n
+    | n == nZero = nZero
+    | otherwise = nOne
+  fromInteger i 
+    | i == 0 = nZero
+    | i > 0 = case mkDRlistFromInt i of
+      Just n -> nFromList (reverse n)
+      Nothing -> nZero
+    | otherwise = undefined
+  negate = undefined
+
+nZero :: N
+nZero = N [D0]
 
 nOne :: N
 nOne = N [D1]
 
-nzero' :: N'
-nzero' = N' $ D0 NE.:| []
+nZero' :: N'
+nZero' = N' $ D0 NE.:| []
 
 nFromList :: [D] -> N
 nFromList xs = N $ dropLeadZero xs
-
 
 nFromList' :: [D] -> N'
 nFromList' xs = case dropLeadZero xs of 
@@ -350,7 +364,7 @@ divModN (N ns) (N ms) = Bf.bimap toN toN <$> divModDlist ns ms
 -- it is commonly defined gcd(0, 0) = 0 to preserve usual identities for GCD
 gcdN :: N -> N -> N
 gcdN n m
-  | n == nzero || m == nzero = nzero
+  | n == nZero || m == nZero = nZero
   | n == m = n -- n > 0 and m > 0 and n = m
   | n > m = gcdN (subN n m) m -- Euclid's algorithm
   | otherwise = gcdN (subN m n) n
@@ -361,9 +375,9 @@ gcdN n m
 -- lcm(0, a) = 0 for all a
 lcmN :: N -> N -> N
 lcmN n m
-  | n == nzero || m == nzero = nzero
+  | n == nZero || m == nZero = nZero
   | otherwise = case divModN (mulN n m) (gcdN n m) of
-    Nothing -> nzero -- this means both n and m are zero, won't happen
+    Nothing -> nZero -- this means both n and m are zero, won't happen
     Just (q, _) -> q
 
 --------------------- Integer Number -------------------------
@@ -379,8 +393,8 @@ mkI :: String -> Maybe I
 mkI ('-':cs) = I <$> mkN cs <*> pure False
 mkI cs = I <$> mkN cs <*> pure True
 
-izero :: I
-izero = I nzero True
+iZero :: I
+iZero = I nZero True
 
 iPosFromList :: [D] -> I
 iPosFromList = posI . nFromList
@@ -388,21 +402,21 @@ iPosFromList = posI . nFromList
 iNegFromList :: [D] -> I
 iNegFromList = negI . nFromList
 
-ipos1 :: I
-ipos1 = iPosFromList [D1]
+iOne :: I
+iOne = iPosFromList [D1]
 
-ineg1 :: I
-ineg1 = iNegFromList [D1]
+iMinusOne :: I
+iMinusOne = iNegFromList [D1]
 
 instance Show I where
   show (I n s)
     | s = show n
-    | otherwise = if n == nzero then show n else "-" ++ show n
+    | otherwise = if n == nZero then show n else "-" ++ show n
 
 instance Enum I where
   fromEnum (I n s) = let val = fromEnum n in if s then val else -val
   toEnum d 
-    | d == 0 = izero
+    | d == 0 = iZero
     | d > 0 = posI $ (toEnum d)
     | otherwise = negI $ toEnum (-d)
 
@@ -412,8 +426,8 @@ instance Eq I where
     | not isZero1 && not isZero2 = if s1 == s2 then n1 == n2 else False 
     | otherwise = False  
     where
-      isZero1 = nzero == n1
-      isZero2 = nzero == n2
+      isZero1 = nZero == n1
+      isZero2 = nZero == n2
 
 instance Ord I where
   (I n1 s1) `compare` (I n2 s2)
@@ -425,16 +439,16 @@ instance Ord I where
     | not s1 && not s2 = invertOrd $ n1 `compare` n2
     | otherwise = LT --not s1 && s2
     where 
-      isZero1 = n1 == nzero
-      isZero2 = n2 == nzero
+      isZero1 = n1 == nZero
+      isZero2 = n2 == nZero
       invertOrd GT = LT
       invertOrd LT = GT
       invertOrd EQ = EQ
 
 addI :: I -> I -> I
 addI i1@(I n1 s1) i2@(I n2 s2)
-  | n1 == nzero = i2
-  | n2 == nzero = i1
+  | n1 == nZero = i2
+  | n2 == nZero = i1
   | s1 && s2 = I (addN n1 n2) True
   | not s1 && not s2 = I (addN n1 n2) False
   | s1 && not s2 = if n1 < n2 then negI (subN n2 n1) else posI (subN n1 n2)
@@ -442,7 +456,7 @@ addI i1@(I n1 s1) i2@(I n2 s2)
 
 mulI :: I -> I -> I
 mulI (I n1 s1) (I n2 s2)
-  | n1 == nzero || n2 == nzero = izero
+  | n1 == nZero || n2 == nZero = iZero
   | s1 == s2 = I (mulN n1 n2) True
   | otherwise = I (mulN n1 n2) False
 
@@ -451,17 +465,15 @@ instance Num I where
   (*) = mulI
   abs (I n s) = I n True
   signum i
-    | i == 0 = izero
-    | i > 0 = I (N [D1]) True
-    | otherwise = I (N [D1]) False
+    | i == 0 = iZero
+    | i > 0 = iOne
+    | otherwise = iMinusOne 
   fromInteger i
-    | i == 0 = izero
-    | i > 0 = case mkDRlistFromInt i of
-      Just n -> I (N $ reverse n) True
-      Nothing -> izero
-    | otherwise = negate $ fromInteger $ abs i
+    | i == 0 = iZero
+    | i > 0 = I (fromInteger i) True
+    | otherwise = negate $ fromInteger $ negate i
   negate (I n s)
-    | n == nzero = izero
+    | n == nZero = iZero
     | otherwise = I n (not s)
 
 data F = F N N Bool
