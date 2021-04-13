@@ -20,6 +20,9 @@ module Arithmetic
   , iZero
   , iOne
   , iMinusOne
+  , F
+  , posF
+  , negF
   ) where
 
 import Control.Monad (mapM)
@@ -235,21 +238,27 @@ divModDlist ds1 ds2 = Just $ foldl runDiv ([], []) ds1
     runDiv :: ([D], [D]) -> D -> ([D], [D]) 
     runDiv (qr, n) d = (q:qr, dropTrailZero rr)
       where
-        (q, rr) = divModRlistForD (d:n) ds2'
+        (q, rr) = divModRlistForD0 (d:n) ds2'
 
 -- least signficant digit comes first
 -- the quotient will be a single largest possible digit
 -- remainder will be produced in a most signficant first format
 -- the results also follows least significant first format
-divModRlistForD :: [D] -> [D] -> (D, [D])
-divModRlistForD num denom = case dropWhile greaterThanNum attempts of
+-- 
+-- this method resembles a manual long division process 
+-- suppose we have x digits in the dividend and y digits (y << x) in the divisor
+-- so the entire process is linear to the (x-y) as that's the number 
+-- of long division we have to perform. 
+--
+
+divModRlistForD0 :: [D] -> [D] -> (D, [D])
+divModRlistForD0 num denom = case dropWhile greaterThanNum attempts of
   [] -> (D0, num)
   ((i, val):_) -> (i, subDRlist num val)
   where 
     mul' = mulDRlistByD denom 
     attempts = fmap (\x -> (x, mul' x)) $ reverse [D1 .. D9]
     greaterThanNum (_, x) = (reverse x) `compareDs` (reverse num) == GT
-
 
 ---------------------- Natural number -------------------------
 -- the most significant digit comes first. 
@@ -262,6 +271,9 @@ mkN cs = (N . dropLeadZero) <$> (mapM fromChar cs)
 
 mkN' :: String -> Maybe N'
 mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
+
+nToInteger :: Num a =>  N -> a
+nToInteger (N ds) = foldl horner 0 $ fmap (fromIntegral . fromEnum) ds
 
 instance Show N where
   show (N []) = "0"
@@ -282,7 +294,6 @@ instance Enum N where
       Just n -> n
     | d == 0 = nZero
     | otherwise = undefined
-    
 
 instance Eq N where
   (N ds1) == (N ds2) = ds1 `eq` ds2
@@ -316,7 +327,15 @@ instance Num N where
   negate = undefined
 
 instance Real N where
-  toRational (N ds)= foldl horner 0 $ fmap (fromIntegral . fromEnum) ds
+  toRational = nToInteger
+
+instance Integral N where
+  -- since it is for natural numbers only, quotRem and divMod are identical
+  n1 `quotRem` n2 = case n1 `divModN` n2 of
+    Nothing -> error "divide by zero for type N"
+    Just ret -> ret
+  divMod = quotRem -- otherwise it depends on negate function from Num class
+  toInteger = nToInteger
 
 nZero :: N
 nZero = N [D0]
@@ -353,11 +372,26 @@ subN (N ns) (N ms) = nFromList $ subDlist ns ms
 mulN :: N -> N -> N
 mulN (N ns) (N ms) = nFromList $ mulDlist ns ms
 
-divModN :: N -> N -> Maybe (N, N)
-divModN (N ns) (N ms) = Bf.bimap toN toN <$> divModDlist ns ms
+divModN0 :: N -> N -> Maybe (N, N)
+divModN0 (N ns) (N ms) = Bf.bimap toN toN <$> divModDlist ns ms
   where 
     toN = nFromList . dropLeadZero . reverse
 
+-- this provides a method that is not linearly scaled by the number 
+-- of digits difference between the dividend and divisor. 
+-- Suppose dividend has 30 extra digits, so there answer is at 10^30 level.
+-- It takes on average ~30 long divisions to figure out each digit. 
+-- or when we use binary representation of the result, in the format 
+-- of b(n)*2^n + b(n-1)*2^(n-1) + ... + b(1)*2^1 + b(0)*2^0
+-- b(x) is either 0 or 1
+-- there will more digits to work on, however each digit might take fewer 
+-- tries to find out
+divModN1 :: N -> N -> Maybe (N, N)
+divModN1 num denom
+  | denom == nZero = Nothing
+  | otherwise = undefined
+
+divModN = divModN0
 
 -- when n > 0 and m > 0, gcd(n, m) gives the greatest common divisor
 -- when n > 0, gcd(n, 0) = n
@@ -409,6 +443,11 @@ iOne = iPosFromList [D1]
 iMinusOne :: I
 iMinusOne = iNegFromList [D1]
 
+invertOrd :: Ordering -> Ordering
+invertOrd GT = LT
+invertOrd LT = GT
+invertOrd EQ = EQ
+
 instance Show I where
   show (I n s)
     | s = show n
@@ -442,9 +481,6 @@ instance Ord I where
     where 
       isZero1 = n1 == nZero
       isZero2 = n2 == nZero
-      invertOrd GT = LT
-      invertOrd LT = GT
-      invertOrd EQ = EQ
 
 addI :: I -> I -> I
 addI i1@(I n1 s1) i2@(I n2 s2)
@@ -482,4 +518,130 @@ instance Real I where
     | n >= nZero = toRational n
     | otherwise = negate $ toRational n
 
-data F = F N N Bool
+quotRemI :: I -> I -> (I, I)
+quotRemI i1@(I n1 s1) i2@(I n2 s2)
+  | i2 == iZero = error "divide by zero for type I"
+  | i1 == iZero = (iZero, iZero)
+  | s1 && s2 = (posI q, posI r)
+  | s1 && not s2 = (negI q, posI r)
+  | not s1 && s2 = (negI q, negI r)
+  | otherwise = (posI q, negI r) -- not s1 && not s2
+  where 
+    (q, r) = n1 `quotRem` n2
+
+instance Integral I where
+  quotRem = quotRemI
+  toInteger (I n s)
+    | n >= nZero = toInteger n
+    | otherwise = negate $ toInteger n
+
+data F = F N N Bool -- numerator, denominator and sign, denom > 0
+
+instance Show F where
+  show (F n1 n2 s)
+    | n2 == nZero = error "divide by zero in type F"
+    | n2 == nOne = show (I n1 s)
+    | otherwise = if s then frac else "-" ++ frac
+    where 
+      frac = show n1 ++ "/" ++ show n2
+
+simplify :: (N, N) -> (N, N)
+simplify (num, denom)
+  | denom == nZero = (num, denom)
+  | divisor == nOne = (num, denom)
+  | otherwise = ((num `quot` divisor), (denom `quot` divisor))
+  where
+    divisor = gcdN num denom
+
+simplifyF :: F -> F
+simplifyF (F n d s) = let (n', d') = simplify (n, d) in F n' d' s
+
+constructF :: N -> N -> Bool -> Maybe F
+constructF n1 n2 s
+  | n2' == nZero = Nothing
+  | otherwise = Just $ F n1' n2' s
+  where
+    (n1', n2') = simplify (n1, n2)
+
+posF :: N -> N -> Maybe F
+posF n1 n2 = constructF n1 n2 True
+
+negF :: N -> N -> Maybe F
+negF n1 n2  = constructF n1 n2 False
+
+fZero :: F
+fZero = F nZero nOne True
+
+fOne :: F
+fOne = F nOne nOne True
+
+fMinusOne :: F
+fMinusOne = F nOne nOne False
+
+instance Eq F where
+  (F n1 d1 s1) == (F n2 d2 s2)
+    | d1' == nZero || d2' == nZero = error "divide by zero in type F"
+    -- these 4 special cases for performance
+    | n1' == nZero && n2' == nZero = True
+    | n1' /= nZero && n2' == nZero = False
+    | n1' == nZero && n2' /= nZero = False
+    | s1 /= s2 = False
+    | otherwise = n1' * d2' == n2' * d1' -- comparing n1/d1 vs n2/d2
+    where
+      (n1', d1') = simplify (n1, d1)
+      (n2', d2') = simplify (n2, d2)
+
+instance Ord F where
+  (F n1 d1 s1) `compare` (F n2 d2 s2)
+    | d1 == nZero || d2 == nZero = error "divide by zero in type F"
+    | n1 == nZero && n2 == nZero = EQ
+    | n1 /= nZero && n2 == nZero = if s1 then GT else LT
+    | n1 == nZero && n2 /= nZero = if s2 then LT else GT
+    | s1 && s2 = (n1 * d2) `compare` (n2 * d1)
+    | s1 && not s2 = GT
+    | not s1 && s2 = LT 
+    | otherwise = invertOrd $ (n1 * d2) `compare` (n2 * d1)
+
+addF :: F -> F -> F
+addF f1@(F n1 d1 s1) f2@(F n2 d2 s2)
+  | d1 == nZero || d2 == nZero = error "divide by zero in type F"
+  | n1 == nZero = simplifyF f2
+  | n2 == nZero = simplifyF f1
+  | s1 && s2 = simplifyF $ F (n1'*d2' + n2'*d1') (d1'*d2') True
+  | not s1 && not s2 = simplifyF $ F (n1'*d2' + n2'*d1') (d1'*d2') False
+  | s1 && not s2 = 
+    let 
+      num1 = n1'*d2'
+      num2 = n2'*d1'
+    in if num1 > num2
+      then simplifyF $ F (num1-num2) (d1'*d2') True
+      else simplifyF $ F (num2-num1) (d1'*d2') False
+  | otherwise = addF f2 f1 -- not s2 && s2
+  where 
+    (n1', d1') = simplify (n1, d1)
+    (n2', d2') = simplify (n2, d2)
+
+mulF :: F -> F -> F
+mulF (F n1 d1 s1) (F n2 d2 s2)
+  | d1 == nZero || d2 == nZero = error "divide by zero in type F"
+  | n1 == nZero || n2 == nZero = fZero
+  | otherwise = F num denom (s1 == s2)
+  where 
+    (num, denom) = simplify (n1*n2, d1*d2)
+
+-- have to control the construction of F to avoid repeatedly checking
+instance Num F where
+  (+) = addF
+  (*) = mulF
+  abs (F n d s) = F n d True
+  signum (F n d s)
+    | n == 0 = 0
+    | n > 0 = 1
+    | otherwise = (-1)
+  fromInteger i 
+    | i == 0 = fZero
+    | i > 0 = F (fromInteger i) 1 True
+    | otherwise = negate $ fromInteger $ negate i
+  negate (F n d s)
+    | n == 0 = fZero
+    | otherwise = F n d (not s)
