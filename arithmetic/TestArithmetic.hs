@@ -52,18 +52,11 @@ instance Arbitrary I where
     n <- arbitrary
     sign <- arbitrary
     if sign 
-      then return $ posI n
-      else return $ negI n
+      then return $ posIFromN n
+      else return $ negIFromN n
 
 instance Arbitrary F where
-  arbitrary = do 
-    num <- arbitrary
-    denom <- arbitrary
-    sign <- arbitrary
-    let f = if sign then posF else negF
-    case f num denom of
-      Nothing -> arbitrary
-      Just ret -> return ret
+  arbitrary = undefined
 
 prop_DCharConversion :: D -> Bool
 prop_DCharConversion d = d' == Just d

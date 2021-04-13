@@ -14,15 +14,16 @@ module Arithmetic
   , nOne
   , nFromList
   , I
-  , posI
-  , negI
+  , posIFromN
+  , negIFromN
   , mkI
   , iZero
   , iOne
   , iMinusOne
   , F
-  , posF
-  , negF
+  , posFFromNs
+  , negFFromNs
+  , fFromI
   ) where
 
 import Control.Monad (mapM)
@@ -418,11 +419,11 @@ lcmN n m
 --------------------- Integer Number -------------------------
 data I = I N Bool -- True means positive, 0 can be either way 
 
-posI :: N -> I
-posI n = I n True
+posIFromN :: N -> I
+posIFromN n = I n True
 
-negI :: N -> I
-negI n = I n False
+negIFromN :: N -> I
+negIFromN n = I n False
 
 mkI :: String -> Maybe I
 mkI ('-':cs) = I <$> mkN cs <*> pure False
@@ -432,10 +433,10 @@ iZero :: I
 iZero = I nZero True
 
 iPosFromList :: [D] -> I
-iPosFromList = posI . nFromList
+iPosFromList = posIFromN . nFromList
 
 iNegFromList :: [D] -> I
-iNegFromList = negI . nFromList
+iNegFromList = negIFromN . nFromList
 
 iOne :: I
 iOne = iPosFromList [D1]
@@ -457,8 +458,8 @@ instance Enum I where
   fromEnum (I n s) = let val = fromEnum n in if s then val else -val
   toEnum d 
     | d == 0 = iZero
-    | d > 0 = posI $ (toEnum d)
-    | otherwise = negI $ toEnum (-d)
+    | d > 0 = posIFromN $ (toEnum d)
+    | otherwise = negIFromN $ toEnum (-d)
 
 instance Eq I where
   (I n1 s1) == (I n2 s2)
@@ -488,8 +489,8 @@ addI i1@(I n1 s1) i2@(I n2 s2)
   | n2 == nZero = i1
   | s1 && s2 = I (addN n1 n2) True
   | not s1 && not s2 = I (addN n1 n2) False
-  | s1 && not s2 = if n1 < n2 then negI (subN n2 n1) else posI (subN n1 n2)
-  | not s1 && s2 = if n1 > n2 then negI (subN n1 n2) else posI (subN n2 n1)
+  | s1 && not s2 = if n1 < n2 then negIFromN (subN n2 n1) else posIFromN (subN n1 n2)
+  | not s1 && s2 = if n1 > n2 then negIFromN (subN n1 n2) else posIFromN (subN n2 n1)
 
 mulI :: I -> I -> I
 mulI (I n1 s1) (I n2 s2)
@@ -522,10 +523,10 @@ quotRemI :: I -> I -> (I, I)
 quotRemI i1@(I n1 s1) i2@(I n2 s2)
   | i2 == iZero = error "divide by zero for type I"
   | i1 == iZero = (iZero, iZero)
-  | s1 && s2 = (posI q, posI r)
-  | s1 && not s2 = (negI q, posI r)
-  | not s1 && s2 = (negI q, negI r)
-  | otherwise = (posI q, negI r) -- not s1 && not s2
+  | s1 && s2 = (posIFromN q, posIFromN r)
+  | s1 && not s2 = (negIFromN q, posIFromN r)
+  | not s1 && s2 = (negIFromN q, negIFromN r)
+  | otherwise = (posIFromN q, negIFromN r) -- not s1 && not s2
   where 
     (q, r) = n1 `quotRem` n2
 
@@ -563,11 +564,26 @@ constructF n1 n2 s
   where
     (n1', n2') = simplify (n1, n2)
 
-posF :: N -> N -> Maybe F
-posF n1 n2 = constructF n1 n2 True
 
-negF :: N -> N -> Maybe F
-negF n1 n2  = constructF n1 n2 False
+mkF :: String -> Maybe F
+mkF ('-':cs) = negate <$> mkF cs
+mkF cs = case rest of
+  [] -> fFromI <$> (I <$> num <*> pure True)
+  ('/':cs') -> F <$> num <*> mkN cs' <*> pure True
+  _ -> Nothing 
+  where
+    num = mkN $ takeWhile (/= '/') cs
+    rest = dropWhile (/= '/') cs
+
+
+posFFromNs :: N -> N -> Maybe F
+posFFromNs n1 n2 = constructF n1 n2 True
+
+negFFromNs :: N -> N -> Maybe F
+negFFromNs n1 n2  = constructF n1 n2 False
+
+fFromI :: I -> F
+fFromI (I n s) = F n nOne s
 
 fZero :: F
 fZero = F nZero nOne True
