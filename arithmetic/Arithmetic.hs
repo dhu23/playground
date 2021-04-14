@@ -34,6 +34,8 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Bifunctor as Bf (bimap)
 import qualified Data.Function as F (on)
 
+--import Debug.Trace
+
 data D
   = D0 | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 
   deriving (Enum, Bounded, Eq, Ord, Show)
@@ -613,8 +615,7 @@ instance Eq F where
     | d1' == nZero || d2' == nZero = error "divide by zero in type F"
     -- these 4 special cases for performance
     | n1' == nZero && n2' == nZero = True
-    | n1' /= nZero && n2' == nZero = False
-    | n1' == nZero && n2' /= nZero = False
+    | n1' == nZero || n2' == nZero = False
     | s1 /= s2 = False
     | otherwise = n1' * d2' == n2' * d1' -- comparing n1/d1 vs n2/d2
     where
@@ -640,12 +641,12 @@ addF f1@(F n1 d1 s1) f2@(F n2 d2 s2)
   | s1 && s2 = simplifyF $ F (n1'*d2' + n2'*d1') (d1'*d2') True
   | not s1 && not s2 = simplifyF $ F (n1'*d2' + n2'*d1') (d1'*d2') False
   | s1 && not s2 = 
-    let 
+    let
       num1 = n1'*d2'
       num2 = n2'*d1'
     in if num1 > num2
-      then simplifyF $ F (num1-num2) (d1'*d2') True
-      else simplifyF $ F (num2-num1) (d1'*d2') False
+      then simplifyF $ F (subN num1 num2) (d1'*d2') True
+      else simplifyF $ F (subN num2 num1) (d1'*d2') False
   | otherwise = addF f2 f1 -- not s2 && s2
   where 
     (n1', d1') = simplify (n1, d1)
