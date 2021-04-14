@@ -95,28 +95,10 @@ prop_NDivMod0 n = n `divModN` nZero == Nothing
 prop_NDivMod1 :: N -> Bool
 prop_NDivMod1 n = n `divModN` nOne == Just (n, nZero)
 
-prop_NDivMod :: N -> N -> N -> Bool
-prop_NDivMod n1 n2 n3 = case0 && case1 && case2
-  where
-    (minn:midn:maxn:[]) = L.sort [n1, n2, n3]
-    case0 = 
-      let v = (maxn * midn + minn) `divModN` maxn
-      in 
-        if maxn > nZero 
-          then v == Just (midn, minn)
-          else v == Nothing
-    case1 = 
-      let v = (maxn * midn + minn) `divModN` midn
-      in 
-        if midn > nZero 
-          then v == Just (maxn, minn)
-          else v == Nothing
-    case2 = 
-      let v = (maxn * minn + midn) `divModN` maxn
-      in 
-        if maxn > nZero 
-          then v == Just (minn, midn) 
-          else v == Nothing
+prop_NDivMod :: N -> N -> Bool
+prop_NDivMod n1 n2 = case n1 `divModN` n2 of
+  Nothing -> n2 == nZero
+  Just (d, m) -> m < n2 && d * n2 + m == n1
 
 prop_addUnit :: (Eq a, Num a) => a -> Bool
 prop_addUnit i = i + 0 == i
@@ -142,9 +124,9 @@ prop_mulAssociativeLaw x y z = (x * y) * z == x * (y * z)
 prop_mulDistributiveLaw :: (Eq a, Num a) => a -> a -> a -> Bool
 prop_mulDistributiveLaw x y z = x * (y + z) == x * y + x * z 
 
-prop_addSubDuality0 :: (Eq a, Num a) => a -> a -> Bool
+prop_addSubDuality0 :: (Eq a, Show a, Num a) => a -> a -> Bool
 prop_addSubDuality0 i1 i2 = i1 - i2 == i1 + (negate i2)
-
+        
 prop_compareSub :: (Eq a, Ord a, Num a) => a -> a -> Bool
 prop_compareSub i1 i2
   | i1 == i2 = diff == 0
