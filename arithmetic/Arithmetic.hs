@@ -21,6 +21,9 @@ module Arithmetic
   , iOne
   , iMinusOne
   , F
+  , debugF
+  , getDenom
+  , constructF
   , posFFromNs
   , negFFromNs
   , fFromI
@@ -108,7 +111,7 @@ addD D8 x = runAddByCount D8 x D2
 addD D9 x = runAddByCount D9 x D1
 
 subD :: D -> D -> (Bool, D) -- Bool indicates borrow
-subD x y 
+subD x y
   | x == y = (False, D0)
   | x > y = (False, addByCount D0 x y) -- increase y to x
   | otherwise = let (_, ret) = addD x (addByCount D1 D9 y) in (True, ret)
@@ -335,7 +338,7 @@ instance Integral N where
   n1 `quotRem` n2 = case n1 `divModN` n2 of
     Nothing -> error "divide by zero for type N"
     Just ret -> ret
-  divMod = quotRem -- otherwise it depends on negate function from Num class
+  n1 `divMod` n2 = n1 `quotRem` n2 -- otherwise it depends on negate function from Num class
   toInteger = nToInteger
 
 nZero :: N
@@ -538,6 +541,12 @@ instance Integral I where
 
 data F = F N N Bool -- numerator, denominator and sign, denom > 0
 
+debugF :: F -> String
+debugF (F (N n) (N d) s)= "F:" ++ show n ++ "/" ++ show d ++ "," ++ show s
+
+getDenom :: F -> N
+getDenom (F _ d _) = d
+
 instance Show F where
   show (F n1 n2 s)
     | n2 == nZero = error "divide by zero in type F"
@@ -549,6 +558,7 @@ instance Show F where
 simplify :: (N, N) -> (N, N)
 simplify (num, denom)
   | denom == nZero = (num, denom)
+  | num == nZero = (nZero, nOne) -- without this, 0/5 causes issue in otherwise
   | divisor == nOne = (num, denom)
   | otherwise = ((num `quot` divisor), (denom `quot` divisor))
   where
@@ -557,13 +567,17 @@ simplify (num, denom)
 simplifyF :: F -> F
 simplifyF (F n d s) = let (n', d') = simplify (n, d) in F n' d' s
 
-constructF :: N -> N -> Bool -> Maybe F
-constructF n1 n2 s
+constrcutMabyeF :: N -> N -> Bool -> Maybe F
+constrcutMabyeF n1 n2 s
   | n2' == nZero = Nothing
   | otherwise = Just $ F n1' n2' s
   where
     (n1', n2') = simplify (n1, n2)
 
+constructF :: N -> N -> Bool -> F
+constructF n1 n2 s
+  | n2 == 0 = constructF n1 1 s
+  | otherwise = let (n1', n2') = simplify (n1, n2) in F n1' n2' s
 
 mkF :: String -> Maybe F
 mkF ('-':cs) = negate <$> mkF cs
@@ -577,10 +591,10 @@ mkF cs = case rest of
 
 
 posFFromNs :: N -> N -> Maybe F
-posFFromNs n1 n2 = constructF n1 n2 True
+posFFromNs n1 n2 = constrcutMabyeF n1 n2 True
 
 negFFromNs :: N -> N -> Maybe F
-negFFromNs n1 n2  = constructF n1 n2 False
+negFFromNs n1 n2  = constrcutMabyeF n1 n2 False
 
 fFromI :: I -> F
 fFromI (I n s) = F n nOne s

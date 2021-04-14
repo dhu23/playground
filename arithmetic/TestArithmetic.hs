@@ -3,7 +3,18 @@ import Arithmetic
 import qualified Control.Monad as M (replicateM)
 import qualified Data.List as L (sort)
 
--- based off integer conversion
+import Debug.Trace
+-- trace is a very useful function to debug
+-- say I want to see how what happens inside of prop_NEnum
+-- I can use 
+-- prop_NEnum' i = trace ("passing integer:" + show i) (prop_NEnum i)
+
+--------------------  based off integer conversion -----------------------
+prop_DCharConversion :: D -> Bool
+prop_DCharConversion d = d' == Just d
+  where
+    d' = fromChar (toChar d) 
+
 prop_NEnum :: Int -> Bool
 prop_NEnum i
   | i < 0 = True -- no need to test it
@@ -36,8 +47,19 @@ prop_IDivMod i1 i2
   | otherwise = (i1 `divMod` i2) == (toInteger q, toInteger r)
   where
     (q, r) = (fromInteger i1) `divMod` (fromInteger i2)
+
+
+checkThroughConversions :: IO ()
+checkThroughConversions = do
+  quickCheck prop_DCharConversion
+  quickCheck prop_NEnum
+  quickCheck prop_NShow'
+  quickCheck prop_IEnum
+  quickCheck prop_IDivMod
+  quickCheck prop_IQuotRem
+
   
--- innate property based
+-- ---------------- innate mathematical property based ----------------------
 instance Arbitrary D where
   arbitrary = elements [minBound .. maxBound]
 
@@ -56,12 +78,16 @@ instance Arbitrary I where
       else return $ negIFromN n
 
 instance Arbitrary F where
-  arbitrary = undefined
+  arbitrary = do
+    num <- arbitrary
+    denom <- arbitrary
+    sign <- arbitrary
+    let denom' = max denom 1
+    return $ constructF num denom' sign
+      
 
-prop_DCharConversion :: D -> Bool
-prop_DCharConversion d = d' == Just d
-  where
-    d' = fromChar (toChar d) 
+prop_PosDenom :: F -> Bool
+prop_PosDenom f = (getDenom f) > 0
 
 prop_NDivMod0 :: N -> Bool
 prop_NDivMod0 n = n `divModN` nZero == Nothing
@@ -92,14 +118,14 @@ prop_NDivMod n1 n2 n3 = case0 && case1 && case2
           then v == Just (minn, midn) 
           else v == Nothing
 
-prop_IAddUnit :: I -> Bool
-prop_IAddUnit i = i + iZero == i
+prop_addUnit :: (Eq a, Num a) => a -> Bool
+prop_addUnit i = i + 0 == i
 
-prop_ISubUnit :: I -> Bool
-prop_ISubUnit i = i - iZero == i
+prop_subUnit :: (Eq a, Num a) => a -> Bool
+prop_subUnit i = i - 0 == i
 
-prop_IMulUnit :: I -> Bool
-prop_IMulUnit i = i * iOne == i
+prop_mulUnit :: (Eq a, Num a) => a -> Bool
+prop_mulUnit i = i * 1 == i
 
 prop_addCommutativeLaw :: (Eq a, Num a) => a -> a -> Bool
 prop_addCommutativeLaw x y = x + y == y + x
@@ -116,42 +142,63 @@ prop_mulAssociativeLaw x y z = (x * y) * z == x * (y * z)
 prop_mulDistributiveLaw :: (Eq a, Num a) => a -> a -> a -> Bool
 prop_mulDistributiveLaw x y z = x * (y + z) == x * y + x * z 
 
-prop_ISubAddDuality :: I -> I -> Bool
-prop_ISubAddDuality i1 i2 = i1 - i2 == i1 + (negate i2)
+prop_addSubDuality0 :: (Eq a, Num a) => a -> a -> Bool
+prop_addSubDuality0 i1 i2 = i1 - i2 == i1 + (negate i2)
 
-prop_ICompareSub :: I -> I -> Bool
-prop_ICompareSub i1 i2
-  | i1 == i2 = diff == iZero
-  | i1 > i2 = diff > iZero
-  | otherwise = diff < iZero
+prop_compareSub :: (Eq a, Ord a, Num a) => a -> a -> Bool
+prop_compareSub i1 i2
+  | i1 == i2 = diff == 0
+  | i1 > i2 = diff > 0
+  | otherwise = diff < 0
   where 
     diff = i1 - i2
 
--- I noticed that running this compiled is much faster than in ghci
-main = do
-  quickCheck prop_NEnum
-  quickCheck prop_NShow'
-  quickCheck prop_IEnum
-  quickCheck prop_DCharConversion
+checkNLaws :: IO ()
+checkNLaws = do
   quickCheck prop_NDivMod0
-  --quickCheck prop_NDivMod
-  quickCheck prop_IAddUnit
-  quickCheck prop_ISubUnit
-  quickCheck prop_IMulUnit
+  quickCheck prop_NDivMod1
+  quickCheck prop_NDivMod
+  quickCheck (prop_addUnit :: N -> Bool)
+  quickCheck (prop_mulUnit :: N -> Bool)
   quickCheck (prop_addCommutativeLaw :: N -> N -> Bool)
-  quickCheck (prop_addCommutativeLaw :: I -> I -> Bool)
-  --quickCheck (prop_addCommutativeLaw :: F -> F -> Bool)
   quickCheck (prop_mulCommutativeLaw  :: N -> N -> Bool)
-  quickCheck (prop_mulCommutativeLaw  :: I -> I -> Bool)
-  --quickCheck (prop_mulCommutativeLaw  :: N -> N -> Bool)
   quickCheck (prop_addAssociativeLaw :: N -> N -> N -> Bool)
-  quickCheck (prop_addAssociativeLaw :: I -> I -> I -> Bool)
-  --quickCheck (prop_addAssociativeLaw :: N -> N -> Bool)
   quickCheck (prop_mulAssociativeLaw :: N -> N -> N -> Bool)
-  quickCheck (prop_mulAssociativeLaw :: I -> I -> I -> Bool)
-  --quickCheck (prop_mulAssociativeLaw :: N -> N -> Bool)
   quickCheck (prop_mulDistributiveLaw :: N -> N -> N -> Bool)
+
+
+checkILaws :: IO ()
+checkILaws = do
+  quickCheck (prop_addUnit :: I -> Bool)
+  quickCheck (prop_subUnit :: I -> Bool)
+  quickCheck (prop_mulUnit :: I -> Bool)
+  quickCheck (prop_addSubDuality0 :: I -> I -> Bool)
+  quickCheck (prop_compareSub :: I -> I -> Bool)
+  quickCheck (prop_addCommutativeLaw :: I -> I -> Bool)
+  quickCheck (prop_mulCommutativeLaw  :: I -> I -> Bool)
+  quickCheck (prop_addAssociativeLaw :: I -> I -> I -> Bool)
+  quickCheck (prop_mulAssociativeLaw :: I -> I -> I -> Bool)
   quickCheck (prop_mulDistributiveLaw :: I -> I -> I -> Bool)
-  --quickCheck (prop_mulDistributiveLaw :: N -> N -> Bool)
-  quickCheck prop_ISubAddDuality
-  quickCheck prop_ICompareSub
+
+
+checkFLaws :: IO ()
+checkFLaws = do
+  quickCheck prop_PosDenom
+  quickCheck (prop_addUnit :: F -> Bool)
+  quickCheck (prop_subUnit :: F -> Bool)
+  quickCheck (prop_mulUnit :: F -> Bool)
+  quickCheck (prop_addSubDuality0 :: F -> F -> Bool)
+  quickCheck (prop_compareSub :: F -> F -> Bool)
+  quickCheck (prop_addCommutativeLaw :: F -> F -> Bool)
+  quickCheck (prop_mulCommutativeLaw  :: F -> F -> Bool)
+  quickCheck (prop_addAssociativeLaw :: F -> F -> F -> Bool)
+  quickCheck (prop_mulAssociativeLaw :: F -> F -> F -> Bool)
+  quickCheck (prop_mulDistributiveLaw :: F -> F -> F -> Bool)
+
+
+-- I noticed that running this compiled is way much faster than in ghci
+main = do
+  trace "checking conversion..." checkThroughConversions
+  trace "checking for N..." checkNLaws
+  trace "checking for I..." checkILaws
+  trace "checking for F..." checkFLaws
