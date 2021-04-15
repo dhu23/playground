@@ -541,6 +541,7 @@ instance Integral I where
     | n >= nZero = toInteger n
     | otherwise = negate $ toInteger n
 
+--------------------------- Fraction ----------------------------------
 data F = F N N Bool -- numerator, denominator and sign, denom > 0
 
 debugF :: F -> String
