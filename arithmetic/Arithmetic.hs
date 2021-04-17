@@ -13,10 +13,10 @@ module Arithmetic
   , nZero
   , nOne
   , nFromList
-  , I
-  , posIFromN
-  , negIFromN
-  , mkI
+  , Z
+  , posZFromN
+  , negZFromN
+  , mkZ
   , iZero
   , iOne
   , iMinusOne
@@ -26,7 +26,7 @@ module Arithmetic
   , constructF
   , posFFromNs
   , negFFromNs
-  , fFromI
+  , fFromZ
   ) where
 
 import Control.Monad (mapM)
@@ -422,31 +422,31 @@ lcmN n m
     Just (q, _) -> q
 
 --------------------- Integer Number -------------------------
-data I = I N Bool -- True means positive, 0 can be either way 
+data Z = Z N Bool -- True means positive, 0 can be either way 
 
-posIFromN :: N -> I
-posIFromN n = I n True
+posZFromN :: N -> Z
+posZFromN n = Z n True
 
-negIFromN :: N -> I
-negIFromN n = I n False
+negZFromN :: N -> Z
+negZFromN n = Z n False
 
-mkI :: String -> Maybe I
-mkI ('-':cs) = I <$> mkN cs <*> pure False
-mkI cs = I <$> mkN cs <*> pure True
+mkZ :: String -> Maybe Z
+mkZ ('-':cs) = Z <$> mkN cs <*> pure False
+mkZ cs = Z <$> mkN cs <*> pure True
 
-iZero :: I
-iZero = I nZero True
+iZero :: Z
+iZero = Z nZero True
 
-iPosFromList :: [D] -> I
-iPosFromList = posIFromN . nFromList
+iPosFromList :: [D] -> Z
+iPosFromList = posZFromN . nFromList
 
-iNegFromList :: [D] -> I
-iNegFromList = negIFromN . nFromList
+iNegFromList :: [D] -> Z
+iNegFromList = negZFromN . nFromList
 
-iOne :: I
+iOne :: Z
 iOne = iPosFromList [D1]
 
-iMinusOne :: I
+iMinusOne :: Z
 iMinusOne = iNegFromList [D1]
 
 invertOrd :: Ordering -> Ordering
@@ -454,20 +454,20 @@ invertOrd GT = LT
 invertOrd LT = GT
 invertOrd EQ = EQ
 
-instance Show I where
-  show (I n s)
+instance Show Z where
+  show (Z n s)
     | s = show n
     | otherwise = if n == nZero then show n else "-" ++ show n
 
-instance Enum I where
-  fromEnum (I n s) = let val = fromEnum n in if s then val else -val
+instance Enum Z where
+  fromEnum (Z n s) = let val = fromEnum n in if s then val else -val
   toEnum d 
     | d == 0 = iZero
-    | d > 0 = posIFromN $ (toEnum d)
-    | otherwise = negIFromN $ toEnum (-d)
+    | d > 0 = posZFromN $ (toEnum d)
+    | otherwise = negZFromN $ toEnum (-d)
 
-instance Eq I where
-  (I n1 s1) == (I n2 s2)
+instance Eq Z where
+  (Z n1 s1) == (Z n2 s2)
     | isZero1 && isZero2 = True
     | not isZero1 && not isZero2 = if s1 == s2 then n1 == n2 else False 
     | otherwise = False  
@@ -475,8 +475,8 @@ instance Eq I where
       isZero1 = nZero == n1
       isZero2 = nZero == n2
 
-instance Ord I where
-  (I n1 s1) `compare` (I n2 s2)
+instance Ord Z where
+  (Z n1 s1) `compare` (Z n2 s2)
     | isZero1 && isZero2 = EQ
     | not isZero1 && isZero2 = if s1 then GT else LT
     | isZero1 && not isZero2 = if s2 then LT else GT
@@ -488,56 +488,56 @@ instance Ord I where
       isZero1 = n1 == nZero
       isZero2 = n2 == nZero
 
-addI :: I -> I -> I
-addI i1@(I n1 s1) i2@(I n2 s2)
+addZ :: Z -> Z -> Z
+addZ i1@(Z n1 s1) i2@(Z n2 s2)
   | n1 == nZero = i2
   | n2 == nZero = i1
-  | s1 && s2 = I (addN n1 n2) True
-  | not s1 && not s2 = I (addN n1 n2) False
-  | s1 && not s2 = if n1 < n2 then negIFromN (subN n2 n1) else posIFromN (subN n1 n2)
-  | not s1 && s2 = if n1 > n2 then negIFromN (subN n1 n2) else posIFromN (subN n2 n1)
+  | s1 && s2 = Z (addN n1 n2) True
+  | not s1 && not s2 = Z (addN n1 n2) False
+  | s1 && not s2 = if n1 < n2 then negZFromN (subN n2 n1) else posZFromN (subN n1 n2)
+  | not s1 && s2 = if n1 > n2 then negZFromN (subN n1 n2) else posZFromN (subN n2 n1)
 
-mulI :: I -> I -> I
-mulI (I n1 s1) (I n2 s2)
+mulZ :: Z -> Z -> Z
+mulZ (Z n1 s1) (Z n2 s2)
   | n1 == nZero || n2 == nZero = iZero
-  | s1 == s2 = I (mulN n1 n2) True
-  | otherwise = I (mulN n1 n2) False
+  | s1 == s2 = Z (mulN n1 n2) True
+  | otherwise = Z (mulN n1 n2) False
 
-instance Num I where
-  (+) = addI
-  (*) = mulI
-  abs (I n s) = I n True
+instance Num Z where
+  (+) = addZ
+  (*) = mulZ
+  abs (Z n s) = Z n True
   signum i
     | i == 0 = iZero
     | i > 0 = iOne
     | otherwise = iMinusOne 
   fromInteger i
     | i == 0 = iZero
-    | i > 0 = I (fromInteger i) True
+    | i > 0 = Z (fromInteger i) True
     | otherwise = negate $ fromInteger $ negate i
-  negate (I n s)
+  negate (Z n s)
     | n == nZero = iZero
-    | otherwise = I n (not s)
+    | otherwise = Z n (not s)
 
-instance Real I where
-  toRational (I n s)
+instance Real Z where
+  toRational (Z n s)
     | n >= nZero = toRational n
     | otherwise = negate $ toRational n
 
-quotRemI :: I -> I -> (I, I)
-quotRemI i1@(I n1 s1) i2@(I n2 s2)
-  | i2 == iZero = error "divide by zero for type I"
+quotRemZ :: Z -> Z -> (Z, Z)
+quotRemZ i1@(Z n1 s1) i2@(Z n2 s2)
+  | i2 == iZero = error "divide by zero for type Z"
   | i1 == iZero = (iZero, iZero)
-  | s1 && s2 = (posIFromN q, posIFromN r)
-  | s1 && not s2 = (negIFromN q, posIFromN r)
-  | not s1 && s2 = (negIFromN q, negIFromN r)
-  | otherwise = (posIFromN q, negIFromN r) -- not s1 && not s2
+  | s1 && s2 = (posZFromN q, posZFromN r)
+  | s1 && not s2 = (negZFromN q, posZFromN r)
+  | not s1 && s2 = (negZFromN q, negZFromN r)
+  | otherwise = (posZFromN q, negZFromN r) -- not s1 && not s2
   where 
     (q, r) = n1 `quotRem` n2
 
-instance Integral I where
-  quotRem = quotRemI
-  toInteger (I n s)
+instance Integral Z where
+  quotRem = quotRemZ
+  toInteger (Z n s)
     | n >= nZero = toInteger n
     | otherwise = negate $ toInteger n
 
@@ -553,7 +553,7 @@ getDenom (F _ d _) = d
 instance Show F where
   show (F n1 n2 s)
     | n2 == nZero = error "divide by zero in type F"
-    | n2 == nOne = show (I n1 s)
+    | n2 == nOne = show (Z n1 s)
     | otherwise = if s then frac else "-" ++ frac
     where 
       frac = show n1 ++ "/" ++ show n2
@@ -585,7 +585,7 @@ constructF n1 n2 s
 mkF :: String -> Maybe F
 mkF ('-':cs) = negate <$> mkF cs
 mkF cs = case rest of
-  [] -> fFromI <$> (I <$> num <*> pure True)
+  [] -> fFromZ <$> (Z <$> num <*> pure True)
   ('/':cs') -> F <$> num <*> mkN cs' <*> pure True
   _ -> Nothing 
   where
@@ -599,8 +599,8 @@ posFFromNs n1 n2 = constrcutMabyeF n1 n2 True
 negFFromNs :: N -> N -> Maybe F
 negFFromNs n1 n2  = constrcutMabyeF n1 n2 False
 
-fFromI :: I -> F
-fFromI (I n s) = F n nOne s
+fFromZ :: Z -> F
+fFromZ (Z n s) = F n nOne s
 
 fZero :: F
 fZero = F nZero nOne True

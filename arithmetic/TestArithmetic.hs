@@ -29,20 +29,20 @@ prop_NShow' i
   where 
     n = toEnum $ fromIntegral i :: N
 
-prop_IEnum :: Int -> Bool
-prop_IEnum i = fromEnum i' == i
+prop_ZEnum :: Int -> Bool
+prop_ZEnum i = fromEnum i' == i
   where
-    i' = toEnum i :: I
+    i' = toEnum i :: Z
 
-prop_IQuotRem :: Integer -> Integer -> Bool
-prop_IQuotRem i1 i2
+prop_ZQuotRem :: Integer -> Integer -> Bool
+prop_ZQuotRem i1 i2
   | i2 == 0 = True
   | otherwise = (i1 `quotRem` i2) == (toInteger q, toInteger r)
   where
     (q, r) = (fromInteger i1) `quotRem` (fromInteger i2)
 
-prop_IDivMod :: Integer -> Integer -> Bool
-prop_IDivMod i1 i2
+prop_ZDivMod :: Integer -> Integer -> Bool
+prop_ZDivMod i1 i2
   | i2 == 0 = True
   | otherwise = (i1 `divMod` i2) == (toInteger q, toInteger r)
   where
@@ -54,9 +54,9 @@ checkThroughConversions = do
   quickCheck prop_DCharConversion
   quickCheck prop_NEnum
   quickCheck prop_NShow'
-  quickCheck prop_IEnum
-  quickCheck prop_IDivMod
-  quickCheck prop_IQuotRem
+  quickCheck prop_ZEnum
+  quickCheck prop_ZDivMod
+  quickCheck prop_ZQuotRem
 
   
 -- ---------------- innate mathematical property based ----------------------
@@ -69,13 +69,13 @@ instance Arbitrary N where
     ds <- M.replicateM l arbitrary
     return $ nFromList ds
 
-instance Arbitrary I where
+instance Arbitrary Z where
   arbitrary = do
     n <- arbitrary
     sign <- arbitrary
     if sign 
-      then return $ posIFromN n
-      else return $ negIFromN n
+      then return $ posZFromN n
+      else return $ negZFromN n
 
 instance Arbitrary F where
   arbitrary = do
@@ -149,18 +149,18 @@ checkNLaws = do
   quickCheck (prop_mulDistributiveLaw :: N -> N -> N -> Bool)
 
 
-checkILaws :: IO ()
-checkILaws = do
-  quickCheck (prop_addUnit :: I -> Bool)
-  quickCheck (prop_subUnit :: I -> Bool)
-  quickCheck (prop_mulUnit :: I -> Bool)
-  quickCheck (prop_addSubDuality0 :: I -> I -> Bool)
-  quickCheck (prop_compareSub :: I -> I -> Bool)
-  quickCheck (prop_addCommutativeLaw :: I -> I -> Bool)
-  quickCheck (prop_mulCommutativeLaw  :: I -> I -> Bool)
-  quickCheck (prop_addAssociativeLaw :: I -> I -> I -> Bool)
-  quickCheck (prop_mulAssociativeLaw :: I -> I -> I -> Bool)
-  quickCheck (prop_mulDistributiveLaw :: I -> I -> I -> Bool)
+checkZLaws :: IO ()
+checkZLaws = do
+  quickCheck (prop_addUnit :: Z -> Bool)
+  quickCheck (prop_subUnit :: Z -> Bool)
+  quickCheck (prop_mulUnit :: Z -> Bool)
+  quickCheck (prop_addSubDuality0 :: Z -> Z -> Bool)
+  quickCheck (prop_compareSub :: Z -> Z -> Bool)
+  quickCheck (prop_addCommutativeLaw :: Z -> Z -> Bool)
+  quickCheck (prop_mulCommutativeLaw  :: Z -> Z -> Bool)
+  quickCheck (prop_addAssociativeLaw :: Z -> Z -> Z -> Bool)
+  quickCheck (prop_mulAssociativeLaw :: Z -> Z -> Z -> Bool)
+  quickCheck (prop_mulDistributiveLaw :: Z -> Z -> Z -> Bool)
 
 
 checkFLaws :: IO ()
@@ -182,5 +182,5 @@ checkFLaws = do
 main = do
   trace "checking conversion..." checkThroughConversions
   trace "checking for N..." checkNLaws
-  trace "checking for I..." checkILaws
+  trace "checking for Z..." checkZLaws
   trace "checking for F..." checkFLaws
