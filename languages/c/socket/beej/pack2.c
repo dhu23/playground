@@ -6,12 +6,33 @@
 #include <stdint.h> // defines int*_t, uint*_t types
 #include <inttypes.h> // for PRIdxxx
 
+// ----------------------- debug function ----------------------------
+void binrep8(unsigned char c)
+{
+    for (unsigned char i = 1<<7; i > 0; i /= 2)
+    {
+        if (c & i) { printf("1"); }
+        else { printf("0"); }
+    }
+    printf("\n");
+}
+
+void binrep32(unsigned int n)
+{
+    for (unsigned int i = 1<<31; i > 0; i /= 2)
+    {
+        if (n & i) { printf("1"); }
+        else { printf("0"); }
+    }
+    printf("\n");
+}
+
 // macros for packing floats and doubles:
 #define pack754_16(f) (pack754((f), 16, 5))
 #define pack754_32(f) (pack754((f), 32, 8))
 #define pack754_64(f) (pack754((f), 64, 11))
 
-#define unpack754_16(i) (unpack754((i), 16, 6))
+#define unpack754_16(i) (unpack754((i), 16, 5))
 #define unpack754_32(i) (unpack754((i), 32, 8))
 #define unpack754_64(i) (unpack754((i), 64, 11))
 
@@ -59,14 +80,15 @@ long double unpack754(uint64_t i, unsigned bits, unsigned expbits)
     result /= (1LL<<significandbits); // convert back to float
     result += 1.0f; //add the one back on
 
-    // deal with the exponent
+    // deal with the exponent. meaning that 0 is not represented as all zeros
     bias = (1<<(expbits-1))-1;
     shift = ((i>>significandbits)&((1LL<<expbits)-1)) - bias;
     while (shift > 0) { result *= 2.0; shift--; }
     while (shift < 0) { result /= 2.0; shift++; }
 
     // sign it
-    result *= (1>>(bits-1))&1 ? -1.0 : 1.0;
+    binrep32(i);
+    result *= (i>>(bits-1))&1 ? -1.0 : 1.0;
 
     return result;
 }
@@ -80,8 +102,10 @@ long double unpack754(uint64_t i, unsigned bits, unsigned expbits)
 // packi16() -- store a 16-bit int into a char buffer like htons
 void packi16(unsigned char *buf, uint16_t i)
 {
+    printf("i>>8=%d, i=%d\n", i>>8, i);
     *buf++ = i>>8; 
     *buf++ = i;
+    printf("prev2:%d, prev:%d\n", *(buf-2), *(buf-1));
 }
 
 // packi32 -- store a 32-bit int into a char buffer like htonl
@@ -132,6 +156,10 @@ int16_t unpacki16(unsigned char *buf)
 // unpacku32 - unpack a 32 bit unsigned from a char buffer like ntohl
 uint32_t unpacku32(unsigned char *buf)
 {
+    binrep8(buf[0]);
+    binrep8(buf[1]);
+    binrep8(buf[2]);
+    binrep8(buf[3]);
     return
         ((uint32_t)buf[0] << 24) |
         ((uint32_t)buf[1] << 16) |
@@ -147,7 +175,7 @@ int32_t unpacki32(unsigned char *buf)
     int32_t i;
     //change unsigned numbers to signed
     if (i2 <= 0x7fffffffu) { i = i2; }
-    else { i = -1 - (int32_t)(0xfffffffu - i2); }
+    else { i = -1 - (int32_t)(0xffffffffu - i2); }
 
     return i;
 }
@@ -175,7 +203,7 @@ int64_t unpacki64(unsigned char *buf)
 
     // change unsigned numbers to signed
     if (i2 <= 0x7fffffffffffffffu) { i = i2; }
-    else { i = -1 - (int64_t)(0x7fffffffffffffffu - i2); }
+    else { i = -1 - (int64_t)(0xffffffffffffffffu - i2); }
 
     return i;
 }
@@ -224,7 +252,7 @@ unsigned int pack(unsigned char *buf, char *format, ...)
     va_start(ap, format);
 
     for (; *format != '\0'; format++) {
-        printf("size=%d\n", size);
+        // printf("size=%d\n", size);
         switch (*format) {
         case 'c': // 8 bit
             size += 1;
@@ -240,7 +268,7 @@ unsigned int pack(unsigned char *buf, char *format, ...)
 
         case 'h': // 16 bit unsigned
             size += 2;
-            h = (short)va_arg(ap, int); 
+            h = (short)va_arg(ap, int);
             // h = va_arg(ap, short); 
             // when I used short, compiler says 
             // short int is promoted to int when passed through '...'
@@ -403,7 +431,8 @@ void unpack(unsigned char *buf, char *format, ...)
         case 'f': // float
             f = va_arg(ap, float*);
             fhold = unpacku32(buf);
-            *f = unpack754_16(fhold);
+            binrep32(fhold);
+            *f = unpack754_32(fhold);
             buf += 4;
             break;
 
@@ -475,6 +504,8 @@ int main(void)
 
     // packing and unpacking 
     unsigned char buf[1024];
+    memset(buf, 0, 1024);
+
     char *s = "Great unmitigated Zot! you've found the Runestaff!";
     int16_t packetsize, ps2;
 
@@ -483,7 +514,9 @@ int main(void)
         (int8_t)'B', (int16_t)0, (int16_t)37, (int32_t)-5, 
         s, (float)-3490.6677);
 
-    packi16(buf+1, packetsize); // store packet size in packet for kicks
+    // NOTE don't know why it does this from the example
+    // it basically changes the packing for the 2nd integer 0 to the size, 65
+    // packi16(buf+1, packetsize); // store packet size in packet for kicks
     printf("packet is %" PRId32 " bytes\n", packetsize); // should be 65
     
     // I am not following the old c style of declaring at the top...
@@ -500,7 +533,9 @@ int main(void)
         "'%c' %" PRId32" %" PRId16 " %" PRId32 " \"%s\" %f\n",
         magic, ps2, monkeycount, altitude, s2, absurdityfactor);
     // prints
-    // 'B' 65 37 "Great unmitigated Zot! you've found the Runestaff!" 0.001310
+    // 'B' 0 37 -5 "Great unmitigated Zot! you've found the Runestaff!" -3490.667725
+    
+
 
     return 0;
 }
