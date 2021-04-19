@@ -56,6 +56,9 @@ int main(void)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE; // use my IP
 
+
+    // use getaddrinfo(). 
+    // gethostbyname() and gethostbyaddr() are deprecated
     if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return 1;
@@ -128,3 +131,13 @@ int main(void)
 
     return 0;
 }
+
+// After you've finished using the socket for whatever demented scheme you have
+// connected and you don't want to send() or rev() or indeed do anything else
+// at all with the socket, you can close() it, and it'll be freed up, never to 
+// be used again
+//
+// The remote side can tell if this happens one of two ways:
+// 1) if the remote side calls recv() it will return 0
+// 2) if the remote side calls send(), it will receive a signal SIGPIPE and
+// send() will return -1 and errno will be set to EPIPE

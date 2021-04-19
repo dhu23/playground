@@ -10,3 +10,5 @@ pack
 ieee754
 pack2
 broadcaster
+gethostname
+getaddrandnameinfo
