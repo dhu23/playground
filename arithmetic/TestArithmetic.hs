@@ -69,6 +69,11 @@ instance Arbitrary N where
     ds <- M.replicateM l arbitrary
     return $ nFromList ds
 
+instance Arbitrary N0 where
+  arbitrary = do 
+    maybeListD <- arbitrary
+    return $ n0FromMaybeDs maybeListD
+
 instance Arbitrary Z where
   arbitrary = do
     n <- arbitrary
@@ -147,6 +152,15 @@ checkNLaws = do
   quickCheck (prop_addAssociativeLaw :: N -> N -> N -> Bool)
   quickCheck (prop_mulAssociativeLaw :: N -> N -> N -> Bool)
   quickCheck (prop_mulDistributiveLaw :: N -> N -> N -> Bool)
+
+  quickCheck (prop_addUnit :: N0 -> Bool)
+  quickCheck (prop_mulUnit :: N0 -> Bool)
+  quickCheck (prop_addCommutativeLaw :: N0 -> N0 -> Bool)
+  quickCheck (prop_mulCommutativeLaw  :: N0 -> N0 -> Bool)
+  quickCheck (prop_addAssociativeLaw :: N0 -> N0 -> N0 -> Bool)
+  quickCheck (prop_mulAssociativeLaw :: N0 -> N0 -> N0 -> Bool)
+  quickCheck (prop_mulDistributiveLaw :: N0 -> N0 -> N0 -> Bool)
+  
 
 
 checkZLaws :: IO ()

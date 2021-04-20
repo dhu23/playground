@@ -13,6 +13,8 @@ module Arithmetic
   , nZero
   , nOne
   , nFromList
+  , N0
+  , n0FromMaybeDs
   , Z
   , posZFromN
   , negZFromN
@@ -269,10 +271,12 @@ divModRlistForD0 num denom = case dropWhile greaterThanNum attempts of
 ---------------------- Natural number -------------------------
 -- the most significant digit comes first. 
 -- the value constructor should not be exported
-data N = N [D]
+newtype N = N [D]
 data N' = N' (NE.NonEmpty D)
 
 newtype N0 = N0 { getN :: Maybe [D] }
+
+n0FromMaybeDs = N0
 
 mkN :: String -> Maybe N
 mkN cs = (N . dropLeadZero) <$> (mapM fromChar cs)
