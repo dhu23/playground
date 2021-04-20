@@ -272,8 +272,13 @@ divModRlistForD0 num denom = case dropWhile greaterThanNum attempts of
 data N = N [D]
 data N' = N' (NE.NonEmpty D)
 
+newtype N0 = N0 { getN :: Maybe [D] }
+
 mkN :: String -> Maybe N
 mkN cs = (N . dropLeadZero) <$> (mapM fromChar cs)
+
+mkN0 :: String -> N0
+mkN0 cs = N0 $ mkN cs >>= \(N ds) -> return ds 
 
 mkN' :: String -> Maybe N'
 mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
@@ -284,6 +289,12 @@ nToInteger (N ds) = foldl horner 0 $ fmap (fromIntegral . fromEnum) ds
 instance Show N where
   show (N []) = "0"
   show (N ds) = fmap toChar ds
+
+instance Show N0 where
+  show n = case getN n of 
+    Nothing -> "NaN"
+    Just [] -> "0"
+    Just ds -> fmap toChar ds
 
 instance Show N' where
   show (N' ds) = fmap toChar $ NE.toList ds
@@ -301,8 +312,29 @@ instance Enum N where
     | d == 0 = nZero
     | otherwise = undefined
 
+instance Enum N0 where
+  fromEnum n = case getN n of
+    Nothing -> -1
+    Just ds -> foldl horner 0 $ fmap fromEnum ds
+
+  toEnum d
+    | d > 0 = case (dropLeadZero . reverse) <$> mkDRlistFromInt d of
+      Nothing -> N0 Nothing --this really shouldn't happen
+      Just [] -> N0 Nothing --this really shouldn't happen
+      n -> N0 $ n
+    | d == 0 = N0 $ Just [D0]
+    | otherwise = N0 Nothing
+
 instance Eq N where
   (N ds1) == (N ds2) = ds1 `eq` ds2
+    where
+      eq = (==) `F.on` dropLeadZero
+
+instance Eq N0 where
+  (N0 Nothing) == (N0 Nothing) = True
+  (N0 Nothing) == _ = False
+  (N0 (Just _)) == (N0 Nothing) = False
+  (N0 (Just ds1)) == (N0 (Just ds2)) = ds1 `eq` ds2
     where
       eq = (==) `F.on` dropLeadZero
 
@@ -311,6 +343,15 @@ instance Eq N' where
 
 instance Ord N where
   (N ds1) `compare` (N ds2) = ds1 `comp` ds2
+    where
+      comp = compareDs `F.on` dropLeadZero
+
+-- NaN is defined as positive infinitity
+instance Ord N0 where
+  (N0 Nothing) `compare` (N0 Nothing) = EQ
+  (N0 Nothing) `compare` _ = GT
+  (N0 (Just _)) `compare` (N0 Nothing) = LT
+  (N0 (Just ds1)) `compare` (N0 (Just ds2)) = ds1 `comp` ds2
     where
       comp = compareDs `F.on` dropLeadZero
 
@@ -342,6 +383,21 @@ instance Integral N where
     Just ret -> ret
   n1 `divMod` n2 = n1 `quotRem` n2 -- otherwise it depends on negate function from Num class
   toInteger = nToInteger
+
+instance Num N0 where
+  (N0 n1) + (N0 n2) = N0 $ addDlist <$> n1 <*> n2
+  (N0 n1) * (N0 n2) = N0 $ mulDlist <$> n1 <*> n2
+  abs = id
+  signum n
+    | n == (N0 (Just [D0])) = n
+    | otherwise = N0 (Just [D1])
+  fromInteger i 
+    | i == 0 = N0 (Just [D0])
+    | i > 0 = N0 $ (dropLeadZero . reverse) <$> (mkDRlistFromInt i)
+    | otherwise = N0 Nothing
+  negate n
+    | n == (N0 (Just [D0])) = n
+    | otherwise = N0 Nothing
 
 nZero :: N
 nZero = N [D0]
@@ -677,3 +733,13 @@ instance Num F where
   negate (F n d s)
     | n == 0 = fZero
     | otherwise = F n d (not s)
+
+
+------------------------ expression in algebra -------------------------
+data E
+  = NaN 
+  | Integer Z
+  | Frac E E
+  | Pow E E
+
+
