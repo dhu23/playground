@@ -38,6 +38,9 @@ import qualified Data.Function as F (on)
 
 --import Debug.Trace
 
+class Evaluable e where
+  eval :: e -> e -- evaluate E to something simpler
+
 data D
   = D0 | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 
   deriving (Enum, Bounded, Eq, Ord, Show)
@@ -271,7 +274,7 @@ divModRlistForD0 num denom = case dropWhile greaterThanNum attempts of
 ---------------------- Natural number -------------------------
 -- the most significant digit comes first. 
 -- the value constructor should not be exported
-newtype N = N [D]
+newtype N = N { getDs :: [D] }
 data N' = N' (NE.NonEmpty D)
 
 newtype N0 = N0 { getN :: Maybe [D] }
@@ -744,6 +747,20 @@ data E
   = NaN 
   | Integer Z
   | Frac E E
-  | Pow E E
 
+instance Show E where
+  show NaN = "NaN"
+  show (Integer z) = show z
+  show (Frac a b) = show a ++ "/" ++ show b -- need better fine tuning
 
+instance Num E where
+  NaN + _ = NaN
+  _ + NaN = NaN
+  (Integer z1) + (Integer z2) = Integer (z1 + z2)
+  _ + _ = undefined
+
+  (*) = undefined
+  abs = undefined
+  signum = undefined
+  fromInteger = undefined
+  negate = undefined
