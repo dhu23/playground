@@ -1,7 +1,3 @@
-*.tsk
-*.hi
-*.o
-.stack-work/
 ApplicativeFunctors
 BartoszMilewski
 eval
