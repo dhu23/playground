@@ -64,6 +64,18 @@ struct in6_addr {
 
 ```
 
+```
+struct sockaddr_storage {
+    sa_family_t ss_family; // address family
+    // all this is padding, implementation specific, ignore it
+    char __ss_pad1[_SS_PAD1SIZE];
+    int64_t __ss_align;
+    char __ss_pad2[_SS_PAD2SIZE];
+};
+```
+General socket address holding structure, big enough to hold either 
+`struct sockaddr_in` or `struct sockaddr_in6` data.
+
 `poll()` usage. The signature is:
 ```
 #include <poll.h>
