@@ -10,7 +10,7 @@ public:
 
 struct addrinfo;
 
-class TCPSelectServer
+class TCPSelectServer : public TCPServer
 {
 private:
     struct addrinfo* ai_;
@@ -22,6 +22,6 @@ private:
 
 public:
     TCPSelectServer(const char* port);
-    virtual ~TCPServer();
+    virtual ~TCPSelectServer();
     virtual void run() override;
 };

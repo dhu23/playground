@@ -152,7 +152,9 @@ int main(void)
                             newfd);
                     }
                 } else {
-                    // handle data from a client
+                    // handle data from a client.
+                    // In case of messages received from telnet, I noticed that
+                    // telnet sends char(10, LF) and char(13, CR) at the end
                     if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
                         // got error or connection closed by client
                         if (nbytes == 0) {

@@ -64,7 +64,10 @@ TCPSelectServer::TCPSelectServer(const char* port)
         listener_ = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if (listener_ < 0) { continue; }
 
-        if (bind(listener_, p->ai_addr, p->ai_addrlen) < 0) {
+        rv = bind(listener_, p->ai_addr, p->ai_addrlen) < 0;
+        if (rv < 0)
+        {
+            std::cerr << "binding error:" << std::string(gai_strerror(rv)) << std::endl;
             close(listener_);
             continue;
         }
@@ -85,7 +88,7 @@ TCPSelectServer::TCPSelectServer(const char* port)
     fdmax_ = listener_;
 }
 
-~TCPSelectServer::TCPSelectServer()
+TCPSelectServer::~TCPSelectServer()
 {
     freeaddrinfo(ai_);
 }
@@ -149,7 +152,9 @@ void TCPSelectServer::run()
                 }
                 else
                 {
-                    std::cout << "recv:" << std::string(buf) << std::endl;
+                    printf("recv nbytes:%d\n", nbytes);
+                    std::string data(buf, buf+(std::min(256, nbytes)));
+                    std::cout << "recv:" << data << std::endl;
                 }
             }
         }
