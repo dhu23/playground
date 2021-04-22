@@ -34,6 +34,18 @@ std::string getRemoteIP(struct sockaddr_storage& sa)
 
 class Server
 {
+private:
+    fd_set master_;
+    int listener_;
+    int fdmax_;
+
+private:
+    void closeFd(int i)
+    {
+        close(i);
+        FD_CLR(i, &master_);
+    }
+
 public:
     Server()
     {
@@ -79,19 +91,15 @@ public:
         {
             throw std::runtime_error("server cannot listen");
         }
-        std::cout << "listener fd " << listener_ << std::endl;
         FD_SET(listener_, &master_); 
         fdmax_ = listener_;
-        std::cout << "listener fd again " << listener_ << std::endl;
     }
 
     void run()
     {
         for (;;) 
         {
-            std::cout << "listener fd " << listener_ << std::endl;
-            break;
-            fd_set readFds;
+            fd_set readFds = master_;
             if (select(fdmax_+1, &readFds, NULL, NULL, NULL) == -1)
             {
                 throw std::runtime_error("select error");
@@ -100,12 +108,7 @@ public:
             // run through all connections for data
             for (int i = 0; i <= fdmax_; ++i)
             {
-                if (!FD_ISSET(i, &readFds)) 
-                {
-                    std::cout << "passing fd " << i << std::endl;
-                    continue; 
-                }
-                std::cout << "processing fd " << i << " listener " << listener_ << std::endl;
+                if (!FD_ISSET(i, &readFds)) { continue; }
                 if (i == listener_)
                 {
                     std::cout << "new connection..." << std::endl;
@@ -133,24 +136,35 @@ public:
                             << std::endl;
                     }
                 }
-                else
+                else // received data from a client
                 {
-                    // pass
+                    char buf[256];
+                    int nbytes = recv(i, buf, sizeof buf, 0);
+                    if (nbytes <= 0)
+                    {
+                        if (nbytes == 0) 
+                        {
+                            std::cout << "socket " << i << " hung up" << std::endl;
+                        }
+                        else
+                        {
+                            std::cerr << "recv error" << std::endl;
+                        }
+                        this->closeFd(i);
+                    }
+                    else
+                    {
+                        std::cout << "recv:" << std::string(buf) << std::endl;
+                    }
                 }
             }
         }
     }
-// private:
-    fd_set master_;
-    int listener_;
-    int fdmax_;
 };
 
 int main(int argc, char* argv[])
 {
     Server s;
-    std::cout << "main:listener fd " << s.listener_ << std::endl;
-    std::cout << "main:max fd " << s.fdmax_ << std::endl;
-    // s.run();
+    s.run();
     return 0;
 }
