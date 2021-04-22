@@ -55,7 +55,6 @@ public:
                 );
         }
 
-        int listener_;
         struct addrinfo* p = NULL;
         for (p = ai; p != NULL; p = p->ai_next) 
         {
