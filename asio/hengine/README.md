@@ -1,4 +1,4 @@
-#Architecture
+# Architecture
 
 This is to develop a simplified backbone of a tradings sytem, which a 
 messaging bus layer in the middle and market data producer and strategy that
