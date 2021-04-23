@@ -22,7 +22,7 @@ struct ByteArray
     {
         std::size_t slen = std::min(len, N-1);
         memcpy(arr_.data(), from, slen);
-        memset(arr_.data()+slen, 0, N-len);
+        memset(arr_.data()+slen, 0, N-slen);
         return *this;
     }
 
@@ -37,7 +37,8 @@ struct ByteArray
     }
 
     const char* data() const { return arr_.data(); }
-    std::string str() const { return std::string(arr_.begin(), arr_.end()); }
+    std::string str() const { return std::string(arr_.data()); }
+    // std::string(arr_.begin(), arr_.end()); returns a string with null bytes
     std::size_t size() const { return std::strlen(arr_.data()); }
     bool empty() const { return this->size() == 0; }
 };
