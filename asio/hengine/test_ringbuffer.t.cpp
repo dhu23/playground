@@ -8,3 +8,12 @@ BOOST_AUTO_TEST_CASE(test_ctor)
     BOOST_TEST(rb.isEmpty());
     BOOST_TEST(!rb.isFull());
 }
+
+BOOST_AUTO_TEST_CASE(test_push)
+{
+    RingBuffer<32, 4> rb;
+    rb.push(int(5));
+    rb.push(int(5));
+    rb.push(int(5));
+    rb.push(int(5));
+}
