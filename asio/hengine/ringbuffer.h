@@ -1,4 +1,8 @@
+#ifndef _INCLUDED_RINGBUFFER_H_
+#define _INCLUDED_RINGBUFFER_H_
+
 #include <cstdint>
+#include <array>
 
 template<typename T>
 struct Packet
@@ -39,16 +43,30 @@ public:
     // An alternative solution is to also move the stored data back to start 
     // from position 0 again.
 
+    using RbSize = typename std::array<uint8_t, N>::size_type;
 
     std::array<uint8_t, N> buffer_; // holds the main message buffer
     std::array<uint8_t, M> tmpbuffer_; // for incomplete data
-    size_t head_;
-    size_t tail_; // points to the first empty byte
-    size_t incompleted_; // indicates num of bytes that it is still waiting for
+    RbSize head_;
+    RbSize tail_; // points to the first empty byte
+    RbSize incompleted_; // indicates num of bytes that it is still waiting for
+    // tracking used space because just head_ and tail_ position is not enought
+    // to tell the different between completely empty and completely full
+    RbSize used_; 
 
 public:
-    bool hasPartialData() const { return incomplete_ > 0; }
-    bool isWrappedRound() const { return tail < head; }
+    bool hasPartialData() const { return incompleted_ > 0; }
+    bool isEmpty() const { return used_ == 0; }
+    bool isFull() const { return used_ == N; }
+
+public:
+    bool isWrappedRound() const 
+    { 
+        return 
+            tail_ < head_ || 
+            (tail_ == head_ && used_ > 0) // complete full
+            ; 
+    }
     
     // size_t freeSpace() const
     // {
@@ -64,14 +82,15 @@ public:
         // NOTE: consider memset if a performance optimization is needed
         // because memset is written in Assembly. 
         // NOTE: std::fill is another alternative, however slower than memset
-        for (decltype(tail) i = 0; i < N; ++i) { buffer_[i] = 0; }
-        tail = 0;
+        for (size_t i = tail_; i < N; ++i) { buffer_[i] = 0; }
+        used_ += N-tail_;
+        tail_ = 0;
         return true;
     }
 
     size_t tailRoom() const
     {
-        return this->isWrappedRound() ? 0 : N-tail;
+        return this->isWrappedRound() ? head_-tail_ : N-tail_;
     }
     
 public:
@@ -80,7 +99,8 @@ public:
         tmpbuffer_(),
         head_(0),
         tail_(0),
-        incomplete_(0)
+        incompleted_(0),
+        used_(0)
     {}
 
     // this function takes 
@@ -89,16 +109,18 @@ public:
         // disable insertion when there is partial data. 
         // just a safety measure to prevent bugs
         if (this->hasPartialData()) { return false; }
-        if (this->freeSpace() < sizeof(T)) { return false; }
+        // if (this->freeSpace() < sizeof(T)) { return false; }
         
-        uint8_t start = reinterpret_cast<uint8_t>(&T);
-        uint8_t end = start + sizeof(T);
+        const uint8_t* pstart = reinterpret_cast<const uint8_t*>(&obj);
+        const uint8_t* pend = pstart + sizeof(T);
 
         if (this->isWrappedRound())
         {
 
         }
-
+        return true;
     }
 
 };
+
+#endif
