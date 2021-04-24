@@ -9,10 +9,11 @@
 
 
 template<std::size_t N>
-struct ByteArray
+class ByteArray
 {
     std::array<char, N> arr_;
 
+public:
     ByteArray()
     {
         memset(arr_.data(), 0, N);

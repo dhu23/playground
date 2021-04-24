@@ -1,7 +1,6 @@
 #define BOOST_TEST_MODULE bytearray
 #include <boost/test/unit_test.hpp>
 #include "bytearray.h"
-#include <iostream>
 
 BOOST_AUTO_TEST_CASE(test_default_ctor)
 {
