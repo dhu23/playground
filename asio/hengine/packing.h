@@ -15,16 +15,17 @@
 template<std::size_t K>
 struct Packet
 {
-    static_assert(sizeof(char) == sizeof(int8_t));
-    static_assert(sizeof(unsigned char) == sizeof(uint8_t));
-    static_assert(sizeof(short) == sizeof(int16_t));
-    static_assert(sizeof(unsigned short) == sizeof(uint16_t));
-    static_assert(sizeof(int) == sizeof(int32_t));
-    static_assert(sizeof(unsigned int) == sizeof(uint32_t));
-    static_assert(sizeof(long) == sizeof(int64_t));
-    static_assert(sizeof(unsigned long) == sizeof(uint64_t));
-    static_assert(sizeof(long long) == sizeof(int64_t));
-    static_assert(sizeof(unsigned long long) == sizeof(uint64_t));
+    // doesn't look like we need this
+    // static_assert(sizeof(char) == sizeof(int8_t));
+    // static_assert(sizeof(unsigned char) == sizeof(uint8_t));
+    // static_assert(sizeof(short) == sizeof(int16_t));
+    // static_assert(sizeof(unsigned short) == sizeof(uint16_t));
+    // static_assert(sizeof(int) == sizeof(int32_t));
+    // static_assert(sizeof(unsigned int) == sizeof(uint32_t));
+    // static_assert(sizeof(long) == sizeof(int64_t));
+    // static_assert(sizeof(unsigned long) == sizeof(uint64_t));
+    // static_assert(sizeof(long long) == sizeof(int64_t));
+    // static_assert(sizeof(unsigned long long) == sizeof(uint64_t));
 
     Packet():
         buffer_(),
@@ -50,17 +51,18 @@ struct Packet
     bool put(double f64);
 
     bool put(bool b);
-
-    bool put(char c);
-    bool put(unsigned char c);
-    bool put(short s);
-    bool put(unsigned short s);
-    bool put(int i);
-    bool put(unsigned int i);
-    bool put(long l);
-    bool put(unsigned long l);
-    bool put(long long ll);
-    bool put(unsigned long long ll);
+    
+    // the followings are not needed
+    // bool put(char c);
+    // bool put(unsigned char c);
+    // bool put(short s);
+    // bool put(unsigned short s);
+    // bool put(int i);
+    // bool put(unsigned int i);
+    // bool put(long l);
+    // bool put(unsigned long l);
+    // bool put(long long ll);
+    // bool put(unsigned long long ll);
 
     bool get(uint8_t& u8);
     bool get(uint16_t& u16);
@@ -77,16 +79,17 @@ struct Packet
 
     bool get(bool& b);
 
-    bool get(char& c);
-    bool get(unsigned char& c);
-    bool get(short& s);
-    bool get(unsigned short& s);
-    bool get(int& i);
-    bool get(unsigned int& i);
-    bool get(long& l);
-    bool get(unsigned long& l);
-    bool get(long long& ll);
-    bool get(unsigned long long& ll);
+    // the followings are not needed
+    // bool get(char& c);
+    // bool get(unsigned char& c);
+    // bool get(short& s);
+    // bool get(unsigned short& s);
+    // bool get(int& i);
+    // bool get(unsigned int& i);
+    // bool get(long& l);
+    // bool get(unsigned long& l);
+    // bool get(long long& ll);
+    // bool get(unsigned long long& ll);
     
     template<typename T>
         static void binrep(T x, uint64_t n)
@@ -245,65 +248,65 @@ bool Packet<K>::put(bool b)
     return this->put(static_cast<uint8_t>(b ? 1 : 0));
 }
 
-template<std::size_t K>
-bool Packet<K>::put(char c)
-{
-    return this->put(static_cast<int8_t>(c));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(unsigned char c)
-{
-    return this->put(static_cast<uint8_t>(c));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(short s)
-{
-    return this->put(static_cast<int16_t>(s));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(unsigned short s)
-{
-    return this->put(static_cast<uint16_t>(s));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(int i)
-{
-    return this->put(static_cast<int32_t>(i));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(unsigned int i)
-{
-    return this->put(static_cast<uint32_t>(i));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(long l)
-{
-    return this->put(static_cast<int64_t>(l));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(unsigned long l)
-{
-    return this->put(static_cast<uint64_t>(l));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(long long ll)
-{
-    return this->put(static_cast<int64_t>(ll));
-}
-
-template<std::size_t K>
-bool Packet<K>::put(unsigned long long i)
-{
-    return this->put(static_cast<int64_t>(ll));
-}
+// template<std::size_t K>
+// bool Packet<K>::put(char c)
+// {
+//     return this->put(static_cast<int8_t>(c));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(unsigned char c)
+// {
+//     return this->put(static_cast<uint8_t>(c));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(short s)
+// {
+//     return this->put(static_cast<int16_t>(s));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(unsigned short s)
+// {
+//     return this->put(static_cast<uint16_t>(s));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(int i)
+// {
+//     return this->put(static_cast<int32_t>(i));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(unsigned int i)
+// {
+//     return this->put(static_cast<uint32_t>(i));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(long l)
+// {
+//     return this->put(static_cast<int64_t>(l));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(unsigned long l)
+// {
+//     return this->put(static_cast<uint64_t>(l));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(long long ll)
+// {
+//     return this->put(static_cast<int64_t>(ll));
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::put(unsigned long long i)
+// {
+//     return this->put(static_cast<int64_t>(ll));
+// }
 
 template<std::size_t K>
 bool Packet<K>::get(uint8_t& u8)
@@ -449,73 +452,73 @@ bool Packet<K>::get(bool& b)
     return true;
 }
 
-template<std::size_t K>
-bool Packet<K>::get(char& c)
-{
-    auto* p = reinterpret_cast<int8_t*>(&c);
-    return this->get(*p);
-}
-
-template<std::size_t K>
-bool Packet<K>::get(unsigned char& c)
-{
-    auto* p = reinterpret_cast<uint8_t*>(&c);
-    return this->get(*p);
-}
-
-template<std::size_t K>
-bool Packet<K>::get(short& s)
-{
-    auto* p = reinterpret_cast<int16_t*>(&s);
-    return this->get(*p);
-}
-
-template<std::size_t K>
-bool Packet<K>::get(unsigned short& c)
-{
-    auto* p = reinterpret_cast<uint16_t*>(&s);
-    return this->get(*p);
-}
-
-template<std::size_t K>
-bool Packet<K>::get(int& i)
-{
-    auto* p = reinterpret_cast<int32_t*>(&i);
-    return this->get(*p);
-}
-
-template<std::size_t K>
-bool Packet<K>::get(unsigned int& i)
-{
-    auto* p = reinterpret_cast<uint32_t*>(&i);
-    return this->get(*p);
-}
-
-template<std::size_t K>
-bool Packet<K>::get(long& l)
-{
-    auto* p = reinterpret_cast<int64_t*>(&l);
-    return this->get(*p)
-}
-
-template<std::size_t K>
-bool Packet<K>::get(unsigned long& l)
-{
-    auto* p = reinterpret_cast<uint64_t*>(&l);
-    return this->get(*p);
-}
-
-template<std::size_t K>
-bool Packet<K>::get(long long& ll)
-{
-    auto* p = reinterpret_cast<int64_t*>(&ll);
-    return this->get(*p);
-}
-
-template<std::size_t K>
-bool Packet<K>::get(unsigned long long& ll)
-{
-    auto* p = reinterpret_cast<uint64_t*>(&ll);
-    return this->get(*p);
-}
+// template<std::size_t K>
+// bool Packet<K>::get(char& c)
+// {
+//     auto* p = reinterpret_cast<int8_t*>(&c);
+//     return this->get(*p);
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(unsigned char& c)
+// {
+//     auto* p = reinterpret_cast<uint8_t*>(&c);
+//     return this->get(*p);
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(short& s)
+// {
+//     auto* p = reinterpret_cast<int16_t*>(&s);
+//     return this->get(*p);
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(unsigned short& c)
+// {
+//     auto* p = reinterpret_cast<uint16_t*>(&s);
+//     return this->get(*p);
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(int& i)
+// {
+//     auto* p = reinterpret_cast<int32_t*>(&i);
+//     return this->get(*p);
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(unsigned int& i)
+// {
+//     auto* p = reinterpret_cast<uint32_t*>(&i);
+//     return this->get(*p);
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(long& l)
+// {
+//     auto* p = reinterpret_cast<int64_t*>(&l);
+//     return this->get(*p)
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(unsigned long& l)
+// {
+//     auto* p = reinterpret_cast<uint64_t*>(&l);
+//     return this->get(*p);
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(long long& ll)
+// {
+//     auto* p = reinterpret_cast<int64_t*>(&ll);
+//     return this->get(*p);
+// }
+// 
+// template<std::size_t K>
+// bool Packet<K>::get(unsigned long long& ll)
+// {
+//     auto* p = reinterpret_cast<uint64_t*>(&ll);
+//     return this->get(*p);
+// }
 

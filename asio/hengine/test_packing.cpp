@@ -212,3 +212,29 @@ BOOST_AUTO_TEST_CASE(test_bool)
 
     BOOST_TEST(!packet.get(g1));
 }
+
+BOOST_AUTO_TEST_CASE(test_mixed)
+{
+    Packet<16> packet;
+
+    BOOST_TEST(packet.put(true)); // 1 byte
+    BOOST_TEST(packet.put(double(5.5))); // 8 bytes
+    BOOST_TEST(packet.put(int(-33))); // 4 bytes
+    BOOST_TEST(packet.put(static_cast<unsigned short>(45000))); // 2 bytes
+
+    bool b = false;
+    BOOST_TEST(packet.get(b));
+    BOOST_TEST(b);
+
+    double d = 0.0;
+    BOOST_TEST(packet.get(d));
+    BOOST_TEST(d == 5.5);
+
+    int i = 0;
+    BOOST_TEST(packet.get(i));
+    BOOST_TEST(i == -33);
+
+    unsigned short s = 0;
+    BOOST_TEST(packet.get(s));
+    BOOST_TEST(s == 45000);
+}
