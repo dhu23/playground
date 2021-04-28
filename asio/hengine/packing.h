@@ -11,75 +11,21 @@
 #include <array>
 #include <iostream>
 
-template<typename T>
-void binrep(T x, uint64_t n)
-{
-    std::ostringstream oss;
-    for (T i = 1<<(n-1); i > 0; i /= 2)
-    {
-        if (x & i) { oss << "1"; }
-        else { oss << "0"; }
-    }
-    std::cout << oss.str() << std::endl;
-}
-
-uint64_t pack754(double f, int32_t bits, int32_t expbits)
-{
-    double fnorm;
-    int32_t shift;
-    int64_t sign, exp, significand;
-    uint32_t significandbits = bits - expbits - 1; // -1 for sign bit
-
-    if (f == 0.0) return 0; // get this special case out of the way
-
-    // check sign and begin normalization
-    if (f < 0) { sign = 1; fnorm = -f; }
-    else { sign = 0; fnorm = f; }
-
-    // get the normalized form of f and track the exponent
-    shift = 0;
-    while (fnorm >= 2.0) { fnorm /= 2.0; shift++; }
-    while (fnorm < 1.0) { fnorm *= 2.0; shift--; }
-    fnorm = fnorm - 1.0;
-
-    // calculate the binary form (non-float) of the significand data
-    significand = fnorm * ((1LL<<significandbits) + 0.5f);
-
-    // get the biased exponent
-    exp = shift + ((1<<(expbits-1)) - 1); // shift + bias
-
-    return (sign<<(bits-1)) | (exp<<(bits-expbits-1)) | significand;
-}
-
-double unpack754(uint64_t i, int32_t bits, int32_t expbits)
-{
-    double result;
-    int64_t shift;
-    uint32_t bias;
-    uint32_t significandbits = bits - expbits - 1; // -1 for sign bit
-
-    if (i == 0) return 0.0;
-
-    // pull the significand
-    result = (i&((1LL<<significandbits)-1)); // mask
-    result /= (1LL<<significandbits); // convert back to float
-    result += 1.0f; //add the one back on
-
-    // deal with the exponent. meaning that 0 is not represented as all zeros
-    bias = (1<<(expbits-1))-1;
-    shift = ((i>>significandbits)&((1LL<<expbits)-1)) - bias;
-    while (shift > 0) { result *= 2.0; shift--; }
-    while (shift < 0) { result /= 2.0; shift++; }
-
-    // sign it
-    result *= (i>>(bits-1))&1 ? -1.0 : 1.0;
-
-    return result;
-}
 
 template<std::size_t K>
 struct Packet
 {
+    static_assert(sizeof(char) == sizeof(int8_t));
+    static_assert(sizeof(unsigned char) == sizeof(uint8_t));
+    static_assert(sizeof(short) == sizeof(int16_t));
+    static_assert(sizeof(unsigned short) == sizeof(uint16_t));
+    static_assert(sizeof(int) == sizeof(int32_t));
+    static_assert(sizeof(unsigned int) == sizeof(uint32_t));
+    static_assert(sizeof(long) == sizeof(int64_t));
+    static_assert(sizeof(unsigned long) == sizeof(uint64_t));
+    static_assert(sizeof(long long) == sizeof(int64_t));
+    static_assert(sizeof(unsigned long long) == sizeof(uint64_t));
+
     Packet():
         buffer_(),
         head_(0),
@@ -103,6 +49,19 @@ struct Packet
     bool put(float f32);
     bool put(double f64);
 
+    bool put(bool b);
+
+    bool put(char c);
+    bool put(unsigned char c);
+    bool put(short s);
+    bool put(unsigned short s);
+    bool put(int i);
+    bool put(unsigned int i);
+    bool put(long l);
+    bool put(unsigned long l);
+    bool put(long long ll);
+    bool put(unsigned long long ll);
+
     bool get(uint8_t& u8);
     bool get(uint16_t& u16);
     bool get(uint32_t& u32);
@@ -115,6 +74,86 @@ struct Packet
 
     bool get(float& f32);
     bool get(double& f64);
+
+    bool get(bool& b);
+
+    bool get(char& c);
+    bool get(unsigned char& c);
+    bool get(short& s);
+    bool get(unsigned short& s);
+    bool get(int& i);
+    bool get(unsigned int& i);
+    bool get(long& l);
+    bool get(unsigned long& l);
+    bool get(long long& ll);
+    bool get(unsigned long long& ll);
+    
+    template<typename T>
+        static void binrep(T x, uint64_t n)
+        {
+            std::ostringstream oss;
+            for (T i = 1<<(n-1); i > 0; i /= 2)
+            {
+                if (x & i) { oss << "1"; }
+                else { oss << "0"; }
+            }
+            std::cout << oss.str() << std::endl;
+        }
+
+    static uint64_t pack754(double f, int32_t bits, int32_t expbits)
+    {
+        double fnorm;
+        int32_t shift;
+        int64_t sign, exp, significand;
+        uint32_t significandbits = bits - expbits - 1; // -1 for sign bit
+
+        if (f == 0.0) return 0; // get this special case out of the way
+
+        // check sign and begin normalization
+        if (f < 0) { sign = 1; fnorm = -f; }
+        else { sign = 0; fnorm = f; }
+
+        // get the normalized form of f and track the exponent
+        shift = 0;
+        while (fnorm >= 2.0) { fnorm /= 2.0; shift++; }
+        while (fnorm < 1.0) { fnorm *= 2.0; shift--; }
+        fnorm = fnorm - 1.0;
+
+        // calculate the binary form (non-float) of the significand data
+        significand = fnorm * ((1LL<<significandbits) + 0.5f);
+
+        // get the biased exponent
+        exp = shift + ((1<<(expbits-1)) - 1); // shift + bias
+
+        return (sign<<(bits-1)) | (exp<<(bits-expbits-1)) | significand;
+    }
+
+    static double unpack754(uint64_t i, int32_t bits, int32_t expbits)
+    {
+        double result;
+        int64_t shift;
+        uint32_t bias;
+        uint32_t significandbits = bits - expbits - 1; // -1 for sign bit
+
+        if (i == 0) return 0.0;
+
+        // pull the significand
+        result = (i&((1LL<<significandbits)-1)); // mask
+        result /= (1LL<<significandbits); // convert back to float
+        result += 1.0f; //add the one back on
+
+        // deal with the exponent. meaning that 0 is not represented as all zeros
+        bias = (1<<(expbits-1))-1;
+        shift = ((i>>significandbits)&((1LL<<expbits)-1)) - bias;
+        while (shift > 0) { result *= 2.0; shift--; }
+        while (shift < 0) { result /= 2.0; shift++; }
+
+        // sign it
+        result *= (i>>(bits-1))&1 ? -1.0 : 1.0;
+
+        return result;
+    }
+
 };
 
 template<std::size_t K>
@@ -188,7 +227,7 @@ template<std::size_t K>
 bool Packet<K>::put(float f32)
 {
     if (sizeof(float) + tail_ > K) { return false; }
-    auto fhold = static_cast<uint32_t>(pack754(f32, 32, 8));
+    auto fhold = static_cast<uint32_t>(Packet::pack754(f32, 32, 8));
     return this->put(fhold);
 }
 
@@ -196,8 +235,74 @@ template<std::size_t K>
 bool Packet<K>::put(double f64)
 {
     if (sizeof(double) + tail_ > K) { return false; }
-    auto fhold = static_cast<uint64_t>(pack754(f64, 64, 11));
+    auto fhold = static_cast<uint64_t>(Packet::pack754(f64, 64, 11));
     return this->put(fhold);
+}
+
+template<std::size_t K>
+bool Packet<K>::put(bool b)
+{
+    return this->put(static_cast<uint8_t>(b ? 1 : 0));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(char c)
+{
+    return this->put(static_cast<int8_t>(c));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(unsigned char c)
+{
+    return this->put(static_cast<uint8_t>(c));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(short s)
+{
+    return this->put(static_cast<int16_t>(s));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(unsigned short s)
+{
+    return this->put(static_cast<uint16_t>(s));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(int i)
+{
+    return this->put(static_cast<int32_t>(i));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(unsigned int i)
+{
+    return this->put(static_cast<uint32_t>(i));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(long l)
+{
+    return this->put(static_cast<int64_t>(l));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(unsigned long l)
+{
+    return this->put(static_cast<uint64_t>(l));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(long long ll)
+{
+    return this->put(static_cast<int64_t>(ll));
+}
+
+template<std::size_t K>
+bool Packet<K>::put(unsigned long long i)
+{
+    return this->put(static_cast<int64_t>(ll));
 }
 
 template<std::size_t K>
@@ -319,7 +424,7 @@ bool Packet<K>::get(float& f32)
     if (sizeof(float) + head_ > K) { return false; }
     uint32_t i;
     if (!this->get(i)) { return false; }
-    f32 = unpack754(i, 32, 8);
+    f32 = Packet::unpack754(i, 32, 8);
     // binrep(i, 32);
     return true;
 }
@@ -330,7 +435,87 @@ bool Packet<K>::get(double& f64)
     if (sizeof(double) + head_ > K) { return false; }
     uint64_t i;
     if (!this->get(i)) { return false; }
-    f64 = unpack754(i, 64, 11);
+    f64 = Packet::unpack754(i, 64, 11);
     // binrep(i, 64);
     return true;
 }
+
+template<std::size_t K>
+bool Packet<K>::get(bool& b)
+{
+    uint8_t i = 0;
+    if (!this->get(i)) { return false; }
+    b = i > 0;
+    return true;
+}
+
+template<std::size_t K>
+bool Packet<K>::get(char& c)
+{
+    auto* p = reinterpret_cast<int8_t*>(&c);
+    return this->get(*p);
+}
+
+template<std::size_t K>
+bool Packet<K>::get(unsigned char& c)
+{
+    auto* p = reinterpret_cast<uint8_t*>(&c);
+    return this->get(*p);
+}
+
+template<std::size_t K>
+bool Packet<K>::get(short& s)
+{
+    auto* p = reinterpret_cast<int16_t*>(&s);
+    return this->get(*p);
+}
+
+template<std::size_t K>
+bool Packet<K>::get(unsigned short& c)
+{
+    auto* p = reinterpret_cast<uint16_t*>(&s);
+    return this->get(*p);
+}
+
+template<std::size_t K>
+bool Packet<K>::get(int& i)
+{
+    auto* p = reinterpret_cast<int32_t*>(&i);
+    return this->get(*p);
+}
+
+template<std::size_t K>
+bool Packet<K>::get(unsigned int& i)
+{
+    auto* p = reinterpret_cast<uint32_t*>(&i);
+    return this->get(*p);
+}
+
+template<std::size_t K>
+bool Packet<K>::get(long& l)
+{
+    auto* p = reinterpret_cast<int64_t*>(&l);
+    return this->get(*p)
+}
+
+template<std::size_t K>
+bool Packet<K>::get(unsigned long& l)
+{
+    auto* p = reinterpret_cast<uint64_t*>(&l);
+    return this->get(*p);
+}
+
+template<std::size_t K>
+bool Packet<K>::get(long long& ll)
+{
+    auto* p = reinterpret_cast<int64_t*>(&ll);
+    return this->get(*p);
+}
+
+template<std::size_t K>
+bool Packet<K>::get(unsigned long long& ll)
+{
+    auto* p = reinterpret_cast<uint64_t*>(&ll);
+    return this->get(*p);
+}
+
