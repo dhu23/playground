@@ -185,12 +185,12 @@ uint64_t unpacku64(unsigned char *buf)
 {
     return
         ((uint64_t)buf[0] << 56) |
-        ((uint64_t)buf[0] << 48) |
-        ((uint64_t)buf[0] << 40) |
-        ((uint64_t)buf[0] << 32) |
-        ((uint64_t)buf[0] << 24) |
-        ((uint64_t)buf[0] << 16) |
-        ((uint64_t)buf[0] << 8) |
+        ((uint64_t)buf[1] << 48) |
+        ((uint64_t)buf[2] << 40) |
+        ((uint64_t)buf[3] << 32) |
+        ((uint64_t)buf[4] << 24) |
+        ((uint64_t)buf[5] << 16) |
+        ((uint64_t)buf[6] << 8) |
         buf[7];
 }
 
