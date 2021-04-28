@@ -11,123 +11,17 @@
 #include <array>
 #include <iostream>
 
-// packi16() -- store a 16-bit int into a char buffer like htons
-void packi16(uint8_t *buf, uint16_t i)
+template<typename T>
+void binrep(T x, uint64_t n)
 {
-    *buf++ = i>>8; 
-    *buf++ = i;
+    std::ostringstream oss;
+    for (T i = 1<<(n-1); i > 0; i /= 2)
+    {
+        if (x & i) { oss << "1"; }
+        else { oss << "0"; }
+    }
+    std::cout << oss.str() << std::endl;
 }
-
-// packi32 -- store a 32-bit int into a char buffer like htonl
-void packi32(uint8_t *buf, uint32_t i)
-{
-    *buf++ = i>>24;
-    *buf++ = i>>16;
-    *buf++ = i>>8;
-    *buf++ = i;
-}
-
-// packi64 -- store a 64-bit int into a char buff like htonl
-void packi64(uint8_t *buf, uint64_t i)
-{
-    *buf++ = i>>56;
-    *buf++ = i>>48;
-    *buf++ = i>>40;
-    *buf++ = i>>32;
-    *buf++ = i>>24;
-    *buf++ = i>>16;
-    *buf++ = i>>8;
-    *buf++ = i;
-}
-
-// I swapped the order of the definition to be slightly different from
-// the original so functions get reusagable
-
-// unpacku16 -- unpack a 16 bit int from a char buffer like ntohs
-uint16_t unpacku16(uint8_t *buf)
-{
-    return ((uint16_t)buf[0] << 8) | buf[1];
-}
-
-// unpacki16 - unpack a 16 bit int from a char buffer like ntohs
-int16_t unpacki16(uint8_t *buf)
-{
-    uint16_t i2 = unpacku16(buf);
-    int16_t i;
-
-    // change unsigned numbers to signed
-    // 0x7fffu ==> 0111 1111 1111 1111
-    if (i2 <= 0x7fffu) { i = i2; }
-    else { i = -1 - (int16_t)(0xffffu - i2); }
-
-    return i;
-}
-
-// unpacku32 - unpack a 32 bit unsigned from a char buffer like ntohl
-uint32_t unpacku32(uint8_t *buf)
-{
-    return
-        ((uint32_t)buf[0] << 24) |
-        ((uint32_t)buf[1] << 16) |
-        ((uint32_t)buf[2] << 8) |
-        buf[3];
-}
-
-// unpacki32 - unpack a 32 bit signed int from a char buffer like ntohl
-int32_t unpacki32(uint8_t *buf)
-{
-    uint32_t i2 = unpacku32(buf);
-
-    int32_t i;
-    //change unsigned numbers to signed
-    if (i2 <= 0x7fffffffu) { i = i2; }
-    else { i = -1 - (int32_t)(0xffffffffu - i2); }
-
-    return i;
-}
-
-// unpacku64 - unpack a 64 bit unsigned from a char buffer like ntohl
-uint64_t unpacku64(uint8_t *buf)
-{
-    return
-        ((uint64_t)buf[0] << 56) |
-        ((uint64_t)buf[0] << 48) |
-        ((uint64_t)buf[0] << 40) |
-        ((uint64_t)buf[0] << 32) |
-        ((uint64_t)buf[0] << 24) |
-        ((uint64_t)buf[0] << 16) |
-        ((uint64_t)buf[0] << 8) |
-        buf[7];
-}
-
-// unpacki64 - unpack a 64 bit int from a char buffer like ntohl
-int64_t unpacki64(uint8_t *buf)
-{
-    uint64_t i2 = unpacku64(buf);
-    
-    int64_t i;
-
-    // change unsigned numbers to signed
-    if (i2 <= 0x7fffffffffffffffu) { i = i2; }
-    else { i = -1 - (int64_t)(0xffffffffffffffffu - i2); }
-
-    return i;
-}
-
-// pack - store data dictated by the format string in the buffer
-//
-//  bits | signed    unsigned    float   string
-//  -----+--------------------------------------
-//     8 |      c           C       
-//    16 |      h           H        
-//    32 |      i           I        f
-//    64 |      l           L        d
-//   128 |                           g 
-//     - |                                    s
-//
-// 16 bit unsigned length is automatically prepended to string
-
-// pack754() -- pack a floating point number into IEEE-754 format
 
 uint64_t pack754(double f, int32_t bits, int32_t expbits)
 {
@@ -182,12 +76,6 @@ double unpack754(uint64_t i, int32_t bits, int32_t expbits)
 
     return result;
 }
-
-uint64_t pack754_32(float f) { return pack754(f, 32, 8); }
-uint64_t pack754_64(double d) { return pack754(d, 64, 11); }
-
-float unpack754_32(uint64_t i) { return unpack754(i, 32, 8); }
-double unpack754_64(uint64_t i) { return unpack754(i, 64, 11); }
 
 template<std::size_t K>
 struct Packet
@@ -431,7 +319,8 @@ bool Packet<K>::get(float& f32)
     if (sizeof(float) + head_ > K) { return false; }
     uint32_t i;
     if (!this->get(i)) { return false; }
-    f32 = pack754(i, 32, 8);
+    f32 = unpack754(i, 32, 8);
+    // binrep(i, 32);
     return true;
 }
 
@@ -441,6 +330,7 @@ bool Packet<K>::get(double& f64)
     if (sizeof(double) + head_ > K) { return false; }
     uint64_t i;
     if (!this->get(i)) { return false; }
-    f64 = pack754(i, 64, 11);
+    f64 = unpack754(i, 64, 11);
+    // binrep(i, 64);
     return true;
 }

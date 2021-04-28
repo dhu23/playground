@@ -148,11 +148,11 @@ BOOST_AUTO_TEST_CASE(test_floats)
     BOOST_TEST(packet.get(g1));
     BOOST_TEST(g1 == f1);
 
-    float g2 = 0.0;
+    double g2 = 0.0;
     BOOST_TEST(packet.get(g2));
     BOOST_TEST(g2 == f2);
 
-    float g3 = 0.0;
+    double g3 = 0.0;
     BOOST_TEST(packet.get(g3));
     BOOST_TEST(g3 == f3);
 }

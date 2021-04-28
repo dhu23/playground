@@ -27,6 +27,16 @@ void binrep32(unsigned int n)
     printf("\n");
 }
 
+void binrep64(unsigned int n)
+{
+    for (unsigned long long int i = 1UL<<63; i > 0; i /= 2)
+    {
+        if (n & i) { printf("1"); }
+        else { printf("0"); }
+    }
+    printf("\n");
+}
+
 // macros for packing floats and doubles:
 #define pack754_16(f) (pack754((f), 16, 5))
 #define pack754_32(f) (pack754((f), 32, 8))
@@ -439,6 +449,7 @@ void unpack(unsigned char *buf, char *format, ...)
         case 'd': // float 64
             d = va_arg(ap, double*);
             fhold = unpacku64(buf);
+            binrep64(fhold);
             *d = unpack754_64(fhold);
             buf += 8;
             break;
@@ -510,9 +521,9 @@ int main(void)
     int16_t packetsize, ps2;
 
     packetsize = pack(
-        buf, "chhisf", 
+        buf, "chhisfd", 
         (int8_t)'B', (int16_t)0, (int16_t)37, (int32_t)-5, 
-        s, (float)-3490.6677);
+        s, (float)-3490.6677, (double)3.1415926);
 
     // NOTE don't know why it does this from the example
     // it basically changes the packing for the 2nd integer 0 to the size, 65
@@ -524,14 +535,15 @@ int main(void)
     int16_t monkeycount;
     int32_t altitude;
     float absurdityfactor;
+    double pi;
     char s2[96];
 
     unpack(
-        buf, "chhi96sf", 
-        &magic, &ps2, &monkeycount, &altitude, s2, &absurdityfactor);
+        buf, "chhi96sfd", 
+        &magic, &ps2, &monkeycount, &altitude, s2, &absurdityfactor, &pi);
     printf(
-        "'%c' %" PRId32" %" PRId16 " %" PRId32 " \"%s\" %f\n",
-        magic, ps2, monkeycount, altitude, s2, absurdityfactor);
+        "'%c' %" PRId32" %" PRId16 " %" PRId32 " \"%s\" %f %f\n",
+        magic, ps2, monkeycount, altitude, s2, absurdityfactor, pi);
     // prints
     // 'B' 0 37 -5 "Great unmitigated Zot! you've found the Runestaff!" -3490.667725
     
