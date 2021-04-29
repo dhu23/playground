@@ -4,7 +4,6 @@
 #include <array>
 #include <string>
 #include <cstring>
-#include "packing.h" // the point of ByteArray is for networking
 
 // null-byte-terminated and fixed-sized array
 
@@ -13,15 +12,17 @@ template<std::size_t N>
 class ByteArray
 {
     std::array<char, N> arr_;
-
 public:
     ByteArray()
     {
         memset(arr_.data(), 0, N);
     }
 
+    std::size_t capacity() const { return N; }
+
     ByteArray<N>& fromArray(const char* from, std::size_t len)
     {
+        // there will be at least one null byte at the end
         std::size_t slen = std::min(len, N-1);
         memcpy(arr_.data(), from, slen);
         memset(arr_.data()+slen, 0, N-slen);
@@ -43,13 +44,27 @@ public:
     // std::string(arr_.begin(), arr_.end()); returns a string with null bytes
     std::size_t size() const { return std::strlen(arr_.data()); }
     bool empty() const { return this->size() == 0; }
+
+    bool operator==(const ByteArray<N>& other) const
+    {
+        for (std::size_t i = 0; i < N; ++i)
+        {
+            if (arr_[i] != other.arr_[i]) { return false; }
+        }
+        return true;
+    }
+
+    std::ostream& print(std::ostream& os) const
+    {
+        os << arr_.data();
+        return os;
+    }
 };
 
-template<std::size_t K, std::size_t N>
-inline bool put(Packet<K>& packet, ByteArray<N>& obj)
+template<std::size_t N>
+inline std::ostream& operator<<(std::ostream& os, const ByteArray<N>& obj)
 {
-    std::size_t spaceNeeded = 2 + obj.size(); // len takes an unsigned short
-    return false;
+    return obj.print(os);
 }
 
 #endif

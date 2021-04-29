@@ -11,6 +11,7 @@
 #include <array>
 #include <iostream>
 
+#include "bytearray.h"
 
 template<std::size_t K>
 class Packet
@@ -54,6 +55,19 @@ public:
     bool put(double f64);
 
     bool put(bool b);
+
+    template<std::size_t N>
+    bool put(const ByteArray<N>& obj)
+    {
+        // len takes an unsigned short
+        if (2+N > this->writableSize()) { return false; }
+
+        // this function should not fail from here
+        if (!this->put(static_cast<uint16_t>(N))) { return false; }
+        memcpy(&buffer_[tail_], obj.data(), N);
+        tail_ += N;
+        return true;
+    }
     
     // the followings are not needed
     // bool put(char c);
@@ -66,21 +80,60 @@ public:
     // bool put(unsigned long l);
     // bool put(long long ll);
     // bool put(unsigned long long ll);
-
-    bool get(uint8_t& u8);
-    bool get(uint16_t& u16);
-    bool get(uint32_t& u32);
-    bool get(uint64_t& u64);
     
-    bool get(int8_t& i8);
-    bool get(int16_t& i16);
-    bool get(int32_t& i32);
-    bool get(int64_t& i64);
+    bool peek(uint8_t& u8);
+    bool peek(uint16_t& u16);
+    bool peek(uint32_t& u32);
+    bool peek(uint64_t& u64);
+    
+    bool peek(int8_t& i8);
+    bool peek(int16_t& i16);
+    bool peek(int32_t& i32);
+    bool peek(int64_t& i64);
 
-    bool get(float& f32);
-    bool get(double& f64);
+    bool peek(float& f32);
+    bool peek(double& f64);
 
-    bool get(bool& b);
+    bool peek(bool& b);
+
+private:
+    template<typename T>
+    bool getT(T& x)
+    {
+        if (!this->peek(x)) { return false; }
+        head_ += sizeof(T);
+        return true;
+    }
+
+public:
+
+    bool get(uint8_t& u8) { return getT(u8); }
+    bool get(uint16_t& u16) { return getT(u16); }
+    bool get(uint32_t& u32) { return getT(u32); }
+    bool get(uint64_t& u64) { return getT(u64); }
+    
+    bool get(int8_t& i8) { return getT(i8); }
+    bool get(int16_t& i16) { return getT(i16); }
+    bool get(int32_t& i32) { return getT(i32); }
+    bool get(int64_t& i64) { return getT(i64); }
+
+    bool get(float& f32) { return getT(f32); }
+    bool get(double& f64) { return getT(f64); }
+
+    bool get(bool& b) { return getT(b); }
+
+    template<std::size_t N>
+    bool get(ByteArray<N>& obj)
+    {
+        if (2+N > this->readableSize()) { return false; }
+        uint16_t size;
+        if (!this->peek(size)) { return false; }
+        if (size != N) { return false; }
+        head_ += sizeof(uint16_t);
+        obj.fromArray(reinterpret_cast<char*>(&buffer_[head_]), size);
+        head_ += N;
+        return true;
+    }
 
     // the followings are not needed
     // bool get(char& c);
@@ -95,16 +148,16 @@ public:
     // bool get(unsigned long long& ll);
     
     template<typename T>
-        static void binrep(T x, uint64_t n)
+    static void binrep(T x, uint64_t n)
+    {
+        std::ostringstream oss;
+        for (T i = 1<<(n-1); i > 0; i /= 2)
         {
-            std::ostringstream oss;
-            for (T i = 1<<(n-1); i > 0; i /= 2)
-            {
-                if (x & i) { oss << "1"; }
-                else { oss << "0"; }
-            }
-            std::cout << oss.str() << std::endl;
+            if (x & i) { oss << "1"; }
+            else { oss << "0"; }
         }
+        std::cout << oss.str() << std::endl;
+    }
 
     static uint64_t pack754(double f, int32_t bits, int32_t expbits)
     {
@@ -312,20 +365,18 @@ bool Packet<K>::put(bool b)
 // }
 
 template<std::size_t K>
-bool Packet<K>::get(uint8_t& u8)
+bool Packet<K>::peek(uint8_t& u8)
 {
     if (sizeof(uint8_t) > this->readableSize()) { return false; }
     u8 = buffer_[head_];
-    head_ += 1;
     return true;
 }
 
 template<std::size_t K>
-bool Packet<K>::get(uint16_t& u16)
+bool Packet<K>::peek(uint16_t& u16)
 {
     if (sizeof(uint16_t) > this->readableSize()) { return false; }
     u16 = (static_cast<uint16_t>(buffer_[head_]) << 8) | buffer_[head_+1];
-    head_ += 2;
     // u16 = static_cast<uint16_t>(buffer_[head_++]);
     // u16 <<= 8;
     // u16 |= buffer_[head_++];
@@ -333,7 +384,7 @@ bool Packet<K>::get(uint16_t& u16)
 }
 
 template<std::size_t K>
-bool Packet<K>::get(uint32_t& u32)
+bool Packet<K>::peek(uint32_t& u32)
 {
     if (sizeof(uint32_t) > this->readableSize()) { return false; }
     u32 = 
@@ -341,7 +392,6 @@ bool Packet<K>::get(uint32_t& u32)
         (static_cast<uint32_t>(buffer_[head_+1]) << 16) | 
         (static_cast<uint32_t>(buffer_[head_+2]) << 8) |
         static_cast<uint32_t>(buffer_[head_+3]);
-    head_ += 4;
     // u32 = static_cast<uint32_t>(buffer_[head_++]);
     // u32 <<= 8;
     // u32 |= buffer_[head_++];
@@ -353,7 +403,7 @@ bool Packet<K>::get(uint32_t& u32)
 }
 
 template<std::size_t K>
-bool Packet<K>::get(uint64_t& u64)
+bool Packet<K>::peek(uint64_t& u64)
 {
     if (sizeof(uint64_t) > this->readableSize()) { return false; }
     // u64 = static_cast<uint64_t>(buffer_[head_++]);
@@ -380,77 +430,76 @@ bool Packet<K>::get(uint64_t& u64)
         (static_cast<uint64_t>(buffer_[head_+5]) << 16) |
         (static_cast<uint64_t>(buffer_[head_+6]) << 8) |
         static_cast<uint64_t>(buffer_[head_+7]);
-    head_ += 8;
     return true;
 }
 
 template<std::size_t K>
-bool Packet<K>::get(int8_t& i8)
+bool Packet<K>::peek(int8_t& i8)
 {
     uint8_t i = 0;
-    if (!this->get(i)) { return false; }
+    if (!this->peek(i)) { return false; }
     if (i <= 0x7fu) { i8 = i; }
     else { i8 = -1 - static_cast<int8_t>(0xffu-i); }
     return true;
 }
 
 template<std::size_t K>
-bool Packet<K>::get(int16_t& i16)
+bool Packet<K>::peek(int16_t& i16)
 {
     uint16_t i = 0;
-    if (!this->get(i)) { return false; }
+    if (!this->peek(i)) { return false; }
     if (i <= 0x7fffu) { i16 = i; }
     else { i16 = -1 - static_cast<int16_t>(0xffffu-i); }
     return true;
 }
 
 template<std::size_t K>
-bool Packet<K>::get(int32_t& i32)
+bool Packet<K>::peek(int32_t& i32)
 {
     uint32_t i = 0;
-    if (!this->get(i)) { return false; }
+    if (!this->peek(i)) { return false; }
     if (i <= 0x7fffffffu) { i32 = i; }
     else { i32 = -1 - static_cast<int32_t>(0xffffffffu-i); }
     return true;
 }
 
 template<std::size_t K>
-bool Packet<K>::get(int64_t& i64)
+bool Packet<K>::peek(int64_t& i64)
 {
     uint64_t i = 0;
-    if (!this->get(i)) { return false; }
+    if (!this->peek(i)) { return false; }
     if (i <= 0x7fffffffffffffffu) { i64 = i; }
     else { i64 = -1 - static_cast<int64_t>(0xffffffffffffffffu-i); }
     return true;
 }
 
 template<std::size_t K>
-bool Packet<K>::get(float& f32)
+bool Packet<K>::peek(float& f32)
 {
     if (sizeof(float) > this->readableSize()) { return false; }
     uint32_t i;
-    if (!this->get(i)) { return false; }
+    if (!this->peek(i)) { return false; }
     f32 = Packet::unpack754(i, 32, 8);
     // binrep(i, 32);
     return true;
 }
 
 template<std::size_t K>
-bool Packet<K>::get(double& f64)
+bool Packet<K>::peek(double& f64)
 {
     if (sizeof(double) > this->readableSize()) { return false; }
     uint64_t i;
-    if (!this->get(i)) { return false; }
+    if (!this->peek(i)) { return false; }
     f64 = Packet::unpack754(i, 64, 11);
     // binrep(i, 64);
     return true;
 }
 
 template<std::size_t K>
-bool Packet<K>::get(bool& b)
+bool Packet<K>::peek(bool& b)
 {
     uint8_t i = 0;
-    if (!this->get(i)) { return false; }
+    if (!this->peek(i)) { return false; }
     b = i > 0;
     return true;
 }

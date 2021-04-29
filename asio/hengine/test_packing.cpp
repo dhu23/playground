@@ -270,9 +270,30 @@ BOOST_AUTO_TEST_CASE(test_mixed)
 BOOST_AUTO_TEST_CASE(test_edge_cases)
 {
     Packet<16> packet;
-
     BOOST_TEST(packet.put(true));
-
     int64_t i;
     BOOST_TEST(!packet.get(i));
+}
+
+BOOST_AUTO_TEST_CASE(test_array)
+{
+    Packet<16> packet;
+    
+    ByteArray<10> ba;
+    ba.fromCArray("abcdef");
+
+    BOOST_TEST(packet.put(ba));
+    BOOST_TEST(packet.readableSize() == 12);
+    BOOST_TEST(packet.writableSize() == 4);
+
+    ByteArray<12> gba1;
+    BOOST_TEST(!packet.get(gba1)); // should fail
+
+    ByteArray<10> gba2;
+    BOOST_TEST(packet.get(gba2));
+
+    BOOST_TEST(packet.readableSize() == 0);
+    BOOST_TEST(packet.writableSize() == 4);
+
+    BOOST_TEST(gba2 == ba);
 }
