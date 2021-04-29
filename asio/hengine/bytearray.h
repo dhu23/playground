@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 #include <cstring>
+#include "packing.h" // the point of ByteArray is for networking
 
 // null-byte-terminated and fixed-sized array
 
@@ -43,5 +44,12 @@ public:
     std::size_t size() const { return std::strlen(arr_.data()); }
     bool empty() const { return this->size() == 0; }
 };
+
+template<std::size_t K, std::size_t N>
+inline bool put(Packet<K>& packet, ByteArray<N>& obj)
+{
+    std::size_t spaceNeeded = 2 + obj.size(); // len takes an unsigned short
+    return false;
+}
 
 #endif

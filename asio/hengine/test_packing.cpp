@@ -5,6 +5,8 @@
 BOOST_AUTO_TEST_CASE(test_int8)
 {
     Packet<4> packet;
+    BOOST_TEST(packet.writableSize() == 4);
+    BOOST_TEST(packet.readableSize() == 0);
 
     // each has 1 byte
     int8_t i0 = 6;
@@ -15,9 +17,17 @@ BOOST_AUTO_TEST_CASE(test_int8)
     int8_t i4 = 0; // no room
 
     BOOST_TEST(packet.put(i0));
+    BOOST_TEST(packet.writableSize() == 3);
+    BOOST_TEST(packet.readableSize() == 1);
     BOOST_TEST(packet.put(i1));
+    BOOST_TEST(packet.writableSize() == 2);
+    BOOST_TEST(packet.readableSize() == 2);
     BOOST_TEST(packet.put(i2));
+    BOOST_TEST(packet.writableSize() == 1);
+    BOOST_TEST(packet.readableSize() == 3);
     BOOST_TEST(packet.put(i3));
+    BOOST_TEST(packet.writableSize() == 0);
+    BOOST_TEST(packet.readableSize() == 4);
 
     BOOST_TEST(!packet.put(i4)); // not enough room
 
@@ -216,25 +226,53 @@ BOOST_AUTO_TEST_CASE(test_bool)
 BOOST_AUTO_TEST_CASE(test_mixed)
 {
     Packet<16> packet;
+    BOOST_TEST(packet.writableSize() == 16);
+    BOOST_TEST(packet.readableSize() == 0);
 
     BOOST_TEST(packet.put(true)); // 1 byte
+    BOOST_TEST(packet.writableSize() == 15);
+    BOOST_TEST(packet.readableSize() == 1);
     BOOST_TEST(packet.put(double(5.5))); // 8 bytes
+    BOOST_TEST(packet.writableSize() == 7);
+    BOOST_TEST(packet.readableSize() == 9);
     BOOST_TEST(packet.put(int(-33))); // 4 bytes
+    BOOST_TEST(packet.writableSize() == 3);
+    BOOST_TEST(packet.readableSize() == 13);
     BOOST_TEST(packet.put(static_cast<unsigned short>(45000))); // 2 bytes
+    BOOST_TEST(packet.writableSize() == 1);
+    BOOST_TEST(packet.readableSize() == 15);
 
     bool b = false;
     BOOST_TEST(packet.get(b));
     BOOST_TEST(b);
+    BOOST_TEST(packet.writableSize() == 1);
+    BOOST_TEST(packet.readableSize() == 14);
 
     double d = 0.0;
     BOOST_TEST(packet.get(d));
     BOOST_TEST(d == 5.5);
+    BOOST_TEST(packet.writableSize() == 1);
+    BOOST_TEST(packet.readableSize() == 6);
 
     int i = 0;
     BOOST_TEST(packet.get(i));
     BOOST_TEST(i == -33);
+    BOOST_TEST(packet.writableSize() == 1);
+    BOOST_TEST(packet.readableSize() == 2);
 
     unsigned short s = 0;
     BOOST_TEST(packet.get(s));
     BOOST_TEST(s == 45000);
+    BOOST_TEST(packet.writableSize() == 1);
+    BOOST_TEST(packet.readableSize() == 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_edge_cases)
+{
+    Packet<16> packet;
+
+    BOOST_TEST(packet.put(true));
+
+    int64_t i;
+    BOOST_TEST(!packet.get(i));
 }

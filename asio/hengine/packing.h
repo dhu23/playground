@@ -13,7 +13,7 @@
 
 
 template<std::size_t K>
-struct Packet
+class Packet
 {
     // doesn't look like we need this
     // static_assert(sizeof(char) == sizeof(int8_t));
@@ -27,15 +27,18 @@ struct Packet
     // static_assert(sizeof(long long) == sizeof(int64_t));
     // static_assert(sizeof(unsigned long long) == sizeof(uint64_t));
 
+    std::array<uint8_t, K> buffer_;
+    std::size_t head_; // indicates the readable location
+    std::size_t tail_; // indicates the writable location
+public:
     Packet():
         buffer_(),
         head_(0),
         tail_(0)
     {}
 
-    std::array<uint8_t, K> buffer_;
-    std::size_t head_; // indicates the readable location
-    std::size_t tail_; // indicates the writable location
+    size_t writableSize() const { return K-tail_; }
+    size_t readableSize() const { return tail_-head_; }
 
     bool put(uint8_t u8);
     bool put(uint16_t u16);
@@ -162,7 +165,7 @@ struct Packet
 template<std::size_t K>
 bool Packet<K>::put(uint8_t u8)
 {
-    if (sizeof(uint8_t) + tail_ > K) { return false; }
+    if (sizeof(uint8_t) > this->writableSize()) { return false; }
     buffer_[tail_++] = u8;
     return true;
 }
@@ -170,7 +173,7 @@ bool Packet<K>::put(uint8_t u8)
 template<std::size_t K>
 bool Packet<K>::put(uint16_t u16)
 {
-    if (sizeof(uint16_t) + tail_ > K) { return false; }
+    if (sizeof(uint16_t) > this->writableSize()) { return false; }
     buffer_[tail_++] = u16>>8;
     buffer_[tail_++] = u16;
     return true;
@@ -179,7 +182,7 @@ bool Packet<K>::put(uint16_t u16)
 template<std::size_t K>
 bool Packet<K>::put(uint32_t u32)
 {
-    if (sizeof(uint32_t) + tail_ > K) { return false; }
+    if (sizeof(uint32_t) > this->writableSize()) { return false; }
     buffer_[tail_++] = u32>>24;
     buffer_[tail_++] = u32>>16;
     buffer_[tail_++] = u32>>8;
@@ -190,7 +193,7 @@ bool Packet<K>::put(uint32_t u32)
 template<std::size_t K>
 bool Packet<K>::put(uint64_t u64)
 {
-    if (sizeof(uint64_t) + tail_ > K) { return false; }
+    if (sizeof(uint64_t) > this->writableSize()) { return false; }
     buffer_[tail_++] = u64>>56;
     buffer_[tail_++] = u64>>48;
     buffer_[tail_++] = u64>>40;
@@ -229,7 +232,7 @@ bool Packet<K>::put(int64_t i64)
 template<std::size_t K>
 bool Packet<K>::put(float f32)
 {
-    if (sizeof(float) + tail_ > K) { return false; }
+    if (sizeof(float) > this->writableSize()) { return false; }
     auto fhold = static_cast<uint32_t>(Packet::pack754(f32, 32, 8));
     return this->put(fhold);
 }
@@ -237,7 +240,7 @@ bool Packet<K>::put(float f32)
 template<std::size_t K>
 bool Packet<K>::put(double f64)
 {
-    if (sizeof(double) + tail_ > K) { return false; }
+    if (sizeof(double) > this->writableSize()) { return false; }
     auto fhold = static_cast<uint64_t>(Packet::pack754(f64, 64, 11));
     return this->put(fhold);
 }
@@ -311,7 +314,7 @@ bool Packet<K>::put(bool b)
 template<std::size_t K>
 bool Packet<K>::get(uint8_t& u8)
 {
-    if (sizeof(uint8_t) + head_ > K) { return false; }
+    if (sizeof(uint8_t) > this->readableSize()) { return false; }
     u8 = buffer_[head_];
     head_ += 1;
     return true;
@@ -320,7 +323,7 @@ bool Packet<K>::get(uint8_t& u8)
 template<std::size_t K>
 bool Packet<K>::get(uint16_t& u16)
 {
-    if (sizeof(uint16_t) + head_ > K) { return false; }
+    if (sizeof(uint16_t) > this->readableSize()) { return false; }
     u16 = (static_cast<uint16_t>(buffer_[head_]) << 8) | buffer_[head_+1];
     head_ += 2;
     // u16 = static_cast<uint16_t>(buffer_[head_++]);
@@ -332,7 +335,7 @@ bool Packet<K>::get(uint16_t& u16)
 template<std::size_t K>
 bool Packet<K>::get(uint32_t& u32)
 {
-    if (sizeof(uint32_t) + head_ > K) { return false; }
+    if (sizeof(uint32_t) > this->readableSize()) { return false; }
     u32 = 
         (static_cast<uint32_t>(buffer_[head_]) << 24) |
         (static_cast<uint32_t>(buffer_[head_+1]) << 16) | 
@@ -352,7 +355,7 @@ bool Packet<K>::get(uint32_t& u32)
 template<std::size_t K>
 bool Packet<K>::get(uint64_t& u64)
 {
-    if (sizeof(uint64_t) + head_ > K) { return false; }
+    if (sizeof(uint64_t) > this->readableSize()) { return false; }
     // u64 = static_cast<uint64_t>(buffer_[head_++]);
     // u64 <<= 8;
     // u64 |= buffer_[head_++];
@@ -424,7 +427,7 @@ bool Packet<K>::get(int64_t& i64)
 template<std::size_t K>
 bool Packet<K>::get(float& f32)
 {
-    if (sizeof(float) + head_ > K) { return false; }
+    if (sizeof(float) > this->readableSize()) { return false; }
     uint32_t i;
     if (!this->get(i)) { return false; }
     f32 = Packet::unpack754(i, 32, 8);
@@ -435,7 +438,7 @@ bool Packet<K>::get(float& f32)
 template<std::size_t K>
 bool Packet<K>::get(double& f64)
 {
-    if (sizeof(double) + head_ > K) { return false; }
+    if (sizeof(double) > this->readableSize()) { return false; }
     uint64_t i;
     if (!this->get(i)) { return false; }
     f64 = Packet::unpack754(i, 64, 11);
