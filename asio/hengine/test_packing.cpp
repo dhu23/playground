@@ -1,10 +1,11 @@
 #define BOOST_TEST_MODULE packing
 #include <boost/test/unit_test.hpp>
 #include "packing.h"
+#include "buffer.h"
 
 BOOST_AUTO_TEST_CASE(test_int8)
 {
-    Packet<4> packet;
+    Packet<4, LinearBufferIdx> packet;
     BOOST_TEST(packet.writableSize() == 4);
     BOOST_TEST(packet.readableSize() == 0);
 
@@ -53,7 +54,7 @@ BOOST_AUTO_TEST_CASE(test_int8)
 
 BOOST_AUTO_TEST_CASE(test_int16)
 {
-    Packet<8> packet;
+    Packet<8, LinearBufferIdx> packet;
 
     // each has 2 bytes
     int16_t i0 = 6;
@@ -92,7 +93,7 @@ BOOST_AUTO_TEST_CASE(test_int16)
 
 BOOST_AUTO_TEST_CASE(test_int32)
 {
-    Packet<16> packet;
+    Packet<16, LinearBufferIdx> packet;
 
     // each has 4 bytes
     int32_t i0 = 6;
@@ -131,7 +132,7 @@ BOOST_AUTO_TEST_CASE(test_int32)
 
 BOOST_AUTO_TEST_CASE(test_int64)
 {
-    Packet<32> packet;
+    Packet<32, LinearBufferIdx> packet;
 
     // each has 8 bytes
     int64_t i0 = 6;
@@ -170,7 +171,7 @@ BOOST_AUTO_TEST_CASE(test_int64)
 
 BOOST_AUTO_TEST_CASE(test_floats)
 {
-    Packet<28> packet;
+    Packet<28, LinearBufferIdx> packet;
 
     float f0 = 3.14; // 4 bytes
     float f1 = -3.14; // 4 bytes
@@ -206,7 +207,7 @@ BOOST_AUTO_TEST_CASE(test_floats)
 
 BOOST_AUTO_TEST_CASE(test_bool)
 {
-    Packet<2> packet;
+    Packet<2, LinearBufferIdx> packet;
 
     BOOST_TEST(packet.put(true));
     BOOST_TEST(packet.put(false));
@@ -225,7 +226,7 @@ BOOST_AUTO_TEST_CASE(test_bool)
 
 BOOST_AUTO_TEST_CASE(test_mixed)
 {
-    Packet<16> packet;
+    Packet<16, LinearBufferIdx> packet;
     BOOST_TEST(packet.writableSize() == 16);
     BOOST_TEST(packet.readableSize() == 0);
 
@@ -269,7 +270,7 @@ BOOST_AUTO_TEST_CASE(test_mixed)
 
 BOOST_AUTO_TEST_CASE(test_edge_cases)
 {
-    Packet<16> packet;
+    Packet<16, LinearBufferIdx> packet;
     BOOST_TEST(packet.put(true));
     int64_t i;
     BOOST_TEST(!packet.get(i));
@@ -277,7 +278,7 @@ BOOST_AUTO_TEST_CASE(test_edge_cases)
 
 BOOST_AUTO_TEST_CASE(test_array)
 {
-    Packet<16> packet;
+    Packet<16, LinearBufferIdx> packet;
     
     ByteArray<10> ba;
     ba.fromCArray("abcdef");

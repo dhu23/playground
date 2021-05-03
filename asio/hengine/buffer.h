@@ -1,11 +1,10 @@
 #ifndef _INCLUDED_RINGBUFFER_H_
 #define _INCLUDED_RINGBUFFER_H_
 
-#include "packing.h"
 
 // this is the ring buffer that holds heterogeneous objects in a C style
 // template<size_t N, size_t M>
-// class RingBuffer
+// class RingBufferIdx
 // {
 // public:
 //     
@@ -62,7 +61,7 @@
 //     }
 // 
 // public:
-//     RingBuffer():
+//     RingBufferIdx():
 //         buffer_(),
 //         tmpbuffer_(),
 //         head_(0),
@@ -104,20 +103,23 @@
 // };
 
 
-// Buffer classes do not manage memory directly. It defines how reading and 
+// BufferIdx classes do not manage memory directly. It defines how reading and 
 // writing moves the index indicators.
-class Buffer
+class BufferIdx
 {
 protected:
     std::size_t capacity_;
     std::size_t head_;
     std::size_t tail_;
 public:
-    Buffer(std::size_t capacity):
+    BufferIdx(std::size_t capacity):
         capacity_(capacity),
         head_(0),
         tail_(0)
     {}
+
+    std::size_t head() const { return head_; }
+    std::size_t tail() const { return tail_; }
 
     // available space from tail to the end of the buffer
     virtual std::size_t tailSpace() const = 0;
@@ -136,11 +138,11 @@ public:
 };
 
 // linear buffer reads and writes linearly. 
-class LinearBuffer : public Buffer
+class LinearBufferIdx : public BufferIdx
 {
 public:
-    LinearBuffer(std::size_t capacity):
-        Buffer(capacity)
+    LinearBufferIdx(std::size_t capacity):
+        BufferIdx(capacity)
     {}
 
     std::size_t tailSpace() const override
@@ -178,12 +180,12 @@ public:
 };
 
 // ring buffer reads and writes wrapping around
-class RingBuffer : public Buffer
+class RingBufferIdx : public BufferIdx
 {
     bool wrapped_; // indicator of wrapping in the buffer when head==tail
 public:
-    RingBuffer(std::size_t capacity):
-        Buffer(capacity),
+    RingBufferIdx(std::size_t capacity):
+        BufferIdx(capacity),
         wrapped_(false)
     {}
 

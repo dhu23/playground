@@ -5,7 +5,7 @@
 
 BOOST_AUTO_TEST_CASE(test_linearbuffer)
 {
-    LinearBuffer lb(10);
+    LinearBufferIdx lb(10);
 
     BOOST_TEST(lb.isEmpty());
     BOOST_TEST(!lb.isFull());
@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(test_linearbuffer)
 
 BOOST_AUTO_TEST_CASE(test_ringbuffer)
 {
-    RingBuffer rb(10);
+    RingBufferIdx rb(10);
 
     BOOST_TEST(rb.isEmpty());
     BOOST_TEST(!rb.isFull());
