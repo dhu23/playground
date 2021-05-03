@@ -273,14 +273,6 @@ bool Packet<K, BufIdx>::put(uint64_t u64)
     this->writeByte(u64>>16);
     this->writeByte(u64>>8);
     this->writeByte(u64);
-    //buffer_[tail_++] = u64>>56;
-    //buffer_[tail_++] = u64>>48;
-    //buffer_[tail_++] = u64>>40;
-    //buffer_[tail_++] = u64>>32;
-    //buffer_[tail_++] = u64>>24;
-    //buffer_[tail_++] = u64>>16;
-    //buffer_[tail_++] = u64>>8;
-    //buffer_[tail_++] = u64;
     return true;
 }
 
@@ -394,7 +386,6 @@ template<std::size_t K, typename BufIdx>
 bool Packet<K, BufIdx>::peek(uint8_t& u8)
 {
     if (sizeof(uint8_t) > this->readableSize()) { return false; }
-    // u8 = buffer_[head_];
     u8 = this->peekByte(0);
     return true;
 }
@@ -403,8 +394,6 @@ template<std::size_t K, typename BufIdx>
 bool Packet<K, BufIdx>::peek(uint16_t& u16)
 {
     if (sizeof(uint16_t) > this->readableSize()) { return false; }
-    // u16 = (static_cast<uint16_t>(buffer_[head_]) << 8) | buffer_[head_+1];
-
     u16 = (static_cast<uint16_t>(this->peekByte(0)) << 8) | this->peekByte(1);
     // u16 = static_cast<uint16_t>(buffer_[head_++]);
     // u16 <<= 8;
@@ -421,11 +410,6 @@ bool Packet<K, BufIdx>::peek(uint32_t& u32)
         (static_cast<uint32_t>(this->peekByte(1)) << 16) | 
         (static_cast<uint32_t>(this->peekByte(2)) << 8) | 
         static_cast<uint32_t>(this->peekByte(3));
-    //u32 = 
-    //    (static_cast<uint32_t>(buffer_[head_]) << 24) |
-    //    (static_cast<uint32_t>(buffer_[head_+1]) << 16) | 
-    //    (static_cast<uint32_t>(buffer_[head_+2]) << 8) |
-    //    static_cast<uint32_t>(buffer_[head_+3]);
     // u32 = static_cast<uint32_t>(buffer_[head_++]);
     // u32 <<= 8;
     // u32 |= buffer_[head_++];
@@ -455,15 +439,6 @@ bool Packet<K, BufIdx>::peek(uint64_t& u64)
     // u64 |= buffer_[head_++];
     // u64 <<= 8;
     // u64 |= buffer_[head_++];
-    // u64 = 
-    //     (static_cast<uint64_t>(buffer_[head_]) << 56) |
-    //     (static_cast<uint64_t>(buffer_[head_+1]) << 48) |
-    //     (static_cast<uint64_t>(buffer_[head_+2]) << 40) |
-    //     (static_cast<uint64_t>(buffer_[head_+3]) << 32) |
-    //     (static_cast<uint64_t>(buffer_[head_+4]) << 24) |
-    //     (static_cast<uint64_t>(buffer_[head_+5]) << 16) |
-    //     (static_cast<uint64_t>(buffer_[head_+6]) << 8) |
-    //     static_cast<uint64_t>(buffer_[head_+7]);
     u64 = 
         (static_cast<uint64_t>(this->peekByte(0)) << 56) |
         (static_cast<uint64_t>(this->peekByte(1)) << 48) |
