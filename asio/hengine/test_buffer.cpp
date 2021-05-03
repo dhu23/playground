@@ -2,22 +2,6 @@
 #include <boost/test/unit_test.hpp>
 #include "buffer.h"
 
-//BOOST_AUTO_TEST_CASE(test_ctor)
-//{
-//    RingBuffer<32, 4> rb;
-//    BOOST_TEST(rb.isEmpty());
-//    BOOST_TEST(!rb.isFull());
-//}
-//
-//BOOST_AUTO_TEST_CASE(test_push)
-//{
-//    RingBuffer<32, 4> rb;
-//    rb.push(int(5));
-//    rb.push(int(5));
-//    rb.push(int(5));
-//    rb.push(int(5));
-//}
-
 
 BOOST_AUTO_TEST_CASE(test_linearbuffer)
 {
@@ -46,4 +30,33 @@ BOOST_AUTO_TEST_CASE(test_linearbuffer)
     BOOST_TEST(lb.read(3));
     BOOST_TEST(lb.read(7));
     BOOST_TEST(lb.isEmpty());
+}
+
+BOOST_AUTO_TEST_CASE(test_ringbuffer)
+{
+    RingBuffer rb(10);
+
+    BOOST_TEST(rb.isEmpty());
+    BOOST_TEST(!rb.isFull());
+
+    BOOST_TEST(rb.capacity() == 10);
+
+    BOOST_TEST(!rb.read(1));
+    BOOST_TEST(rb.write(3));
+    BOOST_TEST(rb.read(2));
+
+    BOOST_TEST(rb.tailSpace() == 7);
+    BOOST_TEST(rb.freeSpace() == 9);
+    BOOST_TEST(rb.usedSpace() == 1);
+
+    BOOST_TEST(rb.write(8));
+    BOOST_TEST(rb.tailSpace() == 1);
+    BOOST_TEST(rb.freeSpace() == 1);
+    BOOST_TEST(rb.usedSpace() == 9);
+
+    BOOST_TEST(!rb.read(10));
+    BOOST_TEST(rb.read(3));
+    BOOST_TEST(rb.read(6));
+
+    BOOST_TEST(rb.isEmpty());
 }

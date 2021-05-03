@@ -160,6 +160,7 @@ public:
     {
         if (this->usedSpace() < size) { return false; }
         head_ += size;
+        // resetting indices if both are the same
         if (head_ == tail_)
         {
             head_ = 0;
@@ -182,7 +183,8 @@ class RingBuffer : public Buffer
     bool wrapped_; // indicator of wrapping in the buffer when head==tail
 public:
     RingBuffer(std::size_t capacity):
-        Buffer(capacity)
+        Buffer(capacity),
+        wrapped_(false)
     {}
 
     std::size_t tailSpace() const override
@@ -227,6 +229,7 @@ public:
         {
             tail_ = tail;
         }
+        return true;
     }
 
 };
