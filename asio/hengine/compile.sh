@@ -9,3 +9,6 @@ echo "compiled test_timestamp.tsk"
 
 g++ test_packing.cpp -std=c++2a -I ~/boost_1_75_0 -L ~/boost_1_75_0/stage/lib -lboost_unit_test_framework -static -o test_packing.tsk
 echo "compiled test_packing.tsk"
+
+g++ test_messages.cpp -std=c++2a -I ~/boost_1_75_0 -L ~/boost_1_75_0/stage/lib -lboost_unit_test_framework -static -o test_messages.tsk
+echo "compiled test_messages.tsk"
