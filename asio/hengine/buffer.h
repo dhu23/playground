@@ -160,7 +160,7 @@ public:
     {
         if (this->usedSpace() < size) { return false; }
         head_ += size;
-        if (this->isEmpty())
+        if (head_ == tail_)
         {
             head_ = 0;
             tail_ = 0;
