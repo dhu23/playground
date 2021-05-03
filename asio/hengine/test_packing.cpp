@@ -263,7 +263,7 @@ BOOST_AUTO_TEST_CASE(test_mixed)
     unsigned short s = 0;
     BOOST_TEST(packet.get(s));
     BOOST_TEST(s == 45000);
-    BOOST_TEST(packet.writableSize() == 1);
+    BOOST_TEST(packet.writableSize() == 16); // since buffer reset
     BOOST_TEST(packet.readableSize() == 0);
 }
 
@@ -293,7 +293,7 @@ BOOST_AUTO_TEST_CASE(test_array)
     BOOST_TEST(packet.get(gba2));
 
     BOOST_TEST(packet.readableSize() == 0);
-    BOOST_TEST(packet.writableSize() == 4);
+    BOOST_TEST(packet.writableSize() == 16);
 
     BOOST_TEST(gba2 == ba);
 }

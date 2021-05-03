@@ -41,6 +41,15 @@ public:
     size_t writableSize() const { return K-tail_; }
     size_t readableSize() const { return tail_-head_; }
 
+    std::size_t head() const { return head_; }
+    std::size_t tail() const { return tail_; }
+
+    void reset() 
+    {
+        head_ = 0;
+        tail_ = 0;
+    }
+
     bool put(uint8_t u8);
     bool put(uint16_t u16);
     bool put(uint32_t u32);
@@ -102,6 +111,7 @@ private:
     {
         if (!this->peek(x)) { return false; }
         head_ += sizeof(T);
+        if (head_ == tail_) { this->reset(); }
         return true;
     }
 
@@ -132,6 +142,8 @@ public:
         head_ += sizeof(uint16_t);
         obj.fromArray(reinterpret_cast<char*>(&buffer_[head_]), size);
         head_ += N;
+
+        if (head_ == tail_) { this->reset(); }
         return true;
     }
 
