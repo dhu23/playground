@@ -122,6 +122,7 @@ public:
         buffer_()
     {}
 
+    explicit operator bool() const { return bufferIdx_.isEmpty(); }
     size_t writableSize() const { return bufferIdx_.freeSpace(); }
     size_t readableSize() const { return bufferIdx_.usedSpace(); }
 
@@ -214,7 +215,7 @@ public:
         if (!this->peek(size)) { return false; }
         if (size != N) { return false; }
         bufferIdx_.read(sizeof(uint16_t));
-        obj.fromArray(reinterpret_cast<char*>(&buffer_[bufferIdx_.head()]), size);
+        obj.fromBuffer(reinterpret_cast<char*>(&buffer_[bufferIdx_.head()]), size);
         bufferIdx_.read(N);
         return true;
     }

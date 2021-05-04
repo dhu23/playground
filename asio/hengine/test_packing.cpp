@@ -281,7 +281,7 @@ BOOST_AUTO_TEST_CASE(test_array)
     Packet<16, LinearBufferIdx> packet;
     
     ByteArray<10> ba;
-    ba.fromCArray("abcdef");
+    ba.fromArray("abcdef");
 
     BOOST_TEST(packet.put(ba));
     BOOST_TEST(packet.readableSize() == 12);

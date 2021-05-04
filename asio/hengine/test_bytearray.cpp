@@ -15,19 +15,19 @@ BOOST_AUTO_TEST_CASE(test_ctor)
     ByteArray<8> ba1;
 
     char input[16] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'};
-    ba1.fromArray(input, 10);
+    ba1.fromBuffer(input, 10);
     BOOST_TEST(ba1.size() == 7);
     BOOST_TEST(ba1.str() == std::string("abcdefg"));
 
-    ba1.fromArray(input, 4);
+    ba1.fromBuffer(input, 4);
     BOOST_TEST(ba1.size() == 4);
     BOOST_TEST(ba1.str() == std::string("abcd"));
 
-    ba1.fromCArray("abcdefghi");
+    ba1.fromArray("abcdefghi");
     BOOST_TEST(ba1.size() == 7);
     BOOST_TEST(ba1.str() == std::string("abcdefg"));
 
-    ba1.fromCArray("ab");
+    ba1.fromArray("ab");
     BOOST_TEST(ba1.size() == 2);
     BOOST_TEST(ba1.str() == std::string("ab"));
 

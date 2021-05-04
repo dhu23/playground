@@ -13,14 +13,14 @@ class ByteArray
 {
     std::array<char, N> arr_;
 public:
+    constexpr std::size_t capacity() const { return N; }
+    
     ByteArray()
     {
         memset(arr_.data(), 0, N);
     }
 
-    std::size_t capacity() const { return N; }
-
-    ByteArray<N>& fromArray(const char* from, std::size_t len)
+    ByteArray<N>& fromBuffer(const char* from, std::size_t len)
     {
         // there will be at least one null byte at the end
         std::size_t slen = std::min(len, N-1);
@@ -29,19 +29,41 @@ public:
         return *this;
     }
 
-    ByteArray<N>& fromCArray(const char* from)
+    ByteArray<N>& fromArray(const char* from)
     {
-        return this->fromArray(from, std::strlen(from));
+        return this->fromBuffer(from, std::strlen(from));
     }
 
     ByteArray<N>& fromString(const std::string& from)
     {
-        return this->fromCArray(from.c_str());
+        return this->fromArray(from.c_str());
+    }
+
+    static ByteArray<N> makeFromBuffer(const char* from, std::size_t len)
+    {
+        ByteArray<N> ret;
+        ret.fromBuffer(from, len);
+        return ret;
+    }
+
+    static ByteArray<N> makeFromArray(const char* from)
+    {
+        ByteArray<N> ret;
+        ret.fromArray(from);
+        return ret;
+    }
+
+    static ByteArray<N> makeFromString(const std::string& from)
+    {
+        ByteArray<N> ret;
+        ret.fromString(from);
+        return ret;
     }
 
     const char* data() const { return arr_.data(); }
     std::string str() const { return std::string(arr_.data()); }
     // std::string(arr_.begin(), arr_.end()); returns a string with null bytes
+
     std::size_t size() const { return std::strlen(arr_.data()); }
     bool empty() const { return this->size() == 0; }
 

@@ -1,3 +1,6 @@
+#ifndef _INCLUDED_TCPSERVER_H_
+#define _INCLUDED_TCPSERVER_H_
+
 #include <sys/select.h>
 
 
@@ -25,3 +28,5 @@ public:
     virtual ~TCPSelectServer();
     virtual void run() override;
 };
+
+#endif
