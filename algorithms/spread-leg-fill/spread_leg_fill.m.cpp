@@ -5,7 +5,6 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
-#include <cassert>
 
 // legs       | spread
 // qty cum    | cum/qty
@@ -79,15 +78,15 @@ class QtySequencer
 private:
     unsigned int processed_;
     std::vector<unsigned int> cumSeq_;
-    std::map<Qty, T, QtyCompare> seq_;
+    std::map<unsigned int, T> seq_;
     std::vector<T> merged_;
 public:
     QtySequencer(): processed_(0), cumSeq_(), seq_(), merged_() {}
 
-    unsigned int processedQty() const { return processed_; }
+    unsigned int processed() const { return processed_; }
     unsigned int inSequenceUntil() const 
     { 
-        return cumSeq_.empty() ? 0 : cumSeq.back();
+        return cumSeq_.empty() ? 0 : cumSeq_.back();
     }
     // unsigned int isInSequenceUntil(unsigned int target) const
     // {
@@ -112,13 +111,8 @@ public:
     //  *27    6
     //   30    3 (not seen)
     //  *40   10
-    bool addQty(const T& t) 
+    bool add(const T& t) 
     {
-        auto addToMap = [this](const T& t)
-        {
-            this->seq_.emplace(Qty{t.cumulative, t.last}, t);
-        };
-
         auto seqVal = this->inSequenceUntil();
         // cannot show up before the last cumqty that is already in sequence
         // this certain guarantees that it won't show less than processed val
@@ -134,24 +128,26 @@ public:
         {
             // this new object should be at the front. 
             // this includes inserting into an empty map
-            if (processed_ + t.last <= t.cumulative) { addToMap(t); }
+            if (processed_ + t.last > t.cumulative) { return false; }
         }
         else
         {
             // this object would have something in front of it. check
             auto prev = std::prev(upbound);
-            if (prev->first.cumulative + t.last > t.cumulative) { return false; }
+            if (prev->first + t.last > t.cumulative) { return false; }
 
             // if it also has something behind it. check it too
             if (upbound != seq_.end() &&
-                t.cumulative+upbound->first.last > upbound->first.cumulative)
+                t.cumulative + upbound->second.last > upbound->first)
             {
                 return false;
             }
         }
+        seq_.emplace(t.cumulative, t);
 
         // check if it should be appended to the cum sequence
         if (t.cumulative == seqVal + t.last) { cumSeq_.push_back(t.cumulative); }
+        return true;
     }
 
     // collapsing until target is accumulated
@@ -161,7 +157,7 @@ public:
         auto found = std::find(cumSeq_.begin(), cumSeq_.end(), target);
         if (found == cumSeq_.end()) { return false; }
 
-        auto start = std::uppoer_bound(cumSeq_.begin(), cumSeq_.end(), processed_);
+        auto start = std::upper_bound(cumSeq_.begin(), cumSeq_.end(), processed_);
         merged_.emplace_back();
         T& ret = merged_.back();
         while (start <= found)
@@ -175,12 +171,15 @@ public:
 
     std::ostream& print(std::ostream& os) const
     {
-        os << "QtySequencer[seq=" << seq_;
-        os << ",processed=" << processed_ << "]";
+        os 
+            << "QtySequencer[processed=" << processed_
+            << ",cumSeq=" << cumSeq_ << ",seq=" << seq_
+            << ",merged=" << merged_ << ']';
         return os;
     }
 };
 
+template<typename T>
 std::ostream& operator<<(std::ostream& os, const QtySequencer<T>& qs)
 {
     return qs.print(os);
@@ -194,8 +193,8 @@ template<typename T>
 struct Fill
 {
     // double avgPx;
-    int last;
-    int cumulative;
+    unsigned int cumulative;
+    unsigned int last;
     std::string sym;
 
     void merge(const Fill<T>& other)
@@ -224,7 +223,7 @@ std::ostream& operator<<(std::ostream& os, const LegFill& f)
     os << "LegFill[last=" << f.last << ",cumulative=" << f.cumulative << "]";
     return os;
 }
-
+/*
 class MultiFillCheck
 {
 private:
@@ -303,7 +302,7 @@ void testSequence()
     spreads.addQty(SpreadFill{20, 40});
     std::cout << spreads << std::endl << std::endl;
 }
-
+*/
 //  8  10  2  |  12  8  |  30  2  3  leg last
 //  8  18 20  |  32 40  |  70 72 75  leg cumulative
 //        20  |     20  |        35  spread last 
@@ -342,10 +341,43 @@ void testOutOfOrder()
 }
 */
 
-int main(int argc, char* argv[])
+namespace {
+
+    struct Dummy {};
+    using FD = Fill<Dummy>;
+
+    auto makeFD = [](unsigned int cumulative, unsigned int last)
+    {
+        return FD{cumulative, last, ""};
+    };
+
+} // anonymous namespace
+
+BOOST_AUTO_TEST_CASE(test_sequencer)
 {
-    testSequence();
-    // testInOrder();
-    // testOutOfOrder();
-    return 0;
+    
+    QtySequencer<FD> qs;
+    BOOST_TEST(qs.add(makeFD(5, 5)));
+    BOOST_TEST(qs.processed() == 0);
+    BOOST_TEST(qs.inSequenceUntil() == 5);
+
+    BOOST_TEST(qs.add(makeFD(15, 10)));
+    BOOST_TEST(qs.processed() == 0);
+    BOOST_TEST(qs.inSequenceUntil() == 15);
+
+    BOOST_TEST(qs.add(makeFD(18, 3)));
+    BOOST_TEST(qs.processed() == 0);
+    BOOST_TEST(qs.inSequenceUntil() == 18);
+
+    BOOST_TEST(qs.add(makeFD(28, 10)));
+    BOOST_TEST(qs.processed() == 0);
+    BOOST_TEST(qs.inSequenceUntil() == 28);
+
+    BOOST_TEST(qs.add(makeFD(58, 30)));
+    BOOST_TEST(qs.processed() == 0);
+    BOOST_TEST(qs.inSequenceUntil() == 58);
+
+    BOOST_TEST(qs.add(makeFD(60, 2)));
+    BOOST_TEST(qs.processed() == 0);
+    BOOST_TEST(qs.inSequenceUntil() == 60);
 }
