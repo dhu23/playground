@@ -17,26 +17,6 @@
 //   2  60    |
 // ------------ 42/60
 
-struct Qty
-{
-    unsigned int cumulative;
-    unsigned int last;
-};
-
-std::ostream& operator<<(std::ostream& os, const Qty& q)
-{
-    os << "Qty[cumulative=" << q.cumulative << ",last=" << q.last << "]";
-    return os;
-}
-
-struct QtyCompare
-{
-    bool operator()(const Qty& lhs, const Qty& rhs) const 
-    {
-        return lhs.cumulative < rhs.cumulative;
-    }
-};
-
 template<typename K, typename V>
 std::ostream& operator<<(std::ostream& os, const std::pair<K, V>& p)
 {
@@ -343,17 +323,23 @@ void testOutOfOrder()
 
 namespace {
 
-    struct Dummy {};
-    using FD = Fill<Dummy>;
+struct Dummy {};
+using FD = Fill<Dummy>;
 
-    auto makeFD = [](unsigned int cumulative, unsigned int last)
-    {
-        return FD{cumulative, last, ""};
-    };
+auto makeFD = [](unsigned int cumulative, unsigned int last)
+{
+    return FD{cumulative, last, ""};
+};
+
+std::ostream& operator<<(std::ostream& os, const FD& obj)
+{
+    os << "DummyFill[last:" << obj.last << ",cum:" << obj.cumulative << "]";
+    return os;
+}
 
 } // anonymous namespace
 
-BOOST_AUTO_TEST_CASE(test_sequencer)
+BOOST_AUTO_TEST_CASE(test_sequencer_add)
 {
     
     QtySequencer<FD> qs;
@@ -364,6 +350,9 @@ BOOST_AUTO_TEST_CASE(test_sequencer)
     BOOST_TEST(qs.add(makeFD(15, 10)));
     BOOST_TEST(qs.processed() == 0);
     BOOST_TEST(qs.inSequenceUntil() == 15);
+    BOOST_TEST(qs.collapsable(5));
+    BOOST_TEST(qs.collapsable(15));
+    BOOST_TEST(!qs.collapsable(12));
 
     BOOST_TEST(qs.add(makeFD(18, 3)));
     BOOST_TEST(qs.processed() == 0);
@@ -380,4 +369,13 @@ BOOST_AUTO_TEST_CASE(test_sequencer)
     BOOST_TEST(qs.add(makeFD(60, 2)));
     BOOST_TEST(qs.processed() == 0);
     BOOST_TEST(qs.inSequenceUntil() == 60);
+    BOOST_TEST(qs.collapsable(5));
+    BOOST_TEST(qs.collapsable(15));
+    BOOST_TEST(!qs.collapsable(12));
+
+    std::cout << qs << std::endl;
+}
+
+BOOST_AUTO_TEST_CASE(test_sequencer_collapse)
+{
 }
