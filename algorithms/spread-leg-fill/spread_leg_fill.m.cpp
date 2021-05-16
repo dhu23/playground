@@ -63,6 +63,7 @@ private:
 public:
     QtySequencer(): processed_(0), cumSeq_(), seq_(), merged_() {}
 
+    const std::vector<T>& merged() const { return merged_; }
     unsigned int processed() const { return processed_; }
     unsigned int inSequenceUntil() const 
     { 
@@ -341,7 +342,6 @@ std::ostream& operator<<(std::ostream& os, const FD& obj)
 
 BOOST_AUTO_TEST_CASE(test_sequencer_add)
 {
-    
     QtySequencer<FD> qs;
     BOOST_TEST(qs.add(makeFD(5, 5)));
     BOOST_TEST(qs.processed() == 0);
@@ -373,9 +373,28 @@ BOOST_AUTO_TEST_CASE(test_sequencer_add)
     BOOST_TEST(qs.collapsable(15));
     BOOST_TEST(!qs.collapsable(12));
 
-    std::cout << qs << std::endl;
+    // std::cout << qs << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(test_sequencer_collapse)
 {
+    QtySequencer<FD> qs;
+    BOOST_TEST(qs.add(makeFD(5, 5)));
+    BOOST_TEST(!qs.add(makeFD(5, 5))); // duplicate
+    BOOST_TEST(qs.add(makeFD(18, 3)));
+    BOOST_TEST(!qs.add(makeFD(16, 10))); // 16+3 > 18. incoherent
+    BOOST_TEST(qs.add(makeFD(58, 30)));
+
+    BOOST_TEST(qs.inSequenceUntil() == 5);
+    BOOST_TEST(qs.processed() == 0);
+    BOOST_TEST(qs.merged().size() == 0);
+
+    BOOST_TEST(qs.collapsable(5));
+    BOOST_TEST(!qs.collapsable(15));
+    BOOST_TEST(!qs.collapsable(18));
+
+    BOOST_TEST(qs.add(makeFD(15, 10))); // connecting 5 and 18
+    BOOST_TEST(qs.collapsable(18)); 
+
+    std::cout << qs << std::endl;
 }
