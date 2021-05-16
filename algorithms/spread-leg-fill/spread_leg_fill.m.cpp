@@ -1,6 +1,8 @@
 #define BOOST_TEST_MODULE multifills
 #include <boost/test/unit_test.hpp>
 
+#include <unordered_set>
+#include <unordered_map>
 #include <map>
 #include <vector>
 #include <iostream>
@@ -171,10 +173,69 @@ std::ostream& operator<<(std::ostream& os, const QtySequencer<T>& qs)
     return qs.print(os);
 }
 
-// the following are for testing purposes so that
-// we don't have create sophisticated concrete types
-struct Spread {};
-struct Leg {};
+template<typename SpreadFill, typename LegFill>
+class MultiFillCheck
+{
+private:
+    struct MultiFill
+    {
+        SpreadFill sFill;
+        std::unordered_map<std::string, LegFill> lFills;
+    };
+    std::string spreadSym_;
+    QtySequencer<SpreadFill> spreads_;
+    // mapping leg symbols to leg fill sequence structure
+    std::unordered_map<std::string, QtySequencer<LegFill>> legs_;
+    std::vector<MultiFill> order_;
+public:
+    MultiFillCheck(
+        const std::string& spreadSym,
+        const std::unordered_set<std::string>& legSyms):
+        spreadSym_(spreadSym),
+        spreads_(),
+        legs_(),
+        order_()
+    {
+        for (const auto& legSym : legSyms)
+        {
+            legs_.emplace(legSym, QtySequencer<LegFill>());
+        }
+    }
+    /*
+    void add(const SpreadFill& sf)
+    {
+        if (sf.sym != spreadSym_)
+        {
+            throw std::runtime_error("cannot process spread fill symbol");
+        }
+        spreads_.addQty(sf);
+        while (true)
+        {
+            auto cumval = spreads_.isHeadInSequence();
+            if (cumval <= 0) { return; }
+            // try to tether spread and leg fills together
+            for (const auto& kv : legs_)
+            {
+                auto& legSequencer = kv.second;
+                if (!legSequencer.isInSequenceUntil(cumval)) { return; }
+            }
+
+            for (auto& kv : legs_)
+            {
+                auto& legSequencer = kv.second;
+                legSequencer.collapseUntil(cumval);
+            }
+        }
+    }
+    void add(const LegFill& lf)
+    {
+        m_legs.addQty(lf);
+    }
+    */
+};
+
+
+namespace {
 
 template<typename T>
 struct Fill
@@ -196,24 +257,6 @@ struct Fill
         if (sym.empty()) { sym = other.sym; }
     }
 };
-
-using SpreadFill = Fill<Spread>;
-using LegFill = Fill<Leg>;
-
-std::ostream& operator<<(std::ostream& os, const SpreadFill& f)
-{
-    os << "SpreadFill[last=" << f.last << ",cumulative=" << f.cumulative << "]";
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const LegFill& f)
-{
-    os << "LegFill[last=" << f.last << ",cumulative=" << f.cumulative << "]";
-    return os;
-}
-
-
-namespace {
 
 struct Dummy {};
 using FD = Fill<Dummy>;
