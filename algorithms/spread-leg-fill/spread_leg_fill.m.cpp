@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include <sstream>
 
 // legs       | spread
 // qty cum    | cum/qty
@@ -124,10 +125,17 @@ public:
                 return false;
             }
         }
-        seq_.emplace(t.cumulative, t);
+        auto ret = seq_.emplace(t.cumulative, t);
 
-        // check if it should be appended to the cum sequence
-        if (t.cumulative == seqVal + t.last) { cumSeq_.push_back(t.cumulative); }
+        // now see if we can update cumseq because the new node can be 
+        // potentially added to the list, so are the objects after it
+        auto it = ret.first;
+        while (it != seq_.end() && it->first == seqVal + it->second.last)
+        {
+            cumSeq_.push_back(it->first);
+            seqVal = it->first;
+            ++it;
+        }
         return true;
     }
 
@@ -144,6 +152,7 @@ public:
         while (start <= found)
         {
             auto bit = seq_.begin(); // begin iterator
+            std::cout << "merging " << bit->second << " into " << ret << std::endl;
             ret.merge(bit->second);
             seq_.erase(bit);
         }
@@ -166,7 +175,8 @@ std::ostream& operator<<(std::ostream& os, const QtySequencer<T>& qs)
     return qs.print(os);
 }
 
-// just tags
+// the following are for testing purposes so that
+// we don't have create sophisticated concrete types
 struct Spread {};
 struct Leg {};
 
@@ -182,7 +192,9 @@ struct Fill
     {
         if (sym != other.sym)
         {
-            throw std::runtime_error("cannot merge different symbols");
+            std::ostringstream oss;
+            oss << "cannot merge different symbols:" << sym << " and " << other.sym;
+            throw std::runtime_error(oss.str());
         }
         // avgPx = other.cumulative > cumulative ? other.avgPx : avgPx;
         last += other.last;
@@ -329,12 +341,12 @@ using FD = Fill<Dummy>;
 
 auto makeFD = [](unsigned int cumulative, unsigned int last)
 {
-    return FD{cumulative, last, ""};
+    return FD{cumulative, last, std::string()};
 };
 
 std::ostream& operator<<(std::ostream& os, const FD& obj)
 {
-    os << "DummyFill[last:" << obj.last << ",cum:" << obj.cumulative << "]";
+    os << "DummyFill[last:" << obj.last << ",cum:" << obj.cumulative << ",sym:" << obj.sym << "]";
     return os;
 }
 
@@ -395,6 +407,10 @@ BOOST_AUTO_TEST_CASE(test_sequencer_collapse)
 
     BOOST_TEST(qs.add(makeFD(15, 10))); // connecting 5 and 18
     BOOST_TEST(qs.collapsable(18)); 
+    BOOST_TEST(qs.inSequenceUntil() == 18);
 
+    std::cout << "collapsing =======" << std::endl;
     std::cout << qs << std::endl;
+    BOOST_TEST(qs.collapse(qs.inSequenceUntil())); 
+
 }
