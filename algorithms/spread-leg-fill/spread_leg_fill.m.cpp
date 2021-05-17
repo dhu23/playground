@@ -207,29 +207,45 @@ private:
 
     unsigned int tether() // return number of MultiFill tethered together
     {
+        std::cout << "tethering..........." << std::endl;
         unsigned int count = 0;
         auto target = spreads_.nextInSequence();
-        
+        std::cout << "target=" << target << std::endl;
         while (target > 0)
         {
+            bool legTetherable = true;
             for (const auto& kv : legs_)
             {
-                if (!kv.second.collapsable(target)) { break; }
+                if (!kv.second.collapsable(target)) 
+                {
+                    legTetherable = false;
+                    break;
+                }
             }
+            if (!legTetherable) { break; }
+
+            std::cout << "can tether..." << std::endl;
 
             order_.emplace_back();
             auto& multiFill = order_.back();
             // collapse the spread fill
-            spreads_.collapse(target);
+            if (!spreads_.collapse(target)) 
+            { 
+                throw std::runtime_error("spread fatal error"); 
+            }
             multiFill.sFill = spreads_.merged().back();
 
             // collapse all the leg fills
             for (auto& kv : legs_)
             {
-                kv.second.collapse(target);
+                if (!kv.second.collapse(target)) 
+                { 
+                    throw std::runtime_error("leg fatal error"); 
+                }
                 multiFill.lFills.emplace(kv.first, kv.second.merged().back());
             }
             ++count;
+            target = spreads_.nextInSequence();
         }
         return count;
     }
