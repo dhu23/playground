@@ -468,7 +468,7 @@ BOOST_AUTO_TEST_CASE(test_multi_fill)
     BOOST_TEST(mfc.add(makeA(15, 10)) == 0);
 
     BOOST_TEST(mfc.add(makeA(18, 3)) == 0);
-    BOOST_TEST(mfc.add(makeAB(18, 18)) == 1); // produced a multifill
+    BOOST_TEST(mfc.add(makeAB(18, 18)) == 1); // spread fill produced a multifill
 
     auto& firstMFill = mfc.multiFills().back();
     BOOST_TEST(firstMFill.sFill.cumulative == 18);
@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE(test_multi_fill)
     BOOST_TEST(mfc.add(makeA(60, 2)) == 0);
     BOOST_TEST(mfc.add(makeA(58, 30)) == 0); 
     BOOST_TEST(mfc.add(makeB(58, 30)) == 0);
-    BOOST_TEST(mfc.add(makeB(60, 2)) == 1); // produced a multifill
+    BOOST_TEST(mfc.add(makeB(60, 2)) == 1); // leg fill produced a multifill
 
     auto& secondMFill = mfc.multiFills().back();
     BOOST_TEST(secondMFill.sFill.cumulative == 60);
