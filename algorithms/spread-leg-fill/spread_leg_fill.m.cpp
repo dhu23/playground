@@ -20,6 +20,7 @@
 //   2  60    |
 // ------------ 42/60
 
+
 template<typename K, typename V>
 std::ostream& operator<<(std::ostream& os, const std::pair<K, V>& p)
 {
@@ -29,6 +30,20 @@ std::ostream& operator<<(std::ostream& os, const std::pair<K, V>& p)
 
 template<typename K, typename V, typename Comp>
 std::ostream& operator<<(std::ostream& os, const std::map<K, V, Comp>& m)
+{
+    os << "[";
+    size_t i = 0;
+    for (const auto& kv : m)
+    {
+        if (i++ > 0) { os << ","; }
+        os << kv;
+    }
+    os << "]";
+    return os;
+}
+
+template<typename K, typename V>
+std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& m)
 {
     os << "[";
     size_t i = 0;
@@ -72,10 +87,11 @@ public:
     { 
         return cumSeq_.empty() ? 0 : cumSeq_.back();
     }
-    // unsigned int isInSequenceUntil(unsigned int target) const
-    // {
-    //     return target <= this->inSequenceUntil();
-    // }
+    unsigned int nextInSequence() const
+    {
+        auto upbound = std::upper_bound(cumSeq_.begin(), cumSeq_.end(), processed_);
+        return upbound != cumSeq_.end() ? *upbound : 0;
+    }
     bool collapsable(unsigned int target) const
     {
         if (target <= processed_) { return false; }
@@ -152,6 +168,7 @@ public:
         while (bit != seq_.end() && bit->first <= target) 
         {
             ret.merge(bit->second);
+            processed_ = bit->first;
             bit = seq_.erase(bit);
         }
         return true;
@@ -187,6 +204,36 @@ private:
     // mapping leg symbols to leg fill sequence structure
     std::unordered_map<std::string, QtySequencer<LegFill>> legs_;
     std::vector<MultiFill> order_;
+
+    unsigned int tether() // return number of MultiFill tethered together
+    {
+        unsigned int count = 0;
+        auto target = spreads_.nextInSequence();
+        
+        while (target > 0)
+        {
+            for (const auto& kv : legs_)
+            {
+                if (!kv.second.collapsable(target)) { break; }
+            }
+
+            order_.emplace_back();
+            auto& multiFill = order_.back();
+            // collapse the spread fill
+            spreads_.collapse(target);
+            multiFill.sFill = spreads_.merged().back();
+
+            // collapse all the leg fills
+            for (auto& kv : legs_)
+            {
+                kv.second.collapse(target);
+                multiFill.lFills.emplace(kv.first, kv.second.merged().back());
+            }
+            ++count;
+        }
+        return count;
+    }
+        
 public:
     MultiFillCheck(
         const std::string& spreadSym,
@@ -201,39 +248,39 @@ public:
             legs_.emplace(legSym, QtySequencer<LegFill>());
         }
     }
-    /*
-    void add(const SpreadFill& sf)
+    
+    unsigned int add(const SpreadFill& sf)
     {
-        if (sf.sym != spreadSym_)
-        {
-            throw std::runtime_error("cannot process spread fill symbol");
-        }
-        spreads_.addQty(sf);
-        while (true)
-        {
-            auto cumval = spreads_.isHeadInSequence();
-            if (cumval <= 0) { return; }
-            // try to tether spread and leg fills together
-            for (const auto& kv : legs_)
-            {
-                auto& legSequencer = kv.second;
-                if (!legSequencer.isInSequenceUntil(cumval)) { return; }
-            }
+        if (sf.sym != spreadSym_) { throw std::runtime_error("bad spread sym"); }
+        if (!spreads_.add(sf)) { throw std::runtime_error("cannot add spread"); }
+        
+        return this->tether();
+    }
+   
+    unsigned int add(const LegFill& lf)
+    {
+        auto found = legs_.find(lf.sym);
+        if (found == legs_.end()) { throw std::runtime_error("bad leg sym"); }
+        if (!found->second.add(lf)) { throw std::runtime_error("cannot add leg"); }
 
-            for (auto& kv : legs_)
-            {
-                auto& legSequencer = kv.second;
-                legSequencer.collapseUntil(cumval);
-            }
-        }
+        return this->tether();
     }
-    void add(const LegFill& lf)
+
+    std::ostream& print(std::ostream& os) const
     {
-        m_legs.addQty(lf);
+        os 
+            << "spreadSym:" << spreadSym_
+            << "\nspreads:" << spreads_
+            << "\nlegs:" << legs_;
+        return os;
     }
-    */
 };
 
+template<typename S, typename L>
+inline std::ostream& operator<<(std::ostream& os, const MultiFillCheck<S, L>& obj)
+{
+    return obj.print(os);
+}
 
 namespace {
 
@@ -247,7 +294,7 @@ struct Fill
 
     void merge(const Fill<T>& other)
     {
-        if (sym != other.sym)
+        if (!sym.empty() && sym != other.sym)
         {
             throw std::runtime_error("cannot merge different symbols");
         }
@@ -261,14 +308,46 @@ struct Fill
 struct Dummy {};
 using FD = Fill<Dummy>;
 
-auto makeFD = [](unsigned int cumulative, unsigned int last)
+FD makeFD(unsigned int cumulative, unsigned int last)
 {
-    return FD{cumulative, last, std::string()};
+    return FD{cumulative, last, ""};
 };
 
 std::ostream& operator<<(std::ostream& os, const FD& obj)
 {
     os << "DummyFill[last:" << obj.last << ",cum:" << obj.cumulative << ",sym:" << obj.sym << "]";
+    return os;
+}
+
+struct DummyLeg {};
+struct DummySpread {};
+using DLegFill = Fill<DummyLeg>;
+using DSpreadFill = Fill<DummySpread>;
+
+DSpreadFill makeAB(unsigned int cumulative, unsigned int last)
+{
+    return DSpreadFill{cumulative, last, "A-B"};
+}
+
+DLegFill makeA(unsigned int cumulative, unsigned int last)
+{
+    return DLegFill{cumulative, last, "A"};
+}
+
+DLegFill makeB(unsigned int cumulative, unsigned int last)
+{
+    return DLegFill{cumulative, last, "B"};
+}
+
+std::ostream& operator<<(std::ostream& os, const DSpreadFill& obj)
+{
+    os << "DSpreadFill[last:" << obj.last << ",cum:" << obj.cumulative << ",sym:" << obj.sym << "]";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const DLegFill& obj)
+{
+    os << "DLegFill[last:" << obj.last << ",cum:" << obj.cumulative << ",sym:" << obj.sym << "]";
     return os;
 }
 
@@ -328,13 +407,18 @@ BOOST_AUTO_TEST_CASE(test_sequencer_collapse)
     BOOST_TEST(!qs.collapsable(18));
 
     BOOST_TEST(qs.add(makeFD(15, 10))); // connecting 5 and 18
+    BOOST_TEST(qs.nextInSequence() == 5);
+
     BOOST_TEST(qs.collapsable(18)); 
     BOOST_TEST(qs.inSequenceUntil() == 18);
 
-    BOOST_TEST(qs.collapse(qs.inSequenceUntil())); 
+    BOOST_TEST(qs.collapse(qs.inSequenceUntil())); // collapse
+    BOOST_TEST(qs.processed() == 18);
+    BOOST_TEST(qs.nextInSequence() == 0); // 28 is not received
 
     BOOST_TEST(qs.add(makeFD(28, 10)));
     BOOST_TEST(qs.inSequenceUntil() == 58);
+    BOOST_TEST(qs.nextInSequence() == 28);
     BOOST_TEST(qs.add(makeFD(60, 2)));
     BOOST_TEST(qs.inSequenceUntil() == 60);
     
@@ -345,7 +429,7 @@ BOOST_AUTO_TEST_CASE(test_sequencer_collapse)
     BOOST_TEST(firstMerge.cumulative == 18);
     BOOST_TEST(firstMerge.sym.empty());
 
-    BOOST_TEST(qs.collapse(qs.inSequenceUntil()));
+    BOOST_TEST(qs.collapse(qs.inSequenceUntil())); // collapse
 
     auto& secondMerge = qs.merged().back();
     BOOST_TEST(secondMerge.last == 42);
@@ -353,4 +437,24 @@ BOOST_AUTO_TEST_CASE(test_sequencer_collapse)
     BOOST_TEST(secondMerge.sym.empty());
 
     // std::cout << qs << std::endl;
+}
+
+
+BOOST_AUTO_TEST_CASE(test_multi_fill)
+{
+    MultiFillCheck<DSpreadFill, DLegFill> mfc(
+        "A-B", std::unordered_set<std::string>{"A", "B"});
+
+    BOOST_TEST(mfc.add(makeAB(60, 42)) == 0);
+    BOOST_TEST(mfc.add(makeA(28, 10)) == 0);
+    BOOST_TEST(mfc.add(makeA(5, 5)) == 0);
+    BOOST_TEST(mfc.add(makeB(5, 5)) == 0);
+    BOOST_TEST(mfc.add(makeB(15, 10)) == 0);
+    BOOST_TEST(mfc.add(makeB(18, 3)) == 0);
+    BOOST_TEST(mfc.add(makeA(15, 10)) == 0);
+    std::cout << mfc << std::endl;
+
+    mfc.add(makeAB(18, 18));
+
+    std::cout << mfc << std::endl;
 }
