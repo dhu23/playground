@@ -289,7 +289,6 @@ BOOST_AUTO_TEST_CASE(test_array)
 
     ByteArray<12> gba1;
     BOOST_TEST(!packet.get(gba1)); // should fail
-
     ByteArray<10> gba2;
     BOOST_TEST(packet.get(gba2));
 

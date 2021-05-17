@@ -11,6 +11,11 @@ class Timestamp
     uint64_t nano_;
 public:
 
+    constexpr static std::size_t sizeT()
+    { 
+        return sizeof(decltype(Timestamp::nano_)); 
+    }
+
     constexpr static uint64_t NANO_PER_MICRO = 1000UL;
     constexpr static uint64_t MICRO_PER_MILLI = 1000UL;
     constexpr static uint64_t MILLI_PER_SEC = 1000UL;

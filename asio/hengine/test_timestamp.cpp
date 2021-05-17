@@ -34,5 +34,6 @@ BOOST_AUTO_TEST_CASE(test_operation)
     Timestamp t3 = t2.inThePast(std::chrono::hours(3));
     BOOST_TEST(t3.toString() == "1970-01-01 00:00:00.000,000,000");
 
+    // Timestamp t4 = Timestamp::now();
     // std::cout << Timestamp::now() << std::endl;
 }

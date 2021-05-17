@@ -1,17 +1,10 @@
-// should we be using one-sized packing buffer to hold all the out-going
-// and in-coming messages or should we make accurate size? For instance,
-// if we have two messages, A and B, and size of A is 24 and size of B is
-// 256. Should we use a buffer size 256 for sending messages or should 
-// we be sending two types of messages, one 24 and one 256? Or should we
-// be somewhere in the middle? 
-
-// #include <ctype.h>
 #include <cstring>
 #include <cstdint> // defines int*_t, uint*_t types
 #include <array>
 #include <iostream>
 
 #include "bytearray.h"
+#include "timestamp.h"
 
 struct Packing
 {
@@ -80,29 +73,33 @@ struct Packing
 
         return result;
     }
-
 };
 
+// sizeT template
+template<typename T>
+struct SizeT
+{
+    constexpr static std::size_t value() { return sizeof(T); }
+};
+
+// specialization for ByteArray<N> type
+template<std::size_t N>
+struct SizeT<ByteArray<N>>
+{
+    constexpr static std::size_t value() { return 2+N; }
+};
+
+template<>
+struct SizeT<Timestamp>
+{
+    constexpr static std::size_t value() { return Timestamp::sizeT(); }
+};
 
 template<std::size_t K, typename BufIdx>
 class Packet
 {
-    // doesn't look like we need this
-    // static_assert(sizeof(char) == sizeof(int8_t));
-    // static_assert(sizeof(unsigned char) == sizeof(uint8_t));
-    // static_assert(sizeof(short) == sizeof(int16_t));
-    // static_assert(sizeof(unsigned short) == sizeof(uint16_t));
-    // static_assert(sizeof(int) == sizeof(int32_t));
-    // static_assert(sizeof(unsigned int) == sizeof(uint32_t));
-    // static_assert(sizeof(long) == sizeof(int64_t));
-    // static_assert(sizeof(unsigned long) == sizeof(uint64_t));
-    // static_assert(sizeof(long long) == sizeof(int64_t));
-    // static_assert(sizeof(unsigned long long) == sizeof(uint64_t));
-
     BufIdx bufferIdx_;
     std::array<uint8_t, K> buffer_;
-    // std::size_t head_; // indicates the readable location
-    // std::size_t tail_; // indicates the writable location
 
     // no error check is done in this function. caller needs to make sure
     void writeByte(uint8_t x)
@@ -153,18 +150,8 @@ public:
         bufferIdx_.write(N);
         return true;
     }
-    
-    // the followings are not needed
-    // bool put(char c);
-    // bool put(unsigned char c);
-    // bool put(short s);
-    // bool put(unsigned short s);
-    // bool put(int i);
-    // bool put(unsigned int i);
-    // bool put(long l);
-    // bool put(unsigned long l);
-    // bool put(long long ll);
-    // bool put(unsigned long long ll);
+
+    bool put(Timestamp ts) { return this->put(ts.totalNanoseconds()); }
     
     bool peek(uint8_t& u8);
     bool peek(uint16_t& u16);
@@ -181,58 +168,40 @@ public:
 
     bool peek(bool& b);
 
-private:
-    template<typename T>
-    bool getT(T& x)
-    {
-        if (!this->peek(x)) { return false; }
-        bufferIdx_.read(sizeof(T));
-        return true;
-    }
-
-public:
-
-    bool get(uint8_t& u8) { return getT(u8); }
-    bool get(uint16_t& u16) { return getT(u16); }
-    bool get(uint32_t& u32) { return getT(u32); }
-    bool get(uint64_t& u64) { return getT(u64); }
-    
-    bool get(int8_t& i8) { return getT(i8); }
-    bool get(int16_t& i16) { return getT(i16); }
-    bool get(int32_t& i32) { return getT(i32); }
-    bool get(int64_t& i64) { return getT(i64); }
-
-    bool get(float& f32) { return getT(f32); }
-    bool get(double& f64) { return getT(f64); }
-
-    bool get(bool& b) { return getT(b); }
-
     template<std::size_t N>
-    bool get(ByteArray<N>& obj)
+    bool peek(ByteArray<N>& obj)
     {
-        if (2+N > this->readableSize()) { return false; }
+        if (SizeT<ByteArray<N>>::value() > this->readableSize()) { return false; }
         uint16_t size;
         if (!this->peek(size)) { return false; }
         if (size != N) { return false; }
-        bufferIdx_.read(sizeof(uint16_t));
-        obj.fromBuffer(reinterpret_cast<char*>(&buffer_[bufferIdx_.head()]), size);
-        bufferIdx_.read(N);
+        obj.fromBuffer(
+            reinterpret_cast<char*>(&buffer_[bufferIdx_.head()+sizeof(size)]),
+            size);
         return true;
     }
 
-    // the followings are not needed
-    // bool get(char& c);
-    // bool get(unsigned char& c);
-    // bool get(short& s);
-    // bool get(unsigned short& s);
-    // bool get(int& i);
-    // bool get(unsigned int& i);
-    // bool get(long& l);
-    // bool get(unsigned long& l);
-    // bool get(long long& ll);
-    // bool get(unsigned long long& ll);
-    
+    bool peek(Timestamp& ts)
+    {
+        if (SizeT<Timestamp>::value () > this->readableSize()) { return false; }
+        uint64_t nano;
+        if (!this->peek(nano)) { return false; }
+        ts = Timestamp(nano);
+        return true;
+    }
+
+    template<typename T>
+    bool get(T& x)
+    {
+        if (!this->peek(x)) { return false; }
+        bufferIdx_.read(SizeT<T>::value());
+        return true;
+    }
+
 };
+
+
+
 
 template<std::size_t K, typename BufIdx>
 bool Packet<K, BufIdx>::put(uint8_t u8)
@@ -322,66 +291,6 @@ bool Packet<K, BufIdx>::put(bool b)
 {
     return this->put(static_cast<uint8_t>(b ? 1 : 0));
 }
-
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(char c)
-// {
-//     return this->put(static_cast<int8_t>(c));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(unsigned char c)
-// {
-//     return this->put(static_cast<uint8_t>(c));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(short s)
-// {
-//     return this->put(static_cast<int16_t>(s));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(unsigned short s)
-// {
-//     return this->put(static_cast<uint16_t>(s));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(int i)
-// {
-//     return this->put(static_cast<int32_t>(i));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(unsigned int i)
-// {
-//     return this->put(static_cast<uint32_t>(i));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(long l)
-// {
-//     return this->put(static_cast<int64_t>(l));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(unsigned long l)
-// {
-//     return this->put(static_cast<uint64_t>(l));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(long long ll)
-// {
-//     return this->put(static_cast<int64_t>(ll));
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::put(unsigned long long i)
-// {
-//     return this->put(static_cast<int64_t>(ll));
-// }
 
 template<std::size_t K, typename BufIdx>
 bool Packet<K, BufIdx>::peek(uint8_t& u8)
@@ -522,74 +431,3 @@ bool Packet<K, BufIdx>::peek(bool& b)
     b = i > 0;
     return true;
 }
-
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(char& c)
-// {
-//     auto* p = reinterpret_cast<int8_t*>(&c);
-//     return this->get(*p);
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(unsigned char& c)
-// {
-//     auto* p = reinterpret_cast<uint8_t*>(&c);
-//     return this->get(*p);
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(short& s)
-// {
-//     auto* p = reinterpret_cast<int16_t*>(&s);
-//     return this->get(*p);
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(unsigned short& c)
-// {
-//     auto* p = reinterpret_cast<uint16_t*>(&s);
-//     return this->get(*p);
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(int& i)
-// {
-//     auto* p = reinterpret_cast<int32_t*>(&i);
-//     return this->get(*p);
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(unsigned int& i)
-// {
-//     auto* p = reinterpret_cast<uint32_t*>(&i);
-//     return this->get(*p);
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(long& l)
-// {
-//     auto* p = reinterpret_cast<int64_t*>(&l);
-//     return this->get(*p)
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(unsigned long& l)
-// {
-//     auto* p = reinterpret_cast<uint64_t*>(&l);
-//     return this->get(*p);
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(long long& ll)
-// {
-//     auto* p = reinterpret_cast<int64_t*>(&ll);
-//     return this->get(*p);
-// }
-// 
-// template<std::size_t K, typename BufIdx>
-// bool Packet<K, BufIdx>::get(unsigned long long& ll)
-// {
-//     auto* p = reinterpret_cast<uint64_t*>(&ll);
-//     return this->get(*p);
-// }
-
