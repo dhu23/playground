@@ -207,10 +207,8 @@ private:
 
     unsigned int tether() // return number of MultiFill tethered together
     {
-        std::cout << "tethering..........." << std::endl;
         unsigned int count = 0;
         auto target = spreads_.nextInSequence();
-        std::cout << "target=" << target << std::endl;
         while (target > 0)
         {
             bool legTetherable = true;
@@ -223,8 +221,6 @@ private:
                 }
             }
             if (!legTetherable) { break; }
-
-            std::cout << "can tether..." << std::endl;
 
             order_.emplace_back();
             auto& multiFill = order_.back();
@@ -264,6 +260,8 @@ public:
             legs_.emplace(legSym, QtySequencer<LegFill>());
         }
     }
+
+    const std::vector<MultiFill>& multiFills() const { return order_; }
     
     unsigned int add(const SpreadFill& sf)
     {
@@ -468,9 +466,47 @@ BOOST_AUTO_TEST_CASE(test_multi_fill)
     BOOST_TEST(mfc.add(makeB(15, 10)) == 0);
     BOOST_TEST(mfc.add(makeB(18, 3)) == 0);
     BOOST_TEST(mfc.add(makeA(15, 10)) == 0);
-    std::cout << mfc << std::endl;
 
-    mfc.add(makeAB(18, 18));
+    BOOST_TEST(mfc.add(makeA(18, 3)) == 0);
+    BOOST_TEST(mfc.add(makeAB(18, 18)) == 1); // produced a multifill
 
-    std::cout << mfc << std::endl;
+    auto& firstMFill = mfc.multiFills().back();
+    BOOST_TEST(firstMFill.sFill.cumulative == 18);
+    BOOST_TEST(firstMFill.sFill.last == 18);
+
+    auto firstA = firstMFill.lFills.find("A");
+    auto hasFirstA = firstA != firstMFill.lFills.end();
+    BOOST_TEST(hasFirstA);
+    BOOST_TEST(firstA->second.cumulative == 18);
+    BOOST_TEST(firstA->second.last == 18);
+
+    auto firstB = firstMFill.lFills.find("B");
+    auto hasFirstB = firstB != firstMFill.lFills.end();
+    BOOST_TEST(hasFirstB);
+    BOOST_TEST(firstB->second.cumulative == 18);
+    BOOST_TEST(firstB->second.last == 18);
+
+    BOOST_TEST(mfc.add(makeB(28, 10)) == 0);
+    BOOST_TEST(mfc.add(makeA(60, 2)) == 0);
+    BOOST_TEST(mfc.add(makeA(58, 30)) == 0); 
+    BOOST_TEST(mfc.add(makeB(58, 30)) == 0);
+    BOOST_TEST(mfc.add(makeB(60, 2)) == 1); // produced a multifill
+
+    auto& secondMFill = mfc.multiFills().back();
+    BOOST_TEST(secondMFill.sFill.cumulative == 60);
+    BOOST_TEST(secondMFill.sFill.last == 42);
+
+    auto secondA = secondMFill.lFills.find("A");
+    auto hasSecondA = secondA != secondMFill.lFills.end();
+    BOOST_TEST(hasSecondA);
+    BOOST_TEST(secondA->second.cumulative == 60);
+    BOOST_TEST(secondA->second.last == 42);
+
+    auto secondB = secondMFill.lFills.find("B");
+    auto hasSecondB = secondB != secondMFill.lFills.end();
+    BOOST_TEST(hasSecondB);
+    BOOST_TEST(secondB->second.cumulative == 60);
+    BOOST_TEST(secondB->second.last == 42);
+
+    // std::cout << mfc << std::endl;
 }
