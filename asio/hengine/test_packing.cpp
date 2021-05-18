@@ -297,3 +297,31 @@ BOOST_AUTO_TEST_CASE(test_array)
 
     BOOST_TEST(gba2 == ba);
 }
+
+BOOST_AUTO_TEST_CASE(test_peeker)
+{
+    Packet<16, LinearBufferIdx> packet;
+
+    int8_t a = 1;
+    uint64_t b = 121;
+    int32_t c = -50;
+    BOOST_TEST(packet.put(a));
+    BOOST_TEST(packet.put(b));
+    BOOST_TEST(packet.put(c));
+    BOOST_TEST(packet.put(true));
+    
+    auto p = packet.peeker();
+    
+    int8_t ga;
+    uint64_t gb;
+    int32_t gc;
+    bool g;
+    BOOST_TEST(p.peek(ga));
+    BOOST_TEST(ga == a);
+    BOOST_TEST(p.peek(gb));
+    BOOST_TEST(gb == b);
+    BOOST_TEST(p.peek(gc));
+    BOOST_TEST(gc == c);
+    BOOST_TEST(p.peek(g));
+    BOOST_TEST(g == true);
+}

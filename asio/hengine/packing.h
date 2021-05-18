@@ -153,39 +153,39 @@ public:
 
     bool put(Timestamp ts) { return this->put(ts.totalNanoseconds()); }
     
-    bool peek(uint8_t& u8);
-    bool peek(uint16_t& u16);
-    bool peek(uint32_t& u32);
-    bool peek(uint64_t& u64);
+    bool peek(uint8_t& u8, std::size_t skip=0) const;
+    bool peek(uint16_t& u16, std::size_t skip=0) const;
+    bool peek(uint32_t& u32, std::size_t skip=0) const;
+    bool peek(uint64_t& u64, std::size_t skip=0) const;
     
-    bool peek(int8_t& i8);
-    bool peek(int16_t& i16);
-    bool peek(int32_t& i32);
-    bool peek(int64_t& i64);
+    bool peek(int8_t& i8, std::size_t skip=0) const;
+    bool peek(int16_t& i16, std::size_t skip=0) const;
+    bool peek(int32_t& i32, std::size_t skip=0) const;
+    bool peek(int64_t& i64, std::size_t skip=0) const;
 
-    bool peek(float& f32);
-    bool peek(double& f64);
+    bool peek(float& f32, std::size_t skip=0) const;
+    bool peek(double& f64, std::size_t skip=0) const;
 
-    bool peek(bool& b);
+    bool peek(bool& b, std::size_t skip=0) const;
 
     template<std::size_t N>
-    bool peek(ByteArray<N>& obj)
+    bool peek(ByteArray<N>& obj, std::size_t skip=0) const
     {
-        if (SizeT<ByteArray<N>>::value() > this->readableSize()) { return false; }
+        if (SizeT<ByteArray<N>>::value()+skip > this->readableSize()) { return false; }
         uint16_t size;
-        if (!this->peek(size)) { return false; }
+        if (!this->peek(size, skip)) { return false; }
         if (size != N) { return false; }
         obj.fromBuffer(
-            reinterpret_cast<char*>(&buffer_[bufferIdx_.head()+sizeof(size)]),
+            reinterpret_cast<const char*>(&buffer_[bufferIdx_.head()+sizeof(size)+skip]),
             size);
         return true;
     }
 
-    bool peek(Timestamp& ts)
+    bool peek(Timestamp& ts, std::size_t skip=0) const
     {
-        if (SizeT<Timestamp>::value () > this->readableSize()) { return false; }
+        if (SizeT<Timestamp>::value()+skip > this->readableSize()) { return false; }
         uint64_t nano;
-        if (!this->peek(nano)) { return false; }
+        if (!this->peek(nano, skip)) { return false; }
         ts = Timestamp(nano);
         return true;
     }
@@ -198,9 +198,33 @@ public:
         return true;
     }
 
+public:
+    class Peeker
+    {
+        std::size_t pos_;
+        const Packet* p_;
+
+        Peeker(std::size_t pos, const Packet* p): 
+            pos_(pos),
+            p_(p)
+        {}
+    public:
+        template<typename T>
+        bool peek(T& x)
+        {
+            if (!p_->peek(x, pos_)) { return false; }
+            pos_ += SizeT<T>::value();
+            return true;
+        }
+
+        friend class Packet<K, BufIdx>;
+    };
+
+    Peeker peeker() const
+    {
+        return Peeker(bufferIdx_.head(), this);
+    }
 };
-
-
 
 
 template<std::size_t K, typename BufIdx>
@@ -293,18 +317,20 @@ bool Packet<K, BufIdx>::put(bool b)
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(uint8_t& u8)
+bool Packet<K, BufIdx>::peek(uint8_t& u8, std::size_t skip) const
 {
-    if (sizeof(uint8_t) > this->readableSize()) { return false; }
-    u8 = this->peekByte(0);
+    if (sizeof(uint8_t)+skip > this->readableSize()) { return false; }
+    u8 = this->peekByte(0+skip);
     return true;
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(uint16_t& u16)
+bool Packet<K, BufIdx>::peek(uint16_t& u16, std::size_t skip) const
 {
-    if (sizeof(uint16_t) > this->readableSize()) { return false; }
-    u16 = (static_cast<uint16_t>(this->peekByte(0)) << 8) | this->peekByte(1);
+    if (sizeof(uint16_t)+skip > this->readableSize()) { return false; }
+    u16 = 
+        (static_cast<uint16_t>(this->peekByte(0+skip)) << 8) | 
+        this->peekByte(1+skip);
     // u16 = static_cast<uint16_t>(buffer_[head_++]);
     // u16 <<= 8;
     // u16 |= buffer_[head_++];
@@ -312,14 +338,14 @@ bool Packet<K, BufIdx>::peek(uint16_t& u16)
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(uint32_t& u32)
+bool Packet<K, BufIdx>::peek(uint32_t& u32, std::size_t skip) const
 {
-    if (sizeof(uint32_t) > this->readableSize()) { return false; }
+    if (sizeof(uint32_t)+skip > this->readableSize()) { return false; }
     u32 = 
-        (static_cast<uint32_t>(this->peekByte(0)) << 24) |
-        (static_cast<uint32_t>(this->peekByte(1)) << 16) | 
-        (static_cast<uint32_t>(this->peekByte(2)) << 8) | 
-        static_cast<uint32_t>(this->peekByte(3));
+        (static_cast<uint32_t>(this->peekByte(0+skip)) << 24) |
+        (static_cast<uint32_t>(this->peekByte(1+skip)) << 16) | 
+        (static_cast<uint32_t>(this->peekByte(2+skip)) << 8) | 
+        static_cast<uint32_t>(this->peekByte(3+skip));
     // u32 = static_cast<uint32_t>(buffer_[head_++]);
     // u32 <<= 8;
     // u32 |= buffer_[head_++];
@@ -331,9 +357,9 @@ bool Packet<K, BufIdx>::peek(uint32_t& u32)
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(uint64_t& u64)
+bool Packet<K, BufIdx>::peek(uint64_t& u64, std::size_t skip) const
 {
-    if (sizeof(uint64_t) > this->readableSize()) { return false; }
+    if (sizeof(uint64_t)+skip > this->readableSize()) { return false; }
     // u64 = static_cast<uint64_t>(buffer_[head_++]);
     // u64 <<= 8;
     // u64 |= buffer_[head_++];
@@ -350,84 +376,84 @@ bool Packet<K, BufIdx>::peek(uint64_t& u64)
     // u64 <<= 8;
     // u64 |= buffer_[head_++];
     u64 = 
-        (static_cast<uint64_t>(this->peekByte(0)) << 56) |
-        (static_cast<uint64_t>(this->peekByte(1)) << 48) |
-        (static_cast<uint64_t>(this->peekByte(2)) << 40) |
-        (static_cast<uint64_t>(this->peekByte(3)) << 32) |
-        (static_cast<uint64_t>(this->peekByte(4)) << 24) |
-        (static_cast<uint64_t>(this->peekByte(5)) << 16) |
-        (static_cast<uint64_t>(this->peekByte(6)) << 8) |
-        static_cast<uint64_t>(this->peekByte(7));
+        (static_cast<uint64_t>(this->peekByte(0+skip)) << 56) |
+        (static_cast<uint64_t>(this->peekByte(1+skip)) << 48) |
+        (static_cast<uint64_t>(this->peekByte(2+skip)) << 40) |
+        (static_cast<uint64_t>(this->peekByte(3+skip)) << 32) |
+        (static_cast<uint64_t>(this->peekByte(4+skip)) << 24) |
+        (static_cast<uint64_t>(this->peekByte(5+skip)) << 16) |
+        (static_cast<uint64_t>(this->peekByte(6+skip)) << 8) |
+        static_cast<uint64_t>(this->peekByte(7+skip));
     return true;
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(int8_t& i8)
+bool Packet<K, BufIdx>::peek(int8_t& i8, std::size_t skip) const
 {
     uint8_t i = 0;
-    if (!this->peek(i)) { return false; }
+    if (!this->peek(i, skip)) { return false; }
     if (i <= 0x7fu) { i8 = i; }
     else { i8 = -1 - static_cast<int8_t>(0xffu-i); }
     return true;
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(int16_t& i16)
+bool Packet<K, BufIdx>::peek(int16_t& i16, std::size_t skip) const
 {
     uint16_t i = 0;
-    if (!this->peek(i)) { return false; }
+    if (!this->peek(i, skip)) { return false; }
     if (i <= 0x7fffu) { i16 = i; }
     else { i16 = -1 - static_cast<int16_t>(0xffffu-i); }
     return true;
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(int32_t& i32)
+bool Packet<K, BufIdx>::peek(int32_t& i32, std::size_t skip) const
 {
     uint32_t i = 0;
-    if (!this->peek(i)) { return false; }
+    if (!this->peek(i, skip)) { return false; }
     if (i <= 0x7fffffffu) { i32 = i; }
     else { i32 = -1 - static_cast<int32_t>(0xffffffffu-i); }
     return true;
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(int64_t& i64)
+bool Packet<K, BufIdx>::peek(int64_t& i64, std::size_t skip) const
 {
     uint64_t i = 0;
-    if (!this->peek(i)) { return false; }
+    if (!this->peek(i, skip)) { return false; }
     if (i <= 0x7fffffffffffffffu) { i64 = i; }
     else { i64 = -1 - static_cast<int64_t>(0xffffffffffffffffu-i); }
     return true;
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(float& f32)
+bool Packet<K, BufIdx>::peek(float& f32, std::size_t skip) const
 {
-    if (sizeof(float) > this->readableSize()) { return false; }
+    if (sizeof(float)+skip > this->readableSize()) { return false; }
     uint32_t i;
-    if (!this->peek(i)) { return false; }
+    if (!this->peek(i, skip)) { return false; }
     f32 = Packing::unpack754(i, 32, 8);
     // binrep(i, 32);
     return true;
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(double& f64)
+bool Packet<K, BufIdx>::peek(double& f64, std::size_t skip) const
 {
-    if (sizeof(double) > this->readableSize()) { return false; }
+    if (sizeof(double)+skip > this->readableSize()) { return false; }
     uint64_t i;
-    if (!this->peek(i)) { return false; }
+    if (!this->peek(i, skip)) { return false; }
     f64 = Packing::unpack754(i, 64, 11);
     // binrep(i, 64);
     return true;
 }
 
 template<std::size_t K, typename BufIdx>
-bool Packet<K, BufIdx>::peek(bool& b)
+bool Packet<K, BufIdx>::peek(bool& b, std::size_t skip) const
 {
     uint8_t i = 0;
-    if (!this->peek(i)) { return false; }
+    if (!this->peek(i, skip)) { return false; }
     b = i > 0;
     return true;
 }
