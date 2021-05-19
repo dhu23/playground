@@ -201,28 +201,31 @@ public:
 public:
     class Peeker
     {
-        std::size_t pos_;
+        std::size_t skip_;
         const Packet* p_;
 
-        Peeker(std::size_t pos, const Packet* p): 
-            pos_(pos),
+        Peeker(const Packet* p): 
+            skip_(0),
             p_(p)
         {}
     public:
         template<typename T>
         bool peek(T& x)
         {
-            if (!p_->peek(x, pos_)) { return false; }
-            pos_ += SizeT<T>::value();
+            if (!p_->peek(x, skip_)) { return false; }
+            skip_ += SizeT<T>::value();
             return true;
         }
 
         friend class Packet<K, BufIdx>;
     };
 
-    Peeker peeker() const
-    {
-        return Peeker(bufferIdx_.head(), this);
+    Peeker peeker() const { return Peeker(this); }
+    bool forward(const Peeker& p) 
+    { 
+        if (p.p_ != this) { return false; }
+        bufferIdx_.read(p.skip_); 
+        return true;
     }
 };
 
