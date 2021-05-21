@@ -198,24 +198,38 @@ public:
         return true;
     }
 
+    bool discard(std::size_t skip)
+    {
+        if (this->readableSize() < skip) { return false; }
+        bufferIdx_.read(skip);
+        return true;
+    }
+
 public:
     class Peeker
     {
-        std::size_t skip_;
+        std::size_t seen_;
         const Packet* p_;
 
         Peeker(const Packet* p): 
-            skip_(0),
+            seen_(0),
             p_(p)
         {}
     public:
         template<typename T>
         bool peek(T& x)
         {
-            if (!p_->peek(x, skip_)) { return false; }
-            skip_ += SizeT<T>::value();
+            if (!p_->peek(x, seen_)) { return false; }
+            seen_ += SizeT<T>::value();
             return true;
         }
+        bool discard(std::size_t skip)
+        {
+            if (p_->readableSize() < skip) { return false; }
+            seen_ += skip;
+            return true;
+        }
+        std::size_t skip() const { return seen_; }
 
         friend class Packet<K, BufIdx>;
     };
@@ -224,7 +238,7 @@ public:
     bool forward(const Peeker& p) 
     { 
         if (p.p_ != this) { return false; }
-        bufferIdx_.read(p.skip_); 
+        bufferIdx_.read(p.seen_); 
         return true;
     }
 };

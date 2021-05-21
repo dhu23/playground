@@ -309,6 +309,7 @@ BOOST_AUTO_TEST_CASE(test_peeker)
     BOOST_TEST(packet.put(b));
     BOOST_TEST(packet.put(c));
     BOOST_TEST(packet.put(true));
+    BOOST_TEST(packet.put(a)); // extract at the end
     
     auto p = packet.peeker();
     
@@ -324,9 +325,10 @@ BOOST_AUTO_TEST_CASE(test_peeker)
     BOOST_TEST(gc == c);
     BOOST_TEST(p.peek(g));
     BOOST_TEST(g == true);
+    BOOST_TEST(p.discard(SizeT<int8_t>::value()));
 
-    BOOST_TEST(packet.readableSize() == 14);
-    BOOST_TEST(packet.writableSize() == 2);
+    BOOST_TEST(packet.readableSize() == 15);
+    BOOST_TEST(packet.writableSize() == 1);
     BOOST_TEST(packet.forward(p));
     BOOST_TEST(packet.readableSize() == 0);
     BOOST_TEST(packet.writableSize() == 16);

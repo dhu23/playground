@@ -5,26 +5,20 @@
 #include "bytearray.h"
 #include "packing.h"
 #include "buffer.h"
+#include "timestamp.h"
 #include "templ.h"
 
+// enum to underlying type conversion
+template<typename E>
+inline std::underlying_type<E>::type fromEnum(E e)
+{
+    return static_cast<std::underlying_type<E>::type>(e);
+}
+
+////////////////////// Message type enum class //////////////////////////
 enum class MType : uint8_t
 {
     Unknown = 0,
-
-    // for native C types with known size
-    Int8,
-    UInt8,
-    Int16,
-    UInt16,
-    Int32,
-    UInt32,
-    Int64,
-    UInt64,
-    Float32,
-    Float64,
-    Boolean,
-
-    // customized structures
     ShutDown,
     LogOn,
     LogOut,
@@ -33,39 +27,12 @@ enum class MType : uint8_t
     HeartBeat
 };
 
-inline std::underlying_type<MType>::type fromMType(MType mt)
-{
-    return static_cast<std::underlying_type<MType>::type>(mt);
-}
-
 inline std::string toString(MType obj)
 {
     switch(obj)
     {
     case MType::Unknown:
         return "Unknown";
-    case MType::Int8: 
-        return "Int8";
-    case MType::UInt8:
-        return "UInt8";
-    case MType::Int16:
-        return "Int16";
-    case MType::UInt16:
-        return "UInt16";
-    case MType::Int32: 
-        return "Int32";
-    case MType::UInt32: 
-        return "UInt32";
-    case MType::Int64: 
-        return "Int64";
-    case MType::UInt64:
-        return "UInt64";
-    case MType::Float32:
-        return "Float32";
-    case MType::Float64:
-        return "Float64";
-    case MType::Boolean:
-        return "Boolean";
     case MType::ShutDown: 
         return "ShutDown";
     case MType::LogOn:
@@ -85,23 +52,27 @@ inline std::string toString(MType obj)
 
 inline std::ostream& operator<<(std::ostream& os, MType obj)
 {
-    os << "MType(" << fromMType(obj) << ")::" << toString(obj);
+    os << "MType(" << fromEnum(obj) << ")::" << toString(obj);
     return os;
 }
 
+///////////////////////////// Messages /////////////////////////////
 struct ShutDown
 {
+    Timestamp ts;
     ByteArray<32> from;
     ByteArray<32> reason;
 
     bool operator==(const ShutDown& other) const
     {
-        return equalTs(from, other.from, reason, other.reason);
+        return equalTs(ts, other.ts, from, other.from, reason, other.reason);
     }
 
     std::ostream& print(std::ostream& os) const
     {
-        os << "ShutDown[from=" << from << ",reason=" << reason << "]";
+        os 
+            << "ShutDown[ts=" << ts 
+            << ",from=" << from << ",reason=" << reason << "]";
         return os;
     }
 };
@@ -113,16 +84,17 @@ inline std::ostream& operator<<(std::ostream& os, const ShutDown& obj)
 
 struct LogOn
 {
+    Timestamp ts;
     ByteArray<32> from;
 
     bool operator==(const LogOn& other) const
     {
-        return equalTs(from, other.from);
+        return equalTs(ts, other.ts, from, other.from);
     }
 
     std::ostream& print(std::ostream& os) const
     {
-        os << "LogOn[from=" << from << "]";
+        os << "LogOn[ts=" << ts << "from=" << from << "]";
         return os;
     }
 };
@@ -134,17 +106,20 @@ inline std::ostream& operator<<(std::ostream& os, const LogOn& obj)
 
 struct LogOut
 {
+    Timestamp ts;
     ByteArray<32> from;
     ByteArray<32> reason;
 
     bool operator==(const LogOut& other) const
     {
-        return equalTs(from, other.from, reason, other.reason);
+        return equalTs(ts, other.ts, from, other.from, reason, other.reason);
     }
 
     std::ostream& print(std::ostream& os) const
     {
-        os << "LogOut[from=" << from << ",reason=" << reason << "]";
+        os 
+            << "LogOut[ts=" << ts 
+            << ",from=" << from << ",reason=" << reason << "]";
         return os;
     }
 };
@@ -156,6 +131,7 @@ inline std::ostream& operator<<(std::ostream& os, const LogOut& obj)
 
 struct QuoteUpdate
 {
+    Timestamp ts;
     uint32_t quantity;
     uint64_t price;
     ByteArray<8> ticker;
@@ -163,6 +139,7 @@ struct QuoteUpdate
     bool operator==(const QuoteUpdate& other) const
     {
         return equalTs(
+            ts, other.ts,
             quantity, other.quantity, 
             price, other.price, 
             ticker, other.ticker);
@@ -171,7 +148,8 @@ struct QuoteUpdate
     std::ostream& print(std::ostream& os) const
     {
         os 
-            << "QuoteUpdate[quantity=" << quantity << ",price=" << price 
+            << "QuoteUpdate[ts=" << ts
+            << ",quantity=" << quantity << ",price=" << price 
             << ",ticker=" << ticker << "]";
         return os;
     }
@@ -184,17 +162,21 @@ inline std::ostream& operator<<(std::ostream& os, const QuoteUpdate& obj)
 
 struct Acknowledgement
 {
+    Timestamp ts;
     ByteArray<32> from;
-    MType received;
+    MType received; // echo back the type of message to the sender
 
     bool operator==(const Acknowledgement& other) const
     {
-        return equalTs(from, other.from, received, other.received);
+        return equalTs(
+            ts, other.ts, from, other.from, received, other.received);
     }
 
     std::ostream& print(std::ostream& os) const
     {
-        os << "Acknowledgement[from=" << from << ",received=" << received;
+        os 
+            << "Acknowledgement[ts=" << ts 
+            << ",from=" << from << ",received=" << received;
         return os;
     }
 };
@@ -206,16 +188,17 @@ inline std::ostream& operator<<(std::ostream& os, const Acknowledgement& obj)
 
 struct HeartBeat
 {
+    Timestamp ts;
     ByteArray<32> from;
 
     bool operator==(const HeartBeat& other) const
     {
-        return equalTs(from, other.from);
+        return equalTs(ts, other.ts, from, other.from);
     }
 
     std::ostream& print(std::ostream& os) const
     {
-        os << "HeartBeat[from=" << from << "]"; 
+        os << "HeartBeat[ts=" << ts << ",from=" << from << "]"; 
         return os;
     }
 };
@@ -225,381 +208,448 @@ inline std::ostream& operator<<(std::ostream& os, const HeartBeat& obj)
     return obj.print(os);
 }
 
-/////////////////////// sizeT functions ////////////////////////////
+/////////////////////// Message Packing Specialization //////////////////////
+
+template<>
+struct SizeT<MType>
+{
+    constexpr static std::size_t value() 
+    {
+        return sizeof(std::underlying_type<MType>::type);
+    }
+};
+
+template<std::size_t K, typename BufIdx>
+bool put(Packet<K, BufIdx>& packet, MType x)
+{
+    if (SizeT<MType>::value() > packet.writableSize()) { return false; }
+    return packet.put(fromEnum(x));
+}
+
+template<std::size_t K, typename BufIdx>
+auto peek(Packet<K, BufIdx>& packet, MType& x)
+{
+    auto p = packet.peeker();
+    std::underlying_type<MType>::type val;
+    auto ok = false;
+    if (p.peek(val)) 
+    { 
+        x = MType(val); 
+        ok = true;
+    }
+    return std::make_pair(ok, p);
+}
+
+template<>
+struct SizeT<ShutDown>
+{
+    constexpr static std::size_t value()
+    {
+        return
+            SizeT<decltype(ShutDown::ts)>::value() +
+            SizeT<decltype(ShutDown::from)>::value() + 
+            SizeT<decltype(ShutDown::reason)>::value();
+    }
+};
+
+template<std::size_t K, typename BufIdx>
+bool put(Packet<K, BufIdx>& packet, const ShutDown& x)
+{
+    if (packet.writableSize() < SizeT<ShutDown>::value()) { return false; }
+    packet.put(x.ts);
+    packet.put(x.from);
+    packet.put(x.reason);
+    return true;
+}
+
+template<std::size_t K, typename BufIdx>
+auto peek(Packet<K, BufIdx>& packet, ShutDown& x)
+{
+    auto p = packet.peeker();
+    auto ok = p.peek(x.ts) && p.peek(x.from) && p.peek(x.reason);
+    return std::make_pair(ok, p);
+}
+
+template<>
+struct SizeT<LogOn>
+{
+    constexpr static std::size_t value()
+    {
+        return
+            SizeT<decltype(LogOn::ts)>::value() +
+            SizeT<decltype(LogOn::from)>::value();
+    }
+};
+
+template<std::size_t K, typename BufIdx>
+bool put(Packet<K, BufIdx>& packet, const LogOn& x)
+{
+    if (packet.writableSize() < SizeT<LogOn>::value()) { return false; }
+    packet.put(x.ts);
+    packet.put(x.from);
+    return true;
+}
+
+template<std::size_t K, typename BufIdx>
+auto peek(Packet<K, BufIdx>& packet, LogOn& x)
+{
+    auto p = packet.peeker();
+    auto ok = p.peek(x.ts) && p.peek(x.from);
+    return std::make_pair(ok, p);
+}
+
+template<>
+struct SizeT<LogOut>
+{
+    constexpr static std::size_t value()
+    {
+        return 
+            SizeT<decltype(LogOut::ts)>::value() +
+            SizeT<decltype(LogOut::from)>::value() + 
+            SizeT<decltype(LogOut::reason)>::value();
+    }
+};
+
+template<std::size_t K, typename BufIdx>
+bool put(Packet<K, BufIdx>& packet, const LogOut& x)
+{
+    if (packet.writableSize() < SizeT<LogOut>::value()) { return false; }
+    packet.put(x.ts);
+    packet.put(x.from);
+    packet.put(x.reason);
+    return true;
+}
+
+template<std::size_t K, typename BufIdx>
+auto peek(Packet<K, BufIdx>& packet, LogOut& x)
+{
+    auto p = packet.peeker();
+    auto ok = p.peek(x.ts) && p.peek(x.from) && p.peek(x.reason);
+    return std::make_pair(ok, p);
+}
+
+template<>
+struct SizeT<QuoteUpdate>
+{
+    constexpr static std::size_t value()
+    {
+        return 
+            SizeT<decltype(QuoteUpdate::ts)>::value() +
+            SizeT<decltype(QuoteUpdate::quantity)>::value() +
+            SizeT<decltype(QuoteUpdate::price)>::value() +
+            SizeT<decltype(QuoteUpdate::ticker)>::value();
+    }
+};
+
+template<std::size_t K, typename BufIdx>
+bool put(Packet<K, BufIdx>& packet, const QuoteUpdate& x)
+{
+    if (packet.writableSize() < SizeT<QuoteUpdate>::value()) { return false; }
+    packet.put(x.ts);
+    packet.put(x.quantity);
+    packet.put(x.price);
+    packet.put(x.ticker);
+    return true;
+}
+
+template<std::size_t K, typename BufIdx>
+auto peek(Packet<K, BufIdx>& packet, QuoteUpdate& x)
+{
+    auto p = packet.peeker();
+    auto ok = 
+        p.peek(x.ts) && p.peek(x.quantity) && 
+        p.peek(x.price) && p.peek(x.ticker);
+    return std::make_pair(ok, p);
+}
+
+template<>
+struct SizeT<Acknowledgement>
+{
+    constexpr static std::size_t value()
+    {
+        return
+            SizeT<decltype(Acknowledgement::ts)>::value() +
+            SizeT<decltype(Acknowledgement::from)>::value() + 
+            SizeT<decltype(Acknowledgement::received)>::value();
+    }
+};
+
+template<std::size_t K, typename BufIdx>
+bool put(Packet<K, BufIdx>& packet, const Acknowledgement& x)
+{
+    if (packet.writableSize() < SizeT<Acknowledgement>::value()) { return false; }
+    packet.put(x.ts);
+    packet.put(x.from);
+    packet.put(x.received);
+    return true;
+}
+
+template<std::size_t K, typename BufIdx>
+auto peek(Packet<K, BufIdx>& packet, Acknowledgement& x)
+{
+    auto p = packet.peeker();
+    typename std::underlying_type<decltype(x.received)>::type val;
+    auto ok = p.peek(x.ts) && p.peek(x.from) && p.peek(val);
+    x.received = MType(val);
+    return std::make_pair(ok, p);
+}
+
+template<>
+struct SizeT<HeartBeat>
+{
+    constexpr static std::size_t value()
+    {
+        return
+            SizeT<decltype(HeartBeat::ts)>::value() +
+            SizeT<decltype(HeartBeat::from)>::value();
+    }
+};
+
+template<std::size_t K, typename BufIdx>
+bool put(Packet<K, BufIdx>& packet, const HeartBeat& x)
+{
+    if (packet.writableSize() < SizeT<HeartBeat>::value()) { return false; }
+    packet.put(x.ts);
+    packet.put(x.from);
+    return true;
+}
+
+template<std::size_t K, typename BufIdx>
+auto peek(Packet<K, BufIdx>& packet, HeartBeat& x)
+{
+    auto p = packet.peeker();
+    auto ok = p.peek(x.ts) && p.peek(x.from);
+    return std::make_pair(ok, p);
+}
+
+
+template<std::size_t K, typename BufIdx, typename T>
+bool get(Packet<K, BufIdx>& packet, T& x)
+{
+    auto ret = peek(packet, x);
+    if (!ret.first) { return false; }
+    packet.forward(ret.second); 
+    return true;
+}
+
+// template<std::size_t K, typename BufIdx>
+// bool get(Packet<K, BufIdx>& packet, MType& x)
+// {
+//     auto 
+// }
+
 template<typename T>
-inline std::size_t sizeT() { return sizeof(T); }
-
-// template<typename T, typename... Ts>
-// inline std::size_t sizeT() { return sizeT<T>() + sizeT<Ts...>(); }
-
-template<>
-inline std::size_t sizeT<MType>()
+struct CorrespondingMT
 {
-    return sizeof(std::underlying_type<MType>::type);
-}
+    constexpr static MType mtype() { return MType::Unknown; }
+};
 
 template<>
-inline std::size_t sizeT<ShutDown>()
+struct CorrespondingMT<ShutDown>
 {
-    return 
-        sizeT<decltype(ShutDown::from)>() + 
-        sizeT<decltype(ShutDown::reason)>();
-}
- 
-template<>
-inline std::size_t sizeT<LogOn>()
-{
-    return sizeT<decltype(LogOn::from)>();
-}
+    constexpr static MType mtype() { return MType::ShutDown; }
+};
 
 template<>
-inline std::size_t sizeT<LogOut>()
+struct CorrespondingMT<LogOn>
 {
-    return 
-        sizeT<decltype(LogOut::from)>() + 
-        sizeT<decltype(LogOut::reason)>();
-}
+    constexpr static MType mtype() { return MType::LogOn; }
+};
 
 template<>
-inline std::size_t sizeT<QuoteUpdate>()
+struct CorrespondingMT<LogOut>
 {
-    return 
-        sizeT<decltype(QuoteUpdate::quantity)>() +
-        sizeT<decltype(QuoteUpdate::price)>() + 
-        sizeT<decltype(QuoteUpdate::ticker)>();
-}
+    constexpr static MType mtype() { return MType::LogOut; }
+};
 
 template<>
-inline std::size_t sizeT<Acknowledgement>()
+struct CorrespondingMT<QuoteUpdate>
 {
-    return 
-        sizeT<decltype(Acknowledgement::from)>() +
-        sizeT<decltype(Acknowledgement::received)>();
-}
+    constexpr static MType mtype() { return MType::QuoteUpdate; }
+};
 
 template<>
-inline std::size_t sizeT<HeartBeat>()
+struct CorrespondingMT<Acknowledgement>
 {
-    return sizeT<decltype(HeartBeat::from)>();
-}
+    constexpr static MType mtype() { return MType::Acknowledgement; }
+};
+
+template<>
+struct CorrespondingMT<HeartBeat>
+{
+    constexpr static MType mtype() { return MType::HeartBeat; }
+};
 
 std::size_t requiredSize(MType mt)
 {
     switch(mt)
     {
-    case MType::Int8:
-        return sizeT<int8_t>();
-    case MType::UInt8:
-        return sizeT<uint8_t>();
-    case MType::Int16:
-        return sizeT<int16_t>();
-    case MType::UInt16:
-        return sizeT<uint16_t>();
-    case MType::Int32:
-        return sizeT<int32_t>();
-    case MType::UInt32:
-        return sizeT<uint32_t>();
-    case MType::Int64:
-        return sizeT<int64_t>();
-    case MType::UInt64:
-        return sizeT<uint64_t>();
-    case MType::Float32:
-        return sizeT<float>();
-    case MType::Float64:
-        return sizeT<double>();
-    case MType::Boolean:
-        return sizeT<bool>();
     case MType::ShutDown:
-        return sizeT<ShutDown>();
+        return SizeT<ShutDown>::value();
     case MType::LogOn:
-        return sizeT<LogOn>();
+        return SizeT<LogOn>::value();
     case MType::LogOut:
-        return sizeT<LogOut>();
+        return SizeT<LogOut>::value();
     case MType::QuoteUpdate:
-        return sizeT<QuoteUpdate>();
+        return SizeT<QuoteUpdate>::value();
     case MType::Acknowledgement:
-        return sizeT<Acknowledgement>();
+        return SizeT<Acknowledgement>::value();
     case MType::HeartBeat:
-        return sizeT<HeartBeat>();
+        return SizeT<HeartBeat>::value();
     case MType::Unknown:
     default:
         return 0;
-    };
-}
-
-///////////////// helper functions for packing/unpacking /////////////////
-template<std::size_t K, typename BufIdx, typename T>
-inline void putT(Packet<K, BufIdx>& packet, T&& t)
-{
-    packet.put(t);
-}
-
-template<std::size_t K, typename BufIdx, typename T, typename... Ts>
-inline void putT(Packet<K, BufIdx>& packet, T&& t, Ts&&... ts)
-{
-    packet.put(t);
-    putT(packet, ts...);
+    }
 }
 
 template<std::size_t K, typename BufIdx, typename T>
-inline void getT(Packet<K, BufIdx>& packet, T&& t)
+inline bool putM(Packet<K, BufIdx>& packet, const T& x)
 {
-    packet.get(t);
-}
+    MType mt = CorrespondingMT<T>::mtype();
+    if (mt == MType::Unknown) { return false; }
 
-template<std::size_t K, typename BufIdx, typename T, typename... Ts>
-inline void getT(Packet<K, BufIdx>& packet, T&& t, Ts&&... ts)
-{
-    packet.get(t);
-    getT(packet, ts...);
-}
-
-template<std::size_t K, typename BufIdx>
-inline bool peekM(Packet<K, BufIdx>& packet)
-{
-    std::underlying_type<MType>::type mt;
-    if (!packet.peek(mt)) { return false; }
-
-    std::size_t readsize = requiredSize(MType(mt));
-    if (readsize == 0) { return false; }
-
-    if (packet.readableSize() < 1+readsize) { return false; }
+    if (packet.writableSize() < SizeT<MType>::value() + SizeT<T>::value())
+    {
+        return false;
+    }
+    put(packet, mt);
+    put(packet, x);
     return true;
 }
 
-//////////////////////// put and get functions ////////////////////////////
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, MType& x)
+struct PeekMRes
 {
-    if (packet.readableSize() < sizeT<MType>()) { return false; }
-    std::underlying_type<MType>::type val;
-    getT(packet, val);
-    x = MType { val };
-    return true;
-}
+    MType mt;
+    bool complete;
+};
 
 template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, int8_t x)
+inline std::optional<PeekMRes> peekM(Packet<K, BufIdx>& packet)
 {
-    if (packet.writableSize() < 1 + sizeT<int8_t>()) { return false; }
-    putT(packet, fromMType(MType::Int8), x);
-    return true;
+    MType mt;
+    if (!peek(packet, mt).first) { return std::optional<PeekMRes>(); }
+
+    auto size = requiredSize(mt);
+    if (size == 0) { return std::optional<PeekMRes>(); }
+
+    auto complete = packet.readableSize() >= SizeT<MType>::value() + size;
+    return std::optional<PeekMRes>({mt, complete});
 }
 
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, int8_t& x)
+
+// Processor is an abstract class that provides interfaces to the business
+// logic of any server or client processes. 
+//
+// Ideally it doesn't involve any network I/O itself and can be used as the 
+// backbone for business logic unit test. However it is not entirely possible
+// to completely decouple from I/O. For instance, a server that receives a log
+// on and then starts sending heart beat message every one minute can't be 
+// decoupled from the I/O. In other words, the function is innately of type
+// onMessage :: IO Request -> IO Response or
+// onMessage' :: Request -> IO Response
+// very often, no response are needed, therefore :: Request -> IO ()
+//
+// The component that manages IO should reside within this class so that
+// if swapped out for an identity/dummy IO component, it can be used for tests
+
+class Processor
 {
-    if (packet.readableSize() < sizeT<int8_t>()) { return false; }
-    getT(packet, x);
-    return true;
+public:
+    virtual void onMessage(const ShutDown& msg) = 0;
+    virtual void onMessage(const LogOn& msg) = 0;
+    virtual void onMessage(const LogOut& msg) = 0;
+    virtual void onMessage(const QuoteUpdate& msg) = 0;
+    virtual void onMessage(const Acknowledgement& msg) = 0;
+    virtual void onMessage(const HeartBeat& msg) = 0;
+};
+
+
+enum class GetMRes : uint8_t
+{
+    Error = 0,
+    Imcomplete,
+    Exhausted
+};
+
+inline std::string toString(GetMRes obj)
+{
+    switch(obj)
+    {
+    case GetMRes::Error: return "Error";
+    case GetMRes::Imcomplete: return "Imcomplete";
+    case GetMRes::Exhausted: return "Exhausted";
+    default: return "?";
+    }
 }
 
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, uint8_t x)
+inline std::ostream& operator<<(std::ostream& os, GetMRes x)
 {
-    if (packet.writableSize() < 1 + sizeT<uint8_t>()) { return false; }
-    putT(packet, fromMType(MType::UInt8), x);
-    return true;
+    os << "GetMRes(" << fromEnum(x) << ")::" << toString(x);
+    return os;
 }
 
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, uint8_t& x)
+template<std::size_t K, typename BufIdx, typename MProc>
+GetMRes getM(Packet<K, BufIdx>& packet, MProc& mp)
 {
-    if (packet.readableSize() < sizeT<uint8_t>()) { return false; }
-    getT(packet, x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, int16_t x)
-{
-    if (packet.writableSize() < 1 + sizeT<int16_t>()) { return false; }
-    putT(packet, fromMType(MType::Int16), x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, uint16_t& x)
-{
-    if (packet.readableSize() < sizeT<uint16_t>()) { return false; }
-    getT(packet, x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, int32_t x)
-{
-    if (packet.writableSize() < 1 + sizeT<int32_t>()) { return false; }
-    putT(packet, fromMType(MType::Int32), x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, uint32_t& x)
-{
-    if (packet.readableSize() < sizeT<uint32_t>()) { return false; }
-    getT(packet, x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, int64_t x)
-{
-    if (packet.writableSize() < 1 + sizeT<int64_t>()) { return false; }
-    putT(packet, fromMType(MType::Int64), x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, uint64_t& x)
-{
-    if (packet.readableSize() < sizeT<uint64_t>()) { return false; }
-    getT(packet, x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, float x)
-{
-    if (packet.writableSize() < 1 + sizeT<float>()) { return false; }
-    putT(packet, fromMType(MType::Float32), x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, float& x)
-{
-    if (packet.readableSize() < sizeT<float>()) { return false; }
-    getT(packet, x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, double x)
-{
-    if (packet.writableSize() < 1 + sizeT<double>()) { return false; }
-    putT(packet, fromMType(MType::Float64), x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, double& x)
-{
-    if (packet.readableSize() < sizeT<double>()) { return false; }
-    getT(packet, x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, bool x)
-{
-    if (packet.writableSize() < 1 + sizeT<bool>()) { return false; }
-    putT(packet, fromMType(MType::Boolean), x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, bool& x)
-{
-    if (packet.readableSize() < sizeT<bool>()) { return false; }
-    getT(packet, x);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, const ShutDown& x)
-{
-    if (packet.writableSize() < 1 + sizeT<ShutDown>()) { return false; }
-    putT(packet, fromMType(MType::ShutDown), x.from, x.reason);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, ShutDown& x)
-{
-    if (packet.readableSize() < sizeT<ShutDown>()) { return false; }
-    getT(packet, x.from, x.reason);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, const LogOn& x)
-{
-    if (packet.writableSize() < 1 + sizeT<LogOn>()) { return false; }
-    putT(packet, fromMType(MType::LogOn), x.from);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, LogOn& x)
-{
-    if (packet.readableSize() < sizeT<LogOn>()) { return false; }
-    getT(packet, x.from);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, const LogOut& x)
-{
-    if (packet.writableSize() < 1 + sizeT<LogOut>()) { return false; }
-    putT(packet, fromMType(MType::LogOut), x.from, x.reason);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, LogOut& x)
-{
-    if (packet.readableSize() < sizeT<LogOut>()) { return false; }
-    getT(packet, x.from, x.reason);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, const QuoteUpdate& x)
-{
-    if (packet.writableSize() < 1 + sizeT<QuoteUpdate>()) { return false; }
-    putT(packet, fromMType(MType::QuoteUpdate), x.quantity, x.price, x.ticker);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, QuoteUpdate& x)
-{
-    if (packet.readableSize() < sizeT<QuoteUpdate>()) { return false; }
-    getT(packet, x.quantity, x.price, x.ticker);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, const Acknowledgement& x)
-{
-    if (packet.writableSize() < 1 + sizeT<Acknowledgement>()) { return false; }
-    putT(packet, fromMType(MType::Acknowledgement), x.from, x.received);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, Acknowledgement& x)
-{
-    if (packet.readableSize() < sizeT<Acknowledgement>()) { return false; }
-    getT(packet, x.from, x.received);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool put(Packet<K, BufIdx>& packet, const HeartBeat& x)
-{
-    if (packet.writableSize() < 1 + sizeT<HeartBeat>()) { return false; }
-    putT(packet, fromMType(MType::HeartBeat), x.from);
-    return true;
-}
-
-template<std::size_t K, typename BufIdx>
-bool get(Packet<K, BufIdx>& packet, HeartBeat& x)
-{
-    if (packet.readableSize() < sizeT<HeartBeat>()) { return false; }
-    getT(packet, x.from);
-    return true;
+    while (packet.readableSize() > 0)
+    {
+        auto res = peekM(packet);
+        if (!res) { return GetMRes::Error; }
+        else if (!res->complete) { return GetMRes::Imcomplete; }
+        else // res && res->complete
+        {
+            packet.discard(SizeT<MType>::value());
+            switch(res->mt)
+            {
+            case MType::ShutDown:
+                {
+                    ShutDown x;
+                    get(packet, x);
+                    mp.onMessage(x);
+                }
+                break;
+            case MType::LogOn:
+                {
+                    LogOn x;
+                    get(packet, x);
+                    mp.onMessage(x);
+                }
+                break;
+            case MType::LogOut:
+                {
+                    LogOut x;
+                    get(packet, x);
+                    mp.onMessage(x);
+                }
+                break;
+            case MType::QuoteUpdate:
+                {
+                    QuoteUpdate x;
+                    get(packet, x);
+                    mp.onMessage(x);
+                }
+                break;
+            case MType::Acknowledgement:
+                {
+                    Acknowledgement x;
+                    get(packet, x);
+                    mp.onMessage(x);
+                }
+                break;
+            case MType::HeartBeat:
+                {
+                    HeartBeat x;
+                    get(packet, x);
+                    mp.onMessage(x);
+                }
+                break;
+            case MType::Unknown:
+            default:
+                break;
+            }
+        }
+    }
+    return GetMRes::Exhausted;
 }
 
 #endif
