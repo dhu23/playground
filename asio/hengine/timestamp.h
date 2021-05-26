@@ -111,7 +111,7 @@ public:
     }
 
     template<typename R, typename P>
-    Timestamp inTheFuture(const std::chrono::duration<R, P>& dur)
+    Timestamp inTheFuture(const std::chrono::duration<R, P>& dur) const
     {
         Timestamp ret(*this);
         ret += dur;
@@ -119,7 +119,7 @@ public:
     }
 
     template<typename R, typename P>
-    Timestamp inThePast(const std::chrono::duration<R, P>& dur)
+    Timestamp inThePast(const std::chrono::duration<R, P>& dur) const
     {
         Timestamp ret(*this);
         ret -= dur;

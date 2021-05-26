@@ -160,6 +160,9 @@ void TCPSelectServer::run()
                     // lets optimize this one away maybe?
                     std::string data(buf, buf+(std::min(256, nbytes)));
                     std::cout << "recv:" << data << std::endl;
+
+                    // TODO there is some optimization, and maybe redesign that
+                    // I can go without this unnecessary copying of data
                     if (buf_.put(buf, nbytes))
                     {
                         std::cout 

@@ -380,7 +380,7 @@ bool put(Packet<K, BufIdx>& packet, const Acknowledgement& x)
     if (packet.writableSize() < SizeT<Acknowledgement>::value()) { return false; }
     packet.put(x.ts);
     packet.put(x.from);
-    packet.put(x.received);
+    put(packet, x.received);
     return true;
 }
 
@@ -552,95 +552,133 @@ inline std::optional<PeekMRes> peekM(Packet<K, BufIdx>& packet)
 // The component that manages IO should reside within this class so that
 // if swapped out for an identity/dummy IO component, it can be used for tests
 
-class Processor
-{
-public:
-    virtual void onMessage(const ShutDown& msg) = 0;
-    virtual void onMessage(const LogOn& msg) = 0;
-    virtual void onMessage(const LogOut& msg) = 0;
-    virtual void onMessage(const QuoteUpdate& msg) = 0;
-    virtual void onMessage(const Acknowledgement& msg) = 0;
-    virtual void onMessage(const HeartBeat& msg) = 0;
-};
+// template<typename T>
+// class Processor
+// {
+// public:
+//     template<typename M, std::size_t K, typename BufIdx>
+//     void onMessage(const M& msg, Packet<K, BufIdx>& output)
+//     {
+//         T& self = static_cast<T&>(*this);
+//         self.onMessage(msg, output);
+//     }
+//     
+//     template<std::size_t K, typename BufIdx>
+//     virtual void onMessage(const LogOn& msg, Packet<K, BufIdx>& output)
+//     {
+//         T& self = static_cast<T&>(*this);
+//         self.onMessage(msg, output);
+//     }
+// 
+//     template<std::size_t K, typename BufIdx>
+//     virtual void onMessage(const LogOut& msg, Packet<K, BufIdx>& output)
+//     {
+//         T& self = static_cast<T&>(*this);
+//         self.onMessage(msg, output);
+//     }
+// 
+//     template<std::size_t K, typename BufIdx>
+//     virtual void onMessage(const QuoteUpdate& msg, Packet<K, BufIdx>& output)
+//     {
+//         T& self = static_cast<T&>(*this);
+//         self.onMessage(
+//     }
+// 
+//     template<std::size_t K, typename BufIdx>
+//     virtual void onMessage(const Acknowledgement& msg, Packet<K, BufIdx>& output);
+//     template<std::size_t K, typename BufIdx>
+//     virtual void onMessage(const HeartBeat& msg, Packet<K, BufIdx>& output);
+// };
 
 
-enum class GetMRes : uint8_t
+enum class ProcMRes : uint8_t
 {
     Error = 0,
     Imcomplete,
     Exhausted
 };
 
-inline std::string toString(GetMRes obj)
+inline std::string toString(ProcMRes obj)
 {
     switch(obj)
     {
-    case GetMRes::Error: return "Error";
-    case GetMRes::Imcomplete: return "Imcomplete";
-    case GetMRes::Exhausted: return "Exhausted";
+    case ProcMRes::Error: return "Error";
+    case ProcMRes::Imcomplete: return "Imcomplete";
+    case ProcMRes::Exhausted: return "Exhausted";
     default: return "?";
     }
 }
 
-inline std::ostream& operator<<(std::ostream& os, GetMRes x)
+inline std::ostream& operator<<(std::ostream& os, ProcMRes x)
 {
-    os << "GetMRes(" << fromEnum(x) << ")::" << toString(x);
+    os << "ProcMRes(" << fromEnum(x) << ")::" << toString(x);
     return os;
 }
 
-template<std::size_t K, typename BufIdx, typename MProc>
-GetMRes getM(Packet<K, BufIdx>& packet, MProc& mp)
+// this template acts as the interface of the MProc class, therefore
+// there is no absolute need to create an interface for it, unless
+// for more readable compliation error messages
+template<
+    std::size_t KIn, typename BufIdxIn, 
+    std::size_t KOut, typename BufIdxOut,
+    typename MProc
+>
+ProcMRes procM(
+    Packet<KIn, BufIdxIn>& packetIn, 
+    Packet<KOut, BufIdxOut>& packetOut, 
+    MProc& mp
+    )
 {
-    while (packet.readableSize() > 0)
+    while (packetIn.readableSize() > 0)
     {
-        auto res = peekM(packet);
-        if (!res) { return GetMRes::Error; }
-        else if (!res->complete) { return GetMRes::Imcomplete; }
+        auto res = peekM(packetIn);
+        if (!res) { return ProcMRes::Error; }
+        else if (!res->complete) { return ProcMRes::Imcomplete; }
         else // res && res->complete
         {
-            packet.discard(SizeT<MType>::value());
+            packetIn.discard(SizeT<MType>::value());
             switch(res->mt)
             {
             case MType::ShutDown:
                 {
                     ShutDown x;
-                    get(packet, x);
-                    mp.onMessage(x);
+                    get(packetIn, x);
+                    mp.onMessage(x, packetOut);
                 }
                 break;
             case MType::LogOn:
                 {
                     LogOn x;
-                    get(packet, x);
-                    mp.onMessage(x);
+                    get(packetIn, x);
+                    mp.onMessage(x, packetOut);
                 }
                 break;
             case MType::LogOut:
                 {
                     LogOut x;
-                    get(packet, x);
-                    mp.onMessage(x);
+                    get(packetIn, x);
+                    mp.onMessage(x, packetOut);
                 }
                 break;
             case MType::QuoteUpdate:
                 {
                     QuoteUpdate x;
-                    get(packet, x);
-                    mp.onMessage(x);
+                    get(packetIn, x);
+                    mp.onMessage(x, packetOut);
                 }
                 break;
             case MType::Acknowledgement:
                 {
                     Acknowledgement x;
-                    get(packet, x);
-                    mp.onMessage(x);
+                    get(packetIn, x);
+                    mp.onMessage(x, packetOut);
                 }
                 break;
             case MType::HeartBeat:
                 {
                     HeartBeat x;
-                    get(packet, x);
-                    mp.onMessage(x);
+                    get(packetIn, x);
+                    mp.onMessage(x, packetOut);
                 }
                 break;
             case MType::Unknown:
@@ -649,7 +687,7 @@ GetMRes getM(Packet<K, BufIdx>& packet, MProc& mp)
             }
         }
     }
-    return GetMRes::Exhausted;
+    return ProcMRes::Exhausted;
 }
 
 #endif

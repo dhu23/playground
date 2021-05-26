@@ -19,6 +19,58 @@ BOOST_AUTO_TEST_CASE(test_sizeof)
     BOOST_TEST(SizeT<HeartBeat>::value() == 42);
 }
 
+// with template member function, this class cannot be defined locally 
+// inside of the test function
+struct TestProc
+{
+    ShutDown sd;
+    LogOn lon;
+    LogOut lout;
+
+    Acknowledgement makeAck(Timestamp ts, MType mt)
+    {
+        return Acknowledgement
+        {
+            ts.inTheFuture(std::chrono::seconds(1)),
+            ByteArray<32>::makeFromArray("testproc"),
+            mt
+        };
+    }
+
+    template<std::size_t K, typename BufIdx>
+    void onMessage(const ShutDown& msg, Packet<K, BufIdx>& out) 
+    { 
+        sd = msg; 
+        putM(out, makeAck(msg.ts, MType::ShutDown));
+    }
+    
+    template<std::size_t K, typename BufIdx>
+    void onMessage(const LogOn& msg, Packet<K, BufIdx>& out) 
+    { 
+        lon = msg; 
+        putM(out, makeAck(msg.ts, MType::LogOn));
+    }
+
+    template<std::size_t K, typename BufIdx>
+    void onMessage(const LogOut& msg, Packet<K, BufIdx>& out) 
+    { 
+        lout = msg; 
+        putM(out, makeAck(msg.ts, MType::LogOut));
+    }
+
+    template<std::size_t K, typename BufIdx>
+    void onMessage(const QuoteUpdate& msg, Packet<K, BufIdx>& out) 
+    {}
+
+    template<std::size_t K, typename BufIdx>
+    void onMessage(const Acknowledgement& msg, Packet<K, BufIdx>& out) 
+    {}
+
+    template<std::size_t K, typename BufIdx>
+    void onMessage(const HeartBeat& msg, Packet<K, BufIdx>& out) 
+    {}
+};
+
 BOOST_AUTO_TEST_CASE(test_packing)
 {
     Packet<256, LinearBufferIdx> packet;
@@ -51,23 +103,32 @@ BOOST_AUTO_TEST_CASE(test_packing)
     BOOST_TEST(res1->mt == MType::LogOn);
     BOOST_TEST(res1->complete);
 
-    struct TestProc : public Processor
-    {
-        ShutDown sd;
-        LogOn lon;
-        LogOut lout;
-        void onMessage(const ShutDown& msg) { sd = msg; }
-        void onMessage(const LogOn& msg) { lon = msg; }
-        void onMessage(const LogOut& msg) { lout = msg; }
-        void onMessage(const QuoteUpdate& msg) {}
-        void onMessage(const Acknowledgement& msg) {}
-        void onMessage(const HeartBeat& msg) {}
-    };
+    auto nextOneSec = now.inTheFuture(std::chrono::seconds(1));
 
     TestProc tp;
-    BOOST_TEST(getM(packet, tp) == GetMRes::Exhausted);
+    Packet<2048, LinearBufferIdx> outPacket;
+    BOOST_TEST(procM(packet, outPacket, tp) == ProcMRes::Exhausted);
 
     BOOST_TEST(tp.sd == sd);
     BOOST_TEST(tp.lon == lon);
     BOOST_TEST(tp.lout == lout);
+
+    MType mt1;
+    Acknowledgement ack1;
+
+    MType mt2;
+    Acknowledgement ack2;
+
+    MType mt3;
+    Acknowledgement ack3;
+    BOOST_TEST(get(outPacket, mt1));
+    BOOST_TEST(get(outPacket, ack1));
+    BOOST_TEST(get(outPacket, mt2));
+    BOOST_TEST(get(outPacket, ack2));
+    BOOST_TEST(get(outPacket, mt3));
+    BOOST_TEST(get(outPacket, ack3));
+
+    BOOST_TEST(mt1 == MType::Acknowledgement);
+    BOOST_TEST(mt2 == MType::Acknowledgement);
+    BOOST_TEST(mt3 == MType::Acknowledgement);
 }
