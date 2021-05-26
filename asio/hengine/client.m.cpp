@@ -1,11 +1,10 @@
-#include "tcpserver.h"
+#include "tcpclient.h"
 #include <iostream>
-
 
 int main(int argc, char* argv[])
 {
     const char* PORT = "12345";
-    TCPSelectServer s(PORT);
-    s.run();
+    TCPClient c("localhost", PORT);
+    c.run();
     return 0;
 }

@@ -14,6 +14,8 @@
 #include <string>
 #include <iostream>
 
+namespace 
+{
 
 std::string getRemoteIP(struct sockaddr_storage& sa)
 {
@@ -32,6 +34,8 @@ std::string getRemoteIP(struct sockaddr_storage& sa)
 
     return std::string(remoteIP);
 }
+
+} // anonymous namespace
 
 void TCPSelectServer::closeFd(int i)
 {
@@ -153,8 +157,19 @@ void TCPSelectServer::run()
                 else
                 {
                     printf("recv nbytes:%d\n", nbytes);
+                    // lets optimize this one away maybe?
                     std::string data(buf, buf+(std::min(256, nbytes)));
                     std::cout << "recv:" << data << std::endl;
+                    if (buf_.put(buf, nbytes))
+                    {
+                        std::cout 
+                            << "wrote " << nbytes << " bytes into buffer. left:" 
+                            << buf_.writableSize() << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "failed to write to buffer" << std::endl;
+                    }
                 }
             }
         }

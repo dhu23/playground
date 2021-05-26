@@ -152,6 +152,13 @@ public:
     }
 
     bool put(Timestamp ts) { return this->put(ts.totalNanoseconds()); }
+
+    bool put(const char* buf, std::size_t size)
+    {
+        if (size > this->writableSize()) { return false; }
+        for (std::size_t i = 0; i < size; ++i) { this->writeByte(buf[i]); };
+        return true;
+    }
     
     bool peek(uint8_t& u8, std::size_t skip=0) const;
     bool peek(uint16_t& u16, std::size_t skip=0) const;

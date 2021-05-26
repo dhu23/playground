@@ -2,14 +2,17 @@
 #define _INCLUDED_TCPSERVER_H_
 
 #include <sys/select.h>
-
+#include "packing.h"
+#include "buffer.h"
 
 class TCPServer
 {
 public:
     virtual void run() = 0;
-};
 
+protected:
+    Packet<1024, LinearBufferIdx> buf_;
+};
 
 struct addrinfo;
 
