@@ -5,12 +5,13 @@
 
 struct MAbsorber
 {
-    template<std::size_t K, typename BufIdx>
-    void onMessage(const ShutDown& msg, Packet<K, BufIdx>& out)
+    template<std::size_t K, typename BufIdx, typename T>
+    void onMessage(const T& msg, Packet<K, BufIdx>& out)
     {
         std::cout << "absorbed:" << msg << std::endl;
     }
-
+};
+    /*
     template<std::size_t K, typename BufIdx>
     void onMessage(const LogOn& msg, Packet<K, BufIdx>& out)
     {
@@ -20,7 +21,7 @@ struct MAbsorber
     template<std::size_t K, typename BufIdx>
     void onMessage(const LogOut& msg, Packet<K, BufIdx>& out)
     {
-        std::cout << "received:" << msg << std::endl;
+        std::cout << "absorbed:" << msg << std::endl;
     }
 
     template<std::size_t K, typename BufIdx>
@@ -37,7 +38,7 @@ struct MAbsorber
     void onMessage(const HeartBeat& msg, Packet<K, BufIdx>& out)
     {
     }
-};
+    */
 
 
 int main(int argc, char* argv[])

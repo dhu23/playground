@@ -72,8 +72,3 @@ TCPClient::~TCPClient()
 {
     freeaddrinfo(servinfo_);
 }
-
-void TCPClient::run()
-{
-    std::cout << "running..." << std::endl;
-}

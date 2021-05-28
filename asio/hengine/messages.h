@@ -481,7 +481,7 @@ struct CorrespondingMT<HeartBeat>
     constexpr static MType mtype() { return MType::HeartBeat; }
 };
 
-std::size_t requiredSize(MType mt)
+inline std::size_t requiredSize(MType mt)
 {
     switch(mt)
     {

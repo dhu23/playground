@@ -10,9 +10,7 @@
 #include <netdb.h>
 #include <iostream>
 
-
-#include "packing.h"
-#include "buffer.h"
+#include "messages.h"
 
 inline std::string getRemoteIP(struct sockaddr_storage& sa)
 {
@@ -68,7 +66,6 @@ public:
                 if (i == listener_)
                 {
                     std::cout << "new connection..." << std::endl;
-                    printf("new connection\n");
                     struct sockaddr_storage remoteaddr;
                     socklen_t addrlen = sizeof remoteaddr;
                     int newfd = accept(
@@ -110,7 +107,7 @@ public:
                     }
                     else
                     {
-                        printf("recv nbytes:%d\n", nbytes);
+                        std::cout << "recv nbytes:" << nbytes << std::endl;
                         // lets optimize this one away maybe?
                         std::string data(buf, buf+(std::min(256, nbytes)));
                         std::cout << "recv:" << data << std::endl;
@@ -126,7 +123,7 @@ public:
                         }
                         else
                         {
-                            std::cout << "failed to write to buffer" << std::endl;
+                            std::cerr << "failed to write to buffer" << std::endl;
                         }
                     }
                 }

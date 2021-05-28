@@ -15,6 +15,6 @@ echo "compiled test_messages.tsk"
 
 g++ mbus.m.cpp tcpserver.cpp -std=c++2a -o mbus.tsk
 echo "compiled mbus.tsk"
-#
-#g++ client.m.cpp tcpclient.cpp -std=c++2a -o client.tsk
-#echo "complied client.tsk"
+
+g++ client.m.cpp tcpclient.cpp -std=c++2a -o client.tsk
+echo "complied client.tsk"
