@@ -2,6 +2,7 @@
 #define _INCLUDED_MESSAGES_H_
 
 #include <cstdint>
+#include <optional>
 #include "bytearray.h"
 #include "packing.h"
 #include "buffer.h"
