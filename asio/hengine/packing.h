@@ -1,3 +1,6 @@
+#ifndef _INCLUDED_PACKING_H_
+#define _INCLUDED_PACKING_H_
+
 #include <cstring>
 #include <cstdint> // defines int*_t, uint*_t types
 #include <array>
@@ -481,3 +484,5 @@ bool Packet<K, BufIdx>::peek(bool& b, std::size_t skip) const
     b = i > 0;
     return true;
 }
+
+#endif
