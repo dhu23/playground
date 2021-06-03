@@ -26,6 +26,10 @@ public:
     virtual std::size_t freeSpace() const = 0;
     // used space between head and tail
     virtual std::size_t usedSpace() const = 0;
+    // gives the next position
+    virtual std::size_t next(std::size_t pos) const = 0;
+    virtual bool isReadable(std::size_t pos) const = 0;
+    virtual bool isWritable(std::size_t pos) const = 0;
 
     bool isEmpty() const { return this->freeSpace() == capacity_; }
     bool isFull() const { return this->usedSpace() == capacity_; }
@@ -55,6 +59,20 @@ public:
     std::size_t usedSpace() const override
     {
         return tail_-head_;
+    }
+    
+    std::size_t next(std::size_t pos) const override
+    {
+        if (pos >= capacity_) { return capacity_; }
+        return pos+1;
+    }
+    bool isReadable(std::size_t pos) const override
+    {
+        return pos >= head_ && pos < tail_;
+    }
+    bool isWritable(std::size_t pos) const override
+    {
+        return pos < capacity_ && pos >= tail_;
     }
 
     bool read(std::size_t size) override
@@ -99,6 +117,25 @@ public:
     std::size_t usedSpace() const override
     {
         return this->capacity() - this->freeSpace();
+    }
+
+    std::size_t next(std::size_t pos) const override
+    {
+        return (pos+1) % capacity_;
+    }
+    bool isReadable(std::size_t pos) const override
+    {
+        if (pos >= capacity_) { return false; }
+
+        if (wrapped_) { return pos >= head_ || pos < tail_; }
+        else { return pos >= head_ && pos < tail_; }
+    }
+    bool isWritable(std::size_t pos) const override
+    {
+        if (pos >= capacity_) { return false; }
+
+        if (wrapped_) { return pos >= tail_ && pos < head_; }
+        else { return pos < head_ || pos >= tail_; }
     }
 
     bool read(std::size_t size) override
