@@ -2,6 +2,13 @@
 #include <boost/test/unit_test.hpp>
 #include "buffer.h"
 
+void testExclusive(const LinearBufferIdx& b)
+{
+    for (std::size_t i = b.head(); i < b.capacity(); ++i)
+    {
+        BOOST_TEST(b.isWritable(i) != b.isReadable(i));
+    }
+}
 
 BOOST_AUTO_TEST_CASE(test_linearbuffer)
 {
@@ -12,24 +19,49 @@ BOOST_AUTO_TEST_CASE(test_linearbuffer)
 
     BOOST_TEST(lb.capacity() == 10);
 
-    BOOST_TEST(!lb.free(1));
-    BOOST_TEST(lb.use(3));
-    BOOST_TEST(lb.free(2));
+    BOOST_TEST(!lb.read(1));
+
+    BOOST_TEST(lb.write(3));
+    testExclusive(lb);
+
+    BOOST_TEST(lb.read(2));
+    testExclusive(lb);
+
+    BOOST_TEST(lb.next(9) == 10);
+    BOOST_TEST(lb.isReadable(2));
+    BOOST_TEST(!lb.isWritable(2));
+    BOOST_TEST(lb.isWritable(3));
+    BOOST_TEST(!lb.isReadable(3));
 
     BOOST_TEST(lb.tailSpace() == 7);
     BOOST_TEST(lb.freeSpace() == 7);
     BOOST_TEST(lb.usedSpace() == 1);
 
-    BOOST_TEST(!lb.use(8));
-    BOOST_TEST(lb.free(1));
+    BOOST_TEST(!lb.write(8));
+    testExclusive(lb);
+
+    BOOST_TEST(lb.read(1));
+    testExclusive(lb);
 
     BOOST_TEST(lb.isEmpty());
     BOOST_TEST(lb.tailSpace() == 10);
     
-    BOOST_TEST(lb.use(10));
-    BOOST_TEST(lb.free(3));
-    BOOST_TEST(lb.free(7));
+    BOOST_TEST(lb.write(10));
+    BOOST_TEST(lb.read(3));
+    testExclusive(lb);
+
+    BOOST_TEST(lb.read(7));
+    testExclusive(lb);
+
     BOOST_TEST(lb.isEmpty());
+}
+
+void testExclusive(const RingBufferIdx& b)
+{
+    for (std::size_t i = 0; i < b.capacity(); ++i)
+    {
+        BOOST_TEST(b.isReadable(i) != b.isWritable(i));
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_ringbuffer)
@@ -41,22 +73,43 @@ BOOST_AUTO_TEST_CASE(test_ringbuffer)
 
     BOOST_TEST(rb.capacity() == 10);
 
-    BOOST_TEST(!rb.free(1));
-    BOOST_TEST(rb.use(3));
-    BOOST_TEST(rb.free(2));
+    BOOST_TEST(!rb.read(1));
+    BOOST_TEST(rb.write(3));
+    testExclusive(rb);
+    
+    BOOST_TEST(rb.read(2));
+    testExclusive(rb);
+
+    BOOST_TEST(rb.next(9) == 0); // wrapping
+    BOOST_TEST(rb.isReadable(2));
+    BOOST_TEST(!rb.isWritable(2));
+    BOOST_TEST(rb.isWritable(3));
+    BOOST_TEST(!rb.isReadable(3));
 
     BOOST_TEST(rb.tailSpace() == 7);
     BOOST_TEST(rb.freeSpace() == 9);
     BOOST_TEST(rb.usedSpace() == 1);
 
-    BOOST_TEST(rb.use(8));
+    BOOST_TEST(rb.write(8));
+    testExclusive(rb);
+
     BOOST_TEST(rb.tailSpace() == 1);
     BOOST_TEST(rb.freeSpace() == 1);
     BOOST_TEST(rb.usedSpace() == 9);
 
-    BOOST_TEST(!rb.free(10));
-    BOOST_TEST(rb.free(3));
-    BOOST_TEST(rb.free(6));
+    BOOST_TEST(rb.isWritable(1));
+    BOOST_TEST(!rb.isReadable(1));
+    BOOST_TEST(rb.isReadable(2));
+    BOOST_TEST(!rb.isWritable(2));
+    BOOST_TEST(rb.isReadable(0));
+    BOOST_TEST(!rb.isWritable(0));
+
+    BOOST_TEST(!rb.read(10));
+    BOOST_TEST(rb.read(3));
+    testExclusive(rb);
+
+    BOOST_TEST(rb.read(6));
+    testExclusive(rb);
 
     BOOST_TEST(rb.isEmpty());
 }
