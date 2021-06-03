@@ -34,8 +34,8 @@ public:
     bool isEmpty() const { return this->freeSpace() == capacity_; }
     bool isFull() const { return this->usedSpace() == capacity_; }
 
-    virtual bool read(std::size_t size) = 0;
-    virtual bool write(std::size_t size) = 0;
+    virtual bool free(std::size_t size) = 0;
+    virtual bool use(std::size_t size) = 0;
 
     std::size_t capacity() const { return capacity_; }
 };
@@ -75,7 +75,7 @@ public:
         return pos < capacity_ && pos >= tail_;
     }
 
-    bool read(std::size_t size) override
+    bool free(std::size_t size) override
     {
         if (this->usedSpace() < size) { return false; }
         head_ += size;
@@ -88,7 +88,7 @@ public:
         return true;
     }
 
-    bool write(std::size_t size) override
+    bool use(std::size_t size) override
     {
         if (this->tailSpace() < size) { return false; }
         tail_ += size;
@@ -138,7 +138,7 @@ public:
         else { return pos < head_ || pos >= tail_; }
     }
 
-    bool read(std::size_t size) override
+    bool free(std::size_t size) override
     {
         if (size > this->usedSpace()) { return false; }
         auto head = head_+size;
@@ -154,7 +154,7 @@ public:
         return true;
     }
 
-    bool write(std::size_t size) override
+    bool use(std::size_t size) override
     {
         if (size > this->freeSpace()) { return false; }
         auto tail = tail_+size;
