@@ -27,7 +27,7 @@ public:
     // used space between head and tail
     virtual std::size_t usedSpace() const = 0;
     // gives the next position
-    virtual std::size_t next(std::size_t pos) const = 0;
+    virtual std::size_t nextMany(std::size_t pos, std::size_t skip) const = 0;
     virtual bool isReadable(std::size_t pos) const = 0;
     virtual bool isWritable(std::size_t pos) const = 0;
 
@@ -63,10 +63,10 @@ public:
         return tail_-head_;
     }
     
-    std::size_t next(std::size_t pos) const override
+    std::size_t nextMany(std::size_t pos, std::size_t skip) const override
     {
-        if (pos >= capacity_) { return capacity_; }
-        return pos+1;
+        if (pos+skip > capacity_) { return capacity_; }
+        return pos+skip;
     }
     bool isReadable(std::size_t pos) const override
     {
@@ -97,7 +97,7 @@ public:
         return true;
     }
 
-    bool readIn(uint8_t* target, const uint8_t* source, std::size_t len)
+    bool readIn(uint8_t* target, const uint8_t* source, std::size_t len) override
     {
         if (this->freeSpace() < len) { return false; }
         uint8_t* pos = target + this->tail();
@@ -130,9 +130,9 @@ public:
         return this->capacity() - this->freeSpace();
     }
 
-    std::size_t next(std::size_t pos) const override
+    std::size_t nextMany(std::size_t pos, std::size_t skip) const override
     {
-        return (pos+1) % capacity_;
+        return (pos+skip) % capacity_;
     }
     bool isReadable(std::size_t pos) const override
     {
@@ -181,7 +181,7 @@ public:
         return true;
     }
 
-    bool readIn(uint8_t* target, const uint8_t* source, std::size_t len)
+    bool readIn(uint8_t* target, const uint8_t* source, std::size_t len) override
     {
         if (this->freeSpace() < len) { return false; }
         

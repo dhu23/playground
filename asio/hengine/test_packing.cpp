@@ -313,6 +313,8 @@ BOOST_AUTO_TEST_CASE(test_ringbuffer)
     BOOST_TEST(packet.readableSize() == 13);
     BOOST_TEST(packet.writableSize() == 3);
 
+    // starting from 0, 12 bytes used by the ByteArray, 1 byte by the uint8_t
+
     ByteArray<10> gba;
     BOOST_TEST(packet.get(gba));
     BOOST_TEST(gba == ba);
@@ -320,9 +322,27 @@ BOOST_AUTO_TEST_CASE(test_ringbuffer)
     BOOST_TEST(packet.readableSize() == 1);
     BOOST_TEST(packet.writableSize() == 15);
 
-    BOOST_TEST(packet.put(ba));
+    // only pos=12 is used by uint8_t
+    BOOST_TEST(packet.idx().tailSpace() == 3);
+    BOOST_TEST(packet.idx().freeSpace() == 15);
+
+    BOOST_TEST(packet.put(ba)); // byteArray would be wrapped
     BOOST_TEST(packet.readableSize() == 13);
     BOOST_TEST(packet.writableSize() == 3);
+
+    uint8_t g8;
+    BOOST_TEST(packet.get(g8));
+    BOOST_TEST(g8 == 1);
+
+    // starting from pos=13, 12 byte by ByteArray that wraps around to pos=8
+
+    ByteArray<10> gba1;
+    BOOST_TEST(packet.get(gba1));
+    BOOST_TEST(gba1 == ba);
+
+    BOOST_TEST(packet.readableSize() == 0);
+    BOOST_TEST(packet.writableSize() == 16);
+
 }
 
 BOOST_AUTO_TEST_CASE(test_peeker)

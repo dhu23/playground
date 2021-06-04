@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(test_linearbuffer)
     BOOST_TEST(lb.read(2));
     testExclusive(lb);
 
-    BOOST_TEST(lb.next(9) == 10);
+    BOOST_TEST(lb.nextMany(9, 1) == 10);
     BOOST_TEST(lb.isReadable(2));
     BOOST_TEST(!lb.isWritable(2));
     BOOST_TEST(lb.isWritable(3));
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(test_ringbuffer)
     BOOST_TEST(rb.read(2));
     testExclusive(rb);
 
-    BOOST_TEST(rb.next(9) == 0); // wrapping
+    BOOST_TEST(rb.nextMany(9, 1) == 0); // wrapping
     BOOST_TEST(rb.isReadable(2));
     BOOST_TEST(!rb.isWritable(2));
     BOOST_TEST(rb.isWritable(3));

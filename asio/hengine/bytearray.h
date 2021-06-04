@@ -60,6 +60,7 @@ public:
         return ret;
     }
 
+    char* data() { return arr_.data(); }
     const char* data() const { return arr_.data(); }
     std::string str() const { return std::string(arr_.data()); }
     // std::string(arr_.begin(), arr_.end()); returns a string with null bytes

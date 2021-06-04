@@ -113,7 +113,7 @@ class Packet
 
     uint8_t peekByte(std::size_t offset) const 
     { 
-        return buffer_[bufferIdx_.head()+offset]; 
+        return buffer_[bufferIdx_.nextMany(bufferIdx_.head(), offset)];
     }
 
 public:
@@ -125,6 +125,8 @@ public:
     explicit operator bool() const { return bufferIdx_.isEmpty(); }
     size_t writableSize() const { return bufferIdx_.freeSpace(); }
     size_t readableSize() const { return bufferIdx_.usedSpace(); }
+
+    const BufIdx& idx() const { return bufferIdx_; }
 
     bool put(uint8_t u8);
     bool put(uint16_t u16);
@@ -151,20 +153,26 @@ public:
         if (!this->put(static_cast<uint16_t>(N))) { return false; }
         // memcpy(&buffer_[bufferIdx_.tail()], obj.data(), N);
         // bufferIdx_.write(N);
-        bufferIdx_.readIn(
-            buffer_.data(), 
-            reinterpret_cast<const uint8_t*>(obj.data()), // static_cast doesn't work
-            N);
-        return true;
+        // bufferIdx_.readIn(
+        //     buffer_.data(), 
+        //     reinterpret_cast<const uint8_t*>(obj.data()), // static_cast doesn't work
+        //     N);
+        // return true;
+        return this->put(obj.data(), N);
     }
 
     bool put(Timestamp ts) { return this->put(ts.totalNanoseconds()); }
 
     bool put(const char* buf, std::size_t size)
     {
-        if (size > this->writableSize()) { return false; }
-        for (std::size_t i = 0; i < size; ++i) { this->writeByte(buf[i]); };
-        return true;
+        return bufferIdx_.readIn(
+            buffer_.data(), 
+            reinterpret_cast<const uint8_t*>(buf), 
+            size);
+        
+        // if (size > this->writableSize()) { return false; }
+        // for (std::size_t i = 0; i < size; ++i) { this->writeByte(buf[i]); };
+        // return true;
     }
     
     bool peek(uint8_t& u8, std::size_t skip=0) const;
@@ -189,9 +197,14 @@ public:
         uint16_t size;
         if (!this->peek(size, skip)) { return false; }
         if (size != N) { return false; }
-        obj.fromBuffer(
-            reinterpret_cast<const char*>(&buffer_[bufferIdx_.head()+sizeof(size)+skip]),
-            size);
+        // obj.fromBuffer(
+        //     reinterpret_cast<const char*>(&buffer_[bufferIdx_.head()+sizeof(size)+skip]),
+        //     size);
+        // TODO improve efficiency by using memcpy
+        for (std::size_t i = 0; i < size; ++i)
+        {
+            obj.data()[i] = static_cast<char>(this->peekByte(i+sizeof(size)+skip));
+        }
         return true;
     }
 
