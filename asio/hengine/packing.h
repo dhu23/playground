@@ -149,8 +149,12 @@ public:
 
         // this function should not fail from here
         if (!this->put(static_cast<uint16_t>(N))) { return false; }
-        memcpy(&buffer_[bufferIdx_.tail()], obj.data(), N);
-        bufferIdx_.write(N);
+        // memcpy(&buffer_[bufferIdx_.tail()], obj.data(), N);
+        // bufferIdx_.write(N);
+        bufferIdx_.readIn(
+            buffer_.data(), 
+            reinterpret_cast<const uint8_t*>(obj.data()), // static_cast doesn't work
+            N);
         return true;
     }
 
@@ -213,6 +217,14 @@ public:
         if (this->readableSize() < skip) { return false; }
         bufferIdx_.read(skip);
         return true;
+    }
+
+    // use receive function only if fd is not a listener port
+    // pass along c recv function return value
+    int receive(int fd) 
+    {
+        // int nbytes = recv(fd, buffer_.
+        return 0;
     }
 
 public:

@@ -298,6 +298,33 @@ BOOST_AUTO_TEST_CASE(test_array)
     BOOST_TEST(gba2 == ba);
 }
 
+BOOST_AUTO_TEST_CASE(test_ringbuffer)
+{
+    Packet<16, RingBufferIdx> packet;
+
+    ByteArray<10> ba;
+    ba.fromArray("abcdef");
+
+    BOOST_TEST(packet.put(ba));
+    BOOST_TEST(packet.readableSize() == 12);
+    BOOST_TEST(packet.writableSize() == 4);
+
+    BOOST_TEST(packet.put(static_cast<uint8_t>(1)));
+    BOOST_TEST(packet.readableSize() == 13);
+    BOOST_TEST(packet.writableSize() == 3);
+
+    ByteArray<10> gba;
+    BOOST_TEST(packet.get(gba));
+    BOOST_TEST(gba == ba);
+
+    BOOST_TEST(packet.readableSize() == 1);
+    BOOST_TEST(packet.writableSize() == 15);
+
+    BOOST_TEST(packet.put(ba));
+    BOOST_TEST(packet.readableSize() == 13);
+    BOOST_TEST(packet.writableSize() == 3);
+}
+
 BOOST_AUTO_TEST_CASE(test_peeker)
 {
     Packet<16, LinearBufferIdx> packet;

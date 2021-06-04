@@ -1,7 +1,7 @@
 #ifndef _INCLUDED_RINGBUFFER_H_
 #define _INCLUDED_RINGBUFFER_H_
 
-
+#include <cstdint>
 // BufferIdx classes do not manage memory directly. It defines how reading and 
 // writing moves the index indicators.
 class BufferIdx
@@ -38,6 +38,8 @@ public:
     virtual bool write(std::size_t size) = 0;
 
     std::size_t capacity() const { return capacity_; }
+
+    virtual bool readIn(uint8_t* target, const uint8_t* source, std::size_t len) = 0;
 };
 
 // linear buffer reads and writes linearly. 
@@ -92,6 +94,15 @@ public:
     {
         if (this->tailSpace() < size) { return false; }
         tail_ += size;
+        return true;
+    }
+
+    bool readIn(uint8_t* target, const uint8_t* source, std::size_t len)
+    {
+        if (this->freeSpace() < len) { return false; }
+        uint8_t* pos = target + this->tail();
+        memcpy(pos, source, len);
+        this->write(len);
         return true;
     }
 };
@@ -170,6 +181,25 @@ public:
         return true;
     }
 
+    bool readIn(uint8_t* target, const uint8_t* source, std::size_t len)
+    {
+        if (this->freeSpace() < len) { return false; }
+        
+        uint8_t* pos = target + this->tail();
+        auto tailSpace = this->tailSpace();
+        if (tailSpace >= len) 
+        {
+            memcpy(pos, source, len);
+        }
+        else
+        {
+            // this data is wrapped around
+            memcpy(pos, source, tailSpace);
+            memcpy(target, source+tailSpace, len-tailSpace);
+        }
+        this->write(len);
+        return true;
+    }
 };
 
 
