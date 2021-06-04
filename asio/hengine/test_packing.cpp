@@ -345,6 +345,86 @@ BOOST_AUTO_TEST_CASE(test_ringbuffer)
 
 }
 
+BOOST_AUTO_TEST_CASE(test_ringbuffer_long)
+{
+    Packet<32, RingBufferIdx> packet;
+
+    ByteArray<12> ba1; // take up 14 bytes
+    ba1.fromArray("abcdef");
+
+    ByteArray<8> ba2; // take up 10 bytes
+    ba2.fromArray("xyz");
+
+    ByteArray<16> ba3; // take up 18 bytes
+    ba3.fromArray("abcdefghijklmnop");
+
+    // 0                  10                  20                  30
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -   
+
+    BOOST_TEST(packet.put(ba1)); // +14
+    BOOST_TEST(packet.put(ba2)); // +10
+    BOOST_TEST(packet.idx().tail() == 24);
+    BOOST_TEST(packet.idx().head() == 0);
+
+    // 0                  10                  20                  30
+    // x x x x x x x x x x x x x x x x x x x x x x x x - - - - - - - -   
+
+    // from now on, take off one and put in another
+
+    ByteArray<12> gba1;
+    BOOST_TEST(packet.get(gba1));
+    BOOST_TEST(gba1 == ba1);
+    BOOST_TEST(packet.idx().tail() == 24);
+    BOOST_TEST(packet.idx().head() == 14);
+
+    // 0                  10                  20                  30
+    // - - - - - - - - - - - - - - x x x x x x x x x x - - - - - - - -   
+
+    BOOST_TEST(packet.put(ba3));
+    BOOST_TEST(packet.idx().tail() == 10);
+    BOOST_TEST(packet.idx().head() == 14);
+
+    // 0                  10                  20                  30
+    // x x x x x x x x x x - - - - x x x x x x x x x x x x x x x x x x   
+
+    ByteArray<8> gba2;
+    BOOST_TEST(packet.get(gba2));
+    BOOST_TEST(gba2 == ba2);
+    BOOST_TEST(packet.idx().tail() == 10);
+    BOOST_TEST(packet.idx().head() == 24);
+
+    // 0                  10                  20                  30
+    // x x x x x x x x x x - - - - - - - - - - - - - - x x x x x x x x   
+
+    BOOST_TEST(packet.put(ba1));
+    BOOST_TEST(packet.idx().tail() == 24);
+    BOOST_TEST(packet.idx().head() == 24);
+    // 0                  10                  20                  30
+    // x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x   
+
+    ByteArray<16> gba3;
+    BOOST_TEST(packet.get(gba3));
+    BOOST_TEST(gba3 == ba3);
+    BOOST_TEST(packet.idx().tail() == 24);
+    BOOST_TEST(packet.idx().head() == 10);
+
+    // 0                  10                  20                  30
+    // - - - - - - - - - - x x x x x x x x x x x x x x - - - - - - - -
+
+    BOOST_TEST(packet.put(ba2));
+    BOOST_TEST(packet.idx().tail() == 2);
+    BOOST_TEST(packet.idx().head() == 10);
+
+    // 0                  10                  20                  30
+    // x x - - - - - - - - - - - - - - - - - - - - - - x x x x x x x x
+
+    ByteArray<12> gba4;
+    BOOST_TEST(packet.get(gba4));
+    BOOST_TEST(gba4 == ba1);
+    BOOST_TEST(packet.idx().tail() == 2);
+    BOOST_TEST(packet.idx().head() == 24);
+}
+
 BOOST_AUTO_TEST_CASE(test_peeker)
 {
     Packet<16, LinearBufferIdx> packet;
