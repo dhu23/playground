@@ -151,13 +151,6 @@ public:
 
         // this function should not fail from here
         if (!this->put(static_cast<uint16_t>(N))) { return false; }
-        // memcpy(&buffer_[bufferIdx_.tail()], obj.data(), N);
-        // bufferIdx_.write(N);
-        // bufferIdx_.readIn(
-        //     buffer_.data(), 
-        //     reinterpret_cast<const uint8_t*>(obj.data()), // static_cast doesn't work
-        //     N);
-        // return true;
         return this->put(obj.data(), N);
     }
 
@@ -169,10 +162,6 @@ public:
             buffer_.data(), 
             reinterpret_cast<const uint8_t*>(buf), 
             size);
-        
-        // if (size > this->writableSize()) { return false; }
-        // for (std::size_t i = 0; i < size; ++i) { this->writeByte(buf[i]); };
-        // return true;
     }
     
     bool peek(uint8_t& u8, std::size_t skip=0) const;
@@ -197,9 +186,6 @@ public:
         uint16_t size;
         if (!this->peek(size, skip)) { return false; }
         if (size != N) { return false; }
-        // obj.fromBuffer(
-        //     reinterpret_cast<const char*>(&buffer_[bufferIdx_.head()+sizeof(size)+skip]),
-        //     size);
         // TODO improve efficiency by using memcpy
         for (std::size_t i = 0; i < size; ++i)
         {
