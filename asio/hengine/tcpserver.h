@@ -1,36 +1,14 @@
 #ifndef _INCLUDED_TCPSERVER_H_
 #define _INCLUDED_TCPSERVER_H_
 
+#include "messages.h"
+#include "socketutil.h"
+
 #include <sys/select.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <iostream>
 
-#include "messages.h"
-
-inline std::string getRemoteIP(struct sockaddr_storage& sa)
-{
-    char remoteIP[INET6_ADDRSTRLEN];
-
-    struct sockaddr* psa = reinterpret_cast<struct sockaddr*>(&sa);
-    inet_ntop(
-        psa->sa_family, 
-
-        psa->sa_family == AF_INET
-        ? (void*)&(reinterpret_cast<struct sockaddr_in*>(psa)->sin_addr)
-        : (void*)&(reinterpret_cast<struct sockaddr_in6*>(psa)->sin6_addr)
-        ,
-
-        remoteIP, INET6_ADDRSTRLEN);
-
-    return std::string(remoteIP);
-}
-
-struct addrinfo;
 
 class TCPSelectServer
 {
