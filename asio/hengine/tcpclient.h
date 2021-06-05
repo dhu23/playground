@@ -19,7 +19,7 @@ class Oscillator
     std::size_t pos_;
 
 public:
-    Oscillator(T tmin, T tstep, std::size_t range, bool dir, std::size_t pos=0):
+    Oscillator(T tmin, T tstep, std::size_t range, bool dir=true, std::size_t pos=0):
         min_(tmin),
         step_(tstep),
         range_(range),
@@ -30,40 +30,49 @@ public:
     T gen()
     {
         auto ret = pos_*step_ + min_;
-
-        if (direction_)
+        if (pos_ == range_) 
         {
-                    
+            direction_ = false;
+            pos_ -= step_;
+        }
+        else if (pos_ == 0)
+        {
+            direction_ = true;
+            pos_ = 1;
         }
         else
         {
+            pos_ = direction_ ? pos_+step_ : pos_-step_;
         }
+        return ret;
     }
 };
 
 class QuoteUpdateGen
 {
-    static constexpr uint32_t qmax_ = 100;
-    static constexpr uint32_t qmin_ = 1;
-
-    static constexpr uint64_t pmax_ = 600LL;
-    static constexpr uint64_t pmin_ = 100LL;
-
-    uint32_t q_ = qmax_;
-    uint32_t qstep_ = 1;
-    bool qdirect_ = false;
-
-    uint64_t p_ = pmin_;
-    uint64_t pstep_ = 50LL;
-    bool pdirect_ = true;
+    ByteArray<8> ticker_;
+    Oscillator<uint32_t> qgen_;
+    Oscillator<uint64_t> pgen_;
 
 public:
+
+    QuoteUpdateGen():
+        ticker_(),
+        qgen_(1, 1, 20),
+        pgen_(100LL, 50LL, 30)
+    {
+        ticker_.fromArray("AAPL");
+    }
+
     QuoteUpdate gen()
     {
-        if (qdirect_)
+        return QuoteUpdate
         {
-
-        }
+            Timestamp::now(),
+            qgen_.gen(),
+            pgen_.gen(),
+            ticker_
+        };
     }
 };
 
