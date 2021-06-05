@@ -10,6 +10,11 @@
 
 class TCPClient
 {
+protected:
+    struct addrinfo *servinfo_;
+    Packet<1024, RingBufferIdx> inbuf_;
+    Packet<1024, RingBufferIdx> outbuf_;
+    int serverfd_;
 public:
     TCPClient(const char* host, const char* part);
     ~TCPClient();
@@ -64,11 +69,6 @@ public:
         }
     }
 
-protected:
-    struct addrinfo *servinfo_;
-    Packet<1024, LinearBufferIdx> inbuf_;
-    Packet<1024, LinearBufferIdx> outbuf_;
-    int serverfd_;
 };
 
 #endif

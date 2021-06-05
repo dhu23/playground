@@ -17,14 +17,14 @@ private:
     fd_set master_;
     int listener_;
     int fdmax_;
-    Packet<1024, LinearBufferIdx> inbuf_;
-    Packet<1024, LinearBufferIdx> outbuf_;
+    Packet<1024, RingBufferIdx> inbuf_;
+    Packet<1024, RingBufferIdx> outbuf_;
 
     void closeFd(int i);
 
 public:
     TCPSelectServer(const char* port);
-    virtual ~TCPSelectServer();
+    ~TCPSelectServer();
 
     template<typename MProc>
     void run(MProc& mp)
