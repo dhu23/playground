@@ -8,6 +8,65 @@
 
 #include "messages.h"
 
+template<typename T>
+class Oscillator
+{
+    T min_;
+    T step_;
+    std::size_t range_;
+
+    bool direction_;
+    std::size_t pos_;
+
+public:
+    Oscillator(T tmin, T tstep, std::size_t range, bool dir, std::size_t pos=0):
+        min_(tmin),
+        step_(tstep),
+        range_(range),
+        direction_(dir),
+        pos_(pos)
+    {}
+
+    T gen()
+    {
+        auto ret = pos_*step_ + min_;
+
+        if (direction_)
+        {
+                    
+        }
+        else
+        {
+        }
+    }
+};
+
+class QuoteUpdateGen
+{
+    static constexpr uint32_t qmax_ = 100;
+    static constexpr uint32_t qmin_ = 1;
+
+    static constexpr uint64_t pmax_ = 600LL;
+    static constexpr uint64_t pmin_ = 100LL;
+
+    uint32_t q_ = qmax_;
+    uint32_t qstep_ = 1;
+    bool qdirect_ = false;
+
+    uint64_t p_ = pmin_;
+    uint64_t pstep_ = 50LL;
+    bool pdirect_ = true;
+
+public:
+    QuoteUpdate gen()
+    {
+        if (qdirect_)
+        {
+
+        }
+    }
+};
+
 class TCPClient
 {
 protected:
@@ -65,7 +124,7 @@ public:
                     std::cerr << "failed to write to buffer" << std::endl;
                 }
             }
-            // putM(outbuf_, 
+            putM(outbuf_, QuoteUpdate
         }
     }
 
