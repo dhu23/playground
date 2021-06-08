@@ -13,6 +13,8 @@ echo "compiled test_packing.tsk"
 g++ test_messages.cpp -std=c++2a -I ~/boost_1_75_0 -L ~/boost_1_75_0/stage/lib -lboost_unit_test_framework -static -o test_messages.tsk
 echo "compiled test_messages.tsk"
 
+g++ test_generalutil.cpp -std=c++2a -I ~/boost_1_75_0 -L ~/boost_1_75_0/stage/lib -lboost_unit_test_framework -static -o test_generalutil.tsk
+
 g++ mbus.m.cpp tcpserver.cpp -std=c++2a -o mbus.tsk
 echo "compiled mbus.tsk"
 
