@@ -98,6 +98,12 @@ struct SizeT<Timestamp>
     constexpr static std::size_t value() { return Timestamp::sizeT(); }
 };
 
+struct RawBuffer
+{
+    char* data;
+    std::size_t size;
+};
+
 template<std::size_t K, typename BufIdx>
 class Packet
 {
@@ -127,6 +133,16 @@ public:
     size_t readableSize() const { return bufferIdx_.usedSpace(); }
 
     const BufIdx& idx() const { return bufferIdx_; }
+    
+    RawBuffer tailBuffer() 
+    {
+        return RawBuffer{
+            reinterpret_cast<char*>(&buffer_[bufferIdx_.tail()]),
+            bufferIdx_.tailSpace()
+        };
+    }
+
+    bool write(std::size_t size) { return bufferIdx_.write(size); }
 
     bool put(uint8_t u8);
     bool put(uint16_t u16);
@@ -216,14 +232,6 @@ public:
         if (this->readableSize() < skip) { return false; }
         bufferIdx_.read(skip);
         return true;
-    }
-
-    // use receive function only if fd is not a listener port
-    // pass along c recv function return value
-    int receive(int fd) 
-    {
-        // int nbytes = recv(fd, buffer_.
-        return 0;
     }
 
 public:

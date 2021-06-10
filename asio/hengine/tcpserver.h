@@ -69,41 +69,53 @@ public:
                 }
                 else // received data from a client
                 {
-                    char buf[256];
-                    int nbytes = recv(i, buf, sizeof buf, 0);
-                    if (nbytes <= 0)
+                    auto tailBuff = inbuf_.tailBuffer();
+                    int rc = receive(tailBuff.data, tailBuff.size, i);
+                    if (rc < 0)
                     {
-                        if (nbytes == 0) 
-                        {
-                            std::cout << "socket " << i << " hung up" << std::endl;
-                        }
-                        else
-                        {
-                            std::cerr << "recv error" << std::endl;
-                        }
                         this->closeFd(i);
                     }
-                    else
+                    else // rc >= 0 no room or something was read out
                     {
-                        std::cout << "recv nbytes:" << nbytes << std::endl;
-                        // lets optimize this one away maybe?
-                        std::string data(buf, buf+(std::min(256, nbytes)));
-                        std::cout << "recv:" << data << std::endl;
-
-                        // TODO there is some optimization, and maybe redesign that
-                        // I can go without this unnecessary copying of data
-                        if (inbuf_.put(buf, nbytes))
-                        {
-                            std::cout 
-                                << "wrote " << nbytes << " bytes into buffer. left:" 
-                                << inbuf_.writableSize() << std::endl;
-                            procM(inbuf_, outbuf_, mp);
-                        }
-                        else
-                        {
-                            std::cerr << "failed to write to buffer" << std::endl;
-                        }
+                        if (rc > 0) { inbuf_.write(rc); }
+                        procM(inbuf_, outbuf_, mp);
                     }
+
+                    // char buf[256];
+                    // int nbytes = recv(i, buf, sizeof buf, 0);
+                    // if (nbytes <= 0)
+                    // {
+                    //     if (nbytes == 0) 
+                    //     {
+                    //         std::cout << "socket " << i << " hung up" << std::endl;
+                    //     }
+                    //     else
+                    //     {
+                    //         std::cerr << "recv error" << std::endl;
+                    //     }
+                    //     this->closeFd(i);
+                    // }
+                    // else
+                    // {
+                    //     std::cout << "recv nbytes:" << nbytes << std::endl;
+                    //     // lets optimize this one away maybe?
+                    //     std::string data(buf, buf+(std::min(256, nbytes)));
+                    //     std::cout << "recv:" << data << std::endl;
+
+                    //     // TODO there is some optimization, and maybe redesign that
+                    //     // I can go without this unnecessary copying of data
+                    //     if (inbuf_.put(buf, nbytes))
+                    //     {
+                    //         std::cout 
+                    //             << "wrote " << nbytes << " bytes into buffer. left:" 
+                    //             << inbuf_.writableSize() << std::endl;
+                    //         procM(inbuf_, outbuf_, mp);
+                    //     }
+                    //     else
+                    //     {
+                    //         std::cerr << "failed to write to buffer" << std::endl;
+                    //     }
+                    // }
                 }
             }
         }
