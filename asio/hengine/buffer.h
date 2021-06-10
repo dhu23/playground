@@ -22,6 +22,8 @@ public:
 
     // available space from tail to the end of the buffer
     virtual std::size_t tailSpace() const = 0;
+    // available space from head to the end of the buffer
+    virtual std::size_t headSpace() const = 0;
     // available space from the tail that is available for writing
     virtual std::size_t freeSpace() const = 0;
     // used space between head and tail
@@ -54,13 +56,17 @@ public:
     {
         return capacity_-tail_;
     }
+    std::size_t headSpace() const override
+    {
+        return tail_-head_;
+    }
     std::size_t freeSpace() const override
     {
         return this->tailSpace();
     }
     std::size_t usedSpace() const override
     {
-        return tail_-head_;
+        return this->headSpace();
     }
     
     std::size_t nextMany(std::size_t pos, std::size_t skip) const override
@@ -120,6 +126,10 @@ public:
     std::size_t tailSpace() const override
     {
         return wrapped_ ? head_-tail_ : capacity_-tail_;
+    }
+    std::size_t headSpace() const override
+    {
+        return wrapped_ ? capacity_-head_ : tail_-head_;
     }
     std::size_t freeSpace() const override
     {

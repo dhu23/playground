@@ -56,4 +56,27 @@ inline int receive(char* buff, std::size_t n, int fd)
     return nbytes;
 }
 
+inline int sendall(char* buff, std::size_t n, int fd)
+{
+    decltype(n) total = 0;
+    decltype(n) left = n;
+    
+    int rc;
+
+    while (total < n)
+    {
+        rc = send(fd, buff+total, left, 0);
+        if (rc == -1) 
+        { 
+            std::cerr << "failed at sending" << std::endl; 
+            break;
+        }
+        auto delta = static_cast<std::size_t>(rc);
+        total += delta;
+        left -= delta;
+    }
+
+    return rc == -1 ? -1 : 0; // -1 on failure
+}
+
 #endif

@@ -141,8 +141,16 @@ public:
             bufferIdx_.tailSpace()
         };
     }
+    RawBuffer headBuffer()
+    {
+        return RawBuffer{
+            reinterpret_cast<char*>(&buffer_[bufferIdx_.head()]),
+            bufferIdx_.headSpace()
+        };
+    }
 
     bool write(std::size_t size) { return bufferIdx_.write(size); }
+    bool read(std::size_t size) { return bufferIdx_.read(size); }
 
     bool put(uint8_t u8);
     bool put(uint16_t u16);

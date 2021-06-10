@@ -73,43 +73,19 @@ public:
             else // (rc >= 0) no room to read out or something was read out
             {
                 if (rc > 0) { inbuf_.write(rc); }
-                procM(inbuf_, outbuf_, mp);
+                if (procM(inbuf_, outbuf_, mp) == ProcMRes::Error)
+                {
+                    std::cerr << "ran into procM error" << std::endl;
+                }
             }
 
-            // char buf[256];
-            // int nbytes = recv(serverfd_, buf, sizeof buf, 0);
-            // if (nbytes <= 0)
-            // {
-            //     if (nbytes == 0)
-            //     {
-            //         std::cout << "socket " << serverfd_ << " hung up" << std::endl;
-            //     }
-            //     else
-            //     {
-            //         std::cerr << "recv error" << std::endl;
-            //     }
-            //     close(serverfd_);
-            //     break;
-            // }
-            // else
-            // {
-            //     std::cout << "recv nbytes:" << nbytes << std::endl;
-            //     std::string data(buf, buf+(std::min(256, nbytes)));
-            //     std::cout << "recv:" << data << std::endl;
-
-            //     if (inbuf_.put(buf, nbytes))
-            //     {
-            //         std::cout 
-            //             << "wrote " << nbytes << " bytes into buffer. left:" 
-            //             << inbuf_.writableSize() << std::endl;
-            //         procM(inbuf_, outbuf_, mp);
-            //     }
-            //     else
-            //     {
-            //         std::cerr << "failed to write to buffer" << std::endl;
-            //     }
-            // }
             putM(outbuf_, qugen_.gen());
+
+            auto headBuff = outbuf_.headBuffer();
+            if (sendall(headBuff.data, headBuff.size, serverfd_) < 0)
+            {
+                std::cerr << "error: failed to send to server somehow" << std::endl;
+            }
 
         }
     }

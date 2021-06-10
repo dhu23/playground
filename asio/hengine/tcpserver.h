@@ -78,44 +78,20 @@ public:
                     else // rc >= 0 no room or something was read out
                     {
                         if (rc > 0) { inbuf_.write(rc); }
-                        procM(inbuf_, outbuf_, mp);
+                        if (procM(inbuf_, outbuf_, mp) == ProcMRes::Error)
+                        {
+                            std::cerr << "ran into procM error" << std::endl;
+                        }
                     }
 
-                    // char buf[256];
-                    // int nbytes = recv(i, buf, sizeof buf, 0);
-                    // if (nbytes <= 0)
-                    // {
-                    //     if (nbytes == 0) 
-                    //     {
-                    //         std::cout << "socket " << i << " hung up" << std::endl;
-                    //     }
-                    //     else
-                    //     {
-                    //         std::cerr << "recv error" << std::endl;
-                    //     }
-                    //     this->closeFd(i);
-                    // }
-                    // else
-                    // {
-                    //     std::cout << "recv nbytes:" << nbytes << std::endl;
-                    //     // lets optimize this one away maybe?
-                    //     std::string data(buf, buf+(std::min(256, nbytes)));
-                    //     std::cout << "recv:" << data << std::endl;
+                    // send everything in outbuf_
+                    auto headBuff = outbuf_.headBuffer();
+                    if (sendall(headBuff.data, headBuff.size, i) < 0)
+                    {
+                        std::cerr << "error: failed to send somehow" << std::endl;
 
-                    //     // TODO there is some optimization, and maybe redesign that
-                    //     // I can go without this unnecessary copying of data
-                    //     if (inbuf_.put(buf, nbytes))
-                    //     {
-                    //         std::cout 
-                    //             << "wrote " << nbytes << " bytes into buffer. left:" 
-                    //             << inbuf_.writableSize() << std::endl;
-                    //         procM(inbuf_, outbuf_, mp);
-                    //     }
-                    //     else
-                    //     {
-                    //         std::cerr << "failed to write to buffer" << std::endl;
-                    //     }
-                    // }
+                    }
+
                 }
             }
         }
