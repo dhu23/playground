@@ -53,6 +53,7 @@ public:
     template<typename MProc>
     void run(MProc& mp)
     {
+        std::cout << "running client...\n" << std::endl;
         for (;;)
         {
             fd_set readFds;
@@ -62,17 +63,23 @@ public:
                 throw std::runtime_error("select error");
             }
             
-            if (!FD_ISSET(serverfd_, &readFds)) { continue; }
-
-            auto tailBuff = inbuf_.tailBuffer();
-            int rc = receive(tailBuff.data, tailBuff.size, serverfd_);
+            if (!FD_ISSET(serverfd_, &readFds)) { 
+                std::cout << "continue...\n";
+                continue; }
+            std::cout << "running receive...\n";
+            int rc = receive(inbuf_, serverfd_);
             if (rc < 0)
             {
+                std::cout << "closed serverfd" << std::endl;
                 close(serverfd_);
             }
             else // (rc >= 0) no room to read out or something was read out
             {
-                if (rc > 0) { inbuf_.write(rc); }
+                std::cout 
+                    << StringUtils::concat(
+                        "processing inbuf. read size:", 
+                        inbuf_.readableSize()) 
+                    << std::endl;
                 if (procM(inbuf_, outbuf_, mp) == ProcMRes::Error)
                 {
                     std::cerr << "ran into procM error" << std::endl;
@@ -81,8 +88,7 @@ public:
 
             putM(outbuf_, qugen_.gen());
 
-            auto headBuff = outbuf_.headBuffer();
-            if (sendall(headBuff.data, headBuff.size, serverfd_) < 0)
+            if (sendall(outbuf_, serverfd_) < 0)
             {
                 std::cerr << "error: failed to send to server somehow" << std::endl;
             }

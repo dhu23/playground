@@ -69,15 +69,19 @@ public:
                 }
                 else // received data from a client
                 {
-                    auto tailBuff = inbuf_.tailBuffer();
-                    int rc = receive(tailBuff.data, tailBuff.size, i);
+                    int rc = receive(inbuf_, i);
                     if (rc < 0)
                     {
+                        std::cout << "closed fd:" << i << std::endl;
                         this->closeFd(i);
                     }
                     else // rc >= 0 no room or something was read out
                     {
-                        if (rc > 0) { inbuf_.write(rc); }
+                        std::cout 
+                            << StringUtils::concat(
+                                "processing inbuf. read size:", 
+                                inbuf_.readableSize()) 
+                            << std::endl;
                         if (procM(inbuf_, outbuf_, mp) == ProcMRes::Error)
                         {
                             std::cerr << "ran into procM error" << std::endl;
@@ -85,8 +89,7 @@ public:
                     }
 
                     // send everything in outbuf_
-                    auto headBuff = outbuf_.headBuffer();
-                    if (sendall(headBuff.data, headBuff.size, i) < 0)
+                    if (sendall(outbuf_, i) < 0)
                     {
                         std::cerr << "error: failed to send somehow" << std::endl;
 

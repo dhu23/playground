@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "packing.h"
 #include "generalutil.h"
 
 inline std::string getRemoteIP(struct sockaddr_storage& sa)
@@ -31,10 +32,13 @@ inline std::string getRemoteIP(struct sockaddr_storage& sa)
 // pass along c recv function return value.
 // fd needs to be ready to read, and the caller is responsible for this
 // for caller: on negative return, please close fd
-inline int receive(char* buff, std::size_t n, int fd)
+template<std::size_t K, typename BufIdx>
+inline int receive(Packet<K, BufIdx>& packet, int fd)
 {
-    if (n == 0) { return 0; } // no room to read out anything
-    auto nbytes = recv(fd, buff, n, 0);
+    auto tailBuff = packet.tailBuffer();
+
+    if (tailBuff.size == 0) { return 0; } // no room to read out anything
+    auto nbytes = recv(fd, tailBuff.data, tailBuff.size, 0);
     if (nbytes <= 0)
     {
         if (nbytes == 0)
@@ -52,28 +56,38 @@ inline int receive(char* buff, std::size_t n, int fd)
     else
     {
         std::cout << StringUtils::concat("recv nbytes:", nbytes) << std::endl;
+        packet.write(static_cast<std::size_t>(nbytes));
     }
     return nbytes;
 }
 
-inline int sendall(char* buff, std::size_t n, int fd)
+
+template<std::size_t K, typename BufIdx>
+inline int sendall(Packet<K, BufIdx>& packet, int fd)
 {
-    decltype(n) total = 0;
-    decltype(n) left = n;
+    auto headBuff = packet.headBuffer();
+    std::cout 
+        << StringUtils::concat(
+            "sendall: head buffer size:", headBuff.size)
+        << std::endl;
+    std::size_t total = 0;
+    std::size_t left = headBuff.size;
     
     int rc;
 
-    while (total < n)
+    while (total < headBuff.size)
     {
-        rc = send(fd, buff+total, left, 0);
+        rc = send(fd, headBuff.data+total, left, 0);
         if (rc == -1) 
         { 
             std::cerr << "failed at sending" << std::endl; 
             break;
         }
         auto delta = static_cast<std::size_t>(rc);
+        std::cout << StringUtils::concat("sent bytes:", rc) << std::endl;
         total += delta;
         left -= delta;
+        packet.read(delta);
     }
 
     return rc == -1 ? -1 : 0; // -1 on failure
