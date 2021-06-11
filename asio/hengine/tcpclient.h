@@ -56,44 +56,55 @@ public:
         std::cout << "running client...\n" << std::endl;
         for (;;)
         {
-            fd_set readFds;
-            FD_SET(serverfd_, &readFds);
-            if (select(serverfd_+1, &readFds, NULL, NULL, NULL) == -1)
-            {
-                throw std::runtime_error("select error");
-            }
-            
-            if (!FD_ISSET(serverfd_, &readFds)) { 
-                std::cout << "continue...\n";
-                continue; }
-            std::cout << "running receive...\n";
-            int rc = receive(inbuf_, serverfd_);
-            if (rc < 0)
-            {
-                std::cout << "closed serverfd" << std::endl;
-                close(serverfd_);
-            }
-            else // (rc >= 0) no room to read out or something was read out
-            {
-                std::cout 
-                    << StringUtils::concat(
-                        "processing inbuf. read size:", 
-                        inbuf_.readableSize()) 
-                    << std::endl;
-                if (procM(inbuf_, outbuf_, mp) == ProcMRes::Error)
-                {
-                    std::cerr << "ran into procM error" << std::endl;
-                }
-            }
-
+            // always try to send everything out before any read
             putM(outbuf_, qugen_.gen());
-
             if (sendall(outbuf_, serverfd_) < 0)
             {
                 std::cerr << "error: failed to send to server somehow" << std::endl;
             }
 
-        }
+            fd_set readFds;
+            FD_SET(serverfd_, &readFds);
+
+            struct timeval tv;
+            tv.tv_sec = 2;
+            tv.tv_usec = 500000;
+            if (select(serverfd_+1, &readFds, NULL, NULL, &tv) == -1)
+            {
+                throw std::runtime_error("select error");
+            }
+
+            for (int i = 0; i <= serverfd_; ++i)
+            {
+                if (FD_ISSET(i, &readFds)) 
+                {
+                    std::cout << StringUtils::concat(i, " set in select readFs\n");
+                }
+            }
+
+            if (FD_ISSET(serverfd_, &readFds)) 
+            { 
+                std::cout << "running receive...\n";
+                int rc = receive(inbuf_, serverfd_);
+                if (rc < 0)
+                {
+                    std::cout << "closed serverfd" << std::endl;
+                    close(serverfd_);
+                }
+                else // (rc >= 0) no room to read out or something was read out
+                {
+                    std::cout 
+                        << StringUtils::concat(
+                            "processing inbuf. read size:", 
+                            inbuf_.readableSize()) 
+                        << std::endl;
+                    if (procM(inbuf_, outbuf_, mp) == ProcMRes::Error)
+                    {
+                        std::cerr << "ran into procM error" << std::endl;
+                    }
+                }
+            }
+        } // END for infinite loop
     }
 
 };

@@ -65,7 +65,13 @@ public:
                             << getRemoteIP(remoteaddr)
                             << " on socket " << newfd
                             << std::endl;
+                        putM(outbuf_, Acknowledgement{Timestamp::now(), ByteArray<32>::makeFromArray("tcpserver"), MType::LogOn});
+                        if (sendall(outbuf_, newfd) < 0)
+                        {
+                            std::cerr << "error: failed to send ack" << std::endl;
+                        }
                     }
+                    
                 }
                 else // received data from a client
                 {
@@ -95,9 +101,9 @@ public:
 
                     }
 
-                }
-            }
-        }
+                } // END else: received data from a client
+            } // END for loop through all fds from 0 to max
+        } // END for infinite loop
     }
 };
 

@@ -41,6 +41,8 @@ int main(void)
     // don't care about writefds and exceptfds
     select(STDIN+1, &readfds, NULL, NULL, &tv);
 
+    printf("select is done\n");
+
     if (FD_ISSET(STDIN, &readfds)) {
         printf("A key was pressed!\n");
     } else {
