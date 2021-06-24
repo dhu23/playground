@@ -110,13 +110,15 @@ void function2_2()
         // once it is waken up by the notifier, it will lock again. That's the 
         // reason we have to use unique_lock, not lock_guard
         //
+        // std::unique_lock locker(mu);
         // cond.wait(locker) is equivalent to the following pseudo code
-        //
-        // locker.unlock();
-        // std::this_thread::sleep_for(...);
-        //
-        // # onwakeup
-        // locker.lock(); // wait() exits;
+        // --------------------- pseudo ----------------------------------
+        // lock();
+        // unlock();                                -- cond::wait
+        // sleep(...);                              -- cond::wait
+        // wakeup();                                -- cond::wait
+        // lock();                                  -- cond::wait
+        // exitWait();                              -- cond::wait
         //
 
         if (!q.empty())
@@ -150,28 +152,41 @@ void function2_3()
         std::unique_lock<std::mutex> locker(mu);
         cond.wait(locker, [](){ return !q.empty(); }); // puts thread 2 in sleep, until notified by  t1
 
-        // unlock locker, goes to sleep, 
+        // checks predicate, if false, unlock locker, goes to sleep, 
         // on wakeup: 
         // lock, 
         // check pred
         // if not satisfied, unlock, sleep
-        // else, proceed
+        // else, exit cond::wait and proceed
         //
+        // cond.wait(locker, pred) is equivalent to:
+        // ----------------------- equivalent ----------------------------
+        // while(!pred) { cond.wait(locker); }
+        //
+        // or in a full version:
+        // std::unique_lock locker(mu);
         // cond.wait(locker, pred);
+        // ------------------------ equivalent ---------------------------
+        // std::unique_lock locker(mu);
+        // while(!pred) { cond.wait(locker); }
         //
-        // wakeup:
-        //   locker.lock()
-        //   if (pred) { locker.unlock(); goto wakeup; sleep_for(...); }
-        //   else goto next;
-        // next:
-        //   ...
-        //
-        // or in another way:
-        // locker.lock()
-        // while (!pred)
-        // {
-        //     wait(locker); // unlock on sleep, lock again on wakeup
-        // }
+        // ------------------------ pseudo code --------------------------
+        // lock();
+        // pred == false;
+        // unlock();                       -- cond::wait
+        // sleep(...);                     -- cond::wait
+        // wakeUp();                       -- cond::wait
+        // lock();                         -- cond::wait
+        // exitWait();                     -- cond::wait
+        // pred == false;
+        // unlock();                       -- cond::wait
+        // sleep(...);                     -- cond::wait
+        // wakeUp();                       -- cond::wait
+        // lock();                         -- cond::wait
+        // exitWait();                     -- cond::wait
+        // pred == true;
+        // exitWhileLoop();
+
         data = q.back();
         q.pop_back();
         locker.unlock();
