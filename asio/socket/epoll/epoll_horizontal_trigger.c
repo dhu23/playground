@@ -65,7 +65,7 @@ int main()
     while (1)
     {
         struct epoll_event ev[8];
-        ret = epoll_wait(epfd, ev, 8, 5000);
+        ret = epoll_wait(epfd, ev, 8, 105000); // blocks
         if (ret != 0)
         {
             if (errno == EINTR) { continue; }
@@ -88,6 +88,7 @@ int main()
                     close(fd);
                     return -1;
                 }
+                printf("added the new fd:%d\n", newfd);
             }
             else
             {
@@ -99,6 +100,7 @@ int main()
                 }
                 else
                 {
+                    printf("client connection closed\n");
                     close(connectfd);
                 }
             }
