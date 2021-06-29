@@ -37,7 +37,7 @@ import qualified Data.Bifunctor as Bf (bimap)
 import qualified Data.Function as F (on)
 import qualified Data.List.Split as S (splitOn)
 
---import Debug.Trace
+import Debug.Trace
 
 class Evaluable e where
   eval :: e -> e -- evaluate E to something simpler
@@ -224,9 +224,15 @@ mulDlist ds1 ds2 = reverse $ ds1 `mul'` ds2
   where
     mul' = mulDRlist `F.on` reverse
 
-dropLeadZero = dropWhile (== D0)
+dropLead :: Eq a => a -> [a] -> [a]
+dropLead a = dropWhile (== a)
 
-dropTrailZero = reverse . dropLeadZero . reverse
+dropTrail :: Eq a => a -> [a] -> [a]
+dropTrail a = reverse . dropLead a . reverse
+
+dropLeadZero = dropLead D0
+
+dropTrailZero = dropTrail D0
 
 compareDs :: [D] -> [D] -> Ordering
 compareDs ds1 ds2 
@@ -293,6 +299,13 @@ mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
 
 nToInteger :: Num a =>  N -> a
 nToInteger (N ds) = foldl horner 0 $ fmap (fromIntegral . fromEnum) ds
+
+nDigitCount :: N -> N
+nDigitCount n = if null ds then N [D1] else foldr count (N [D0]) ds
+  where 
+    ds = dropLeadZero (getDs n)
+    count :: D -> N -> N
+    count _ x = x + 1
 
 instance Show N where
   show (N []) = "0"
@@ -486,7 +499,20 @@ lcmN n m
     Just (q, _) -> q
 
 
---------------------- Integer Number -------------------------
+--------------------- number based utility functions ---------------------
+replicateN :: N -> a -> [a]
+replicateN n x
+  | n == 0 = []
+  | otherwise = x:(replicateN (subN n 1) x)
+          
+chunkN :: N -> [a] -> ([a], [a], N)
+chunkN n xs | n == 0 = ([], xs, 0)
+chunkN n [] = ([], [], 0)
+chunkN n (x:xs) = (x:front, back, n'+1)
+  where
+    (front, back, n') = chunkN (subN n 1) xs -- n > 0 here
+
+---------------------------- Integer Number -----------------------------
 data Z = Z N Bool -- True means positive, 0 can be either way 
 
 posZFromN :: N -> Z
@@ -608,44 +634,100 @@ instance Integral Z where
 
 
 ---------------- Decimal fraction representation -----------------------
-data DecFrac 
-  = DecFrac 
-  { intPart :: Z
-  , fracPart :: [D]
+data DF
+  = DF
+  { getZ :: Z
+  , getDecimalPlaces :: N
   }
 
-instance Show DecFrac where
-  show df = show (intPart df) ++ "." ++ fmap toChar (fracPart df)
+simplifyDF :: DF -> DF
+simplifyDF (DF (Z (N ds) s) dec) = let (ds', dec') = run ((reverse ds), dec)
+  in DF (Z (N $ reverse ds') s) dec'
+  where 
+    run :: ([D], N) -> ([D], N)
+    run ((D0:ds), n)
+      | n > 0 = run (ds, (subN n 1))
+      | otherwise = run (ds, n)
+    run (ds, n) = (ds, n)
 
-mkDF :: String -> Maybe DecFrac
+instance Show DF where
+  show (DF (Z n s) dec)
+    | n == 0 = "0"
+    | s = display n dec
+    | otherwise = "-" ++ display n dec
+    where
+      display :: N -> N -> String
+      display n dec
+        | dCount > dec = let (front, back, _) = chunkN (subN dCount dec) ds
+          in fmap toChar front ++ "." ++ fmap toChar back
+        | otherwise = "0." ++ (fmap toChar $ replicateN (subN dec dCount) D0) ++ show n
+        where 
+          dCount = nDigitCount n
+          ds = getDs n
+
+mkDF :: String -> Maybe DF
+mkDF (' ':cs) = mkDF cs
 mkDF cs = case S.splitOn "." cs of
   [] -> Nothing
-  [s] -> DecFrac <$> mkZ s <*> pure []
-  [s, d] -> DecFrac <$> mkZ s <*> sequence (map fromChar d)
-  _ -> Nothing -- incorrect format
+  [s] -> DF <$> mkZ s <*> pure (N [D0])
+  [s, d] -> let
+      d' = dropTrail '0' d
+      dec = (fromInteger . toInteger . length) <$> (mapM fromChar d')
+      z = mkZ (s ++ d')
+    in DF <$> z <*> dec
+  _ -> Nothing -- incorrect format with too many dots
 
-isInteger :: DecFrac -> Bool
-isInteger = null . dropTrailZero . fracPart
+isInteger :: DF -> Bool
+isInteger = (== 0) . getDecimalPlaces
 
-truncate :: DecFrac -> Z
-truncate = intPart
+intPart :: DF -> Z
+intPart (DF z@(Z n@(N ds) s) dec)
+  | dec == 0 = z
+  | n == 0 = 0
+  | otherwise = Z (N ds') s
+  where
+    ds' = (reverse . drop (fromInteger $ toInteger dec) . reverse) $ ds
 
-mulByTen :: DecFrac -> DecFrac
-mulByTen (DecFrac z ds) = case dropTrailZero ds of
-  [] -> DecFrac (z*10) []
-  d:ds -> let f = if z < 0 then iNegFromList else iPosFromList
-    in DecFrac (z*10+(f [d])) ds
+mulByTen :: DF -> DF
+mulByTen (DF z dec) 
+  | dec == 0 = DF (z*10) dec
+  | otherwise = DF z (subN dec 1)
 
+divByTen :: DF -> DF
+divByTen (DF z@(Z n s) dec)
+  | dec > 0 = DF z (dec+1)
+  | otherwise = case reverse $ getDs n of
+    D0:rest -> DF (Z (N $ reverse rest) s) 0
+    ds' -> DF z 1
 
+iterateN :: N -> a -> (a -> a) -> a
+iterateN n x f = last $ take n' $ iterate f x
+  where
+    n' = fromInteger $ toInteger $ n+1
 
-addDecFrac :: DecFrac -> DecFrac -> DecFrac
-addDecFrac df1 df2 = 
+addDF :: DF -> DF -> DF
+addDF (DF z1 dec1) (DF z2 dec2) = simplifyDF $ DF (z1'+z2') dec'
+  where 
+    dec' = max dec1 dec2
+    z1' = iterateN (subN dec' dec1) z1 (*10)
+    z2' = iterateN (subN dec' dec2) z2 (*10)
+
+mulDF :: DF -> DF -> DF
+mulDF (DF z1 dec1) (DF z2 dec2) = simplifyDF $ DF (z1*z2) (dec1+dec2)
+
+instance Num DF where
+  (+) = addDF
+  (*) = mulDF
+  abs (DF z dec) = DF (abs z) dec
+  signum (DF z _) = DF (signum z) 0
+  fromInteger i = DF (fromInteger i) 0
+  negate (DF z dec) = DF (negate z) dec
 
 --------------------------- Fraction ----------------------------------
 data F = F N N Bool -- numerator, denominator and sign, denom > 0
 
 debugF :: F -> String
-debugF (F (N n) (N d) s)= "F:" ++ show n ++ "/" ++ show d ++ "," ++ show s
+debugF (F (N n) (N d) s) = "F:" ++ show n ++ "/" ++ show d ++ "," ++ show s
 
 getDenom :: F -> N
 getDenom (F _ d _) = d
