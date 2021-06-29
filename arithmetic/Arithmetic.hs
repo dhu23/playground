@@ -3,10 +3,10 @@
 -- Integer type, since it is already a big integer type. 
 
 module Arithmetic
-  ( D(..)
+  ( D(..) -- exposing the 10 digits
   , toChar
   , fromChar
-  , N
+  , N -- not exposing N internals. N is constructed only from mkN
   , mkN
   , subN
   , divModN
@@ -35,6 +35,7 @@ import Control.Monad (mapM)
 import qualified Data.List.NonEmpty as NE 
 import qualified Data.Bifunctor as Bf (bimap)
 import qualified Data.Function as F (on)
+import qualified Data.List.Split as S (splitOn)
 
 --import Debug.Trace
 
@@ -484,6 +485,7 @@ lcmN n m
     Nothing -> nZero -- this means both n and m are zero, won't happen
     Just (q, _) -> q
 
+
 --------------------- Integer Number -------------------------
 data Z = Z N Bool -- True means positive, 0 can be either way 
 
@@ -603,6 +605,41 @@ instance Integral Z where
   toInteger (Z n s)
     | n >= nZero = toInteger n
     | otherwise = negate $ toInteger n
+
+
+---------------- Decimal fraction representation -----------------------
+data DecFrac 
+  = DecFrac 
+  { intPart :: Z
+  , fracPart :: [D]
+  }
+
+instance Show DecFrac where
+  show df = show (intPart df) ++ "." ++ fmap toChar (fracPart df)
+
+mkDF :: String -> Maybe DecFrac
+mkDF cs = case S.splitOn "." cs of
+  [] -> Nothing
+  [s] -> DecFrac <$> mkZ s <*> pure []
+  [s, d] -> DecFrac <$> mkZ s <*> sequence (map fromChar d)
+  _ -> Nothing -- incorrect format
+
+isInteger :: DecFrac -> Bool
+isInteger = null . dropTrailZero . fracPart
+
+truncate :: DecFrac -> Z
+truncate = intPart
+
+mulByTen :: DecFrac -> DecFrac
+mulByTen (DecFrac z ds) = case dropTrailZero ds of
+  [] -> DecFrac (z*10) []
+  d:ds -> let f = if z < 0 then iNegFromList else iPosFromList
+    in DecFrac (z*10+(f [d])) ds
+
+
+
+addDecFrac :: DecFrac -> DecFrac -> DecFrac
+addDecFrac df1 df2 = 
 
 --------------------------- Fraction ----------------------------------
 data F = F N N Bool -- numerator, denominator and sign, denom > 0
@@ -743,24 +780,29 @@ instance Num F where
 
 
 ------------------------ expression in algebra -------------------------
-data E
-  = NaN 
-  | Integer Z
-  | Frac E E
-
-instance Show E where
-  show NaN = "NaN"
-  show (Integer z) = show z
-  show (Frac a b) = show a ++ "/" ++ show b -- need better fine tuning
-
-instance Num E where
-  NaN + _ = NaN
-  _ + NaN = NaN
-  (Integer z1) + (Integer z2) = Integer (z1 + z2)
-  _ + _ = undefined
-
-  (*) = undefined
-  abs = undefined
-  signum = undefined
-  fromInteger = undefined
-  negate = undefined
+-- this also covers type Z and F
+--data E
+--  = NaN 
+--  | IntNum Z
+--  | Frac E E
+--  | Exp E E
+--
+--paren s = "(" ++ s ++ ")"
+--
+--instance Show E where
+--  show NaN = "NaN"
+--  show (IntNum z) = show z
+--  show (Frac a b) = paren (show a) ++ "/" ++ paren (show b) -- need improvement
+--  show (Exp b e) = paren (show b) ++ "^" ++ paren (show e)
+--
+--instance Num E where
+--  NaN + _ = NaN
+--  _ + NaN = NaN
+--  (IntNum z1) + (IntNum z2) = IntNum (z1 + z2)
+--   + _ = undefined
+--
+--  (*) = undefined
+--  abs = undefined
+--  signum = undefined
+--  fromInteger = undefined
+--  negate = undefined
