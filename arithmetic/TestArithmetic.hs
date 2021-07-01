@@ -65,9 +65,10 @@ instance Arbitrary D where
 
 instance Arbitrary N where
   arbitrary = do 
-    l <- getSize
+    --l <- getSize
+    l <- choose (0, 10) :: Gen Int
     ds <- M.replicateM l arbitrary
-    return $ nFromList ds
+    return $ trace ("\n\narbitrary::N -> l:" ++ show l ++ " " ++ show ds) nFromList ds
 
 instance Arbitrary N0 where
   arbitrary = do 
@@ -82,17 +83,24 @@ instance Arbitrary Z where
       then return $ posZFromN n
       else return $ negZFromN n
 
+instance Arbitrary DF where
+  arbitrary = do
+    z <- arbitrary
+    n' <- choose (0, 10) :: Gen Integer
+    let x = constructDF z (fromIntegral n')
+    return x
+
 instance Arbitrary F where
   arbitrary = do
     num <- arbitrary
     denom <- arbitrary
     sign <- arbitrary
-    let denom' = max denom 1
-    return $ constructF num denom' sign
-      
+    let denom' = trace ("num:" ++ show num ++ ",denom:" ++ show denom) $ max denom 1
+        x = constructF num denom' sign
+    return $ trace ("demon':" ++ show denom' ++ ",x:" ++ show x) x
 
 prop_PosDenom :: F -> Bool
-prop_PosDenom f = (getDenom f) > 0
+prop_PosDenom f = let x = trace "debug" $ getDenom f in trace ("f:" ++ show f ++ ",denom:" ++ show x) x > 0
 
 prop_NDivMod0 :: N -> Bool
 prop_NDivMod0 n = n `divModN` nZero == Nothing
@@ -129,7 +137,7 @@ prop_mulAssociativeLaw x y z = (x * y) * z == x * (y * z)
 prop_mulDistributiveLaw :: (Eq a, Num a) => a -> a -> a -> Bool
 prop_mulDistributiveLaw x y z = x * (y + z) == x * y + x * z 
 
-prop_addSubDuality0 :: (Eq a, Show a, Num a) => a -> a -> Bool
+prop_addSubDuality0 :: (Eq a, Num a) => a -> a -> Bool
 prop_addSubDuality0 i1 i2 = i1 - i2 == i1 + (negate i2)
         
 prop_compareSub :: (Eq a, Ord a, Num a) => a -> a -> Bool
@@ -142,59 +150,77 @@ prop_compareSub i1 i2
 
 checkNLaws :: IO ()
 checkNLaws = do
-  quickCheck prop_NDivMod0
-  quickCheck prop_NDivMod1
-  quickCheck prop_NDivMod
-  quickCheck (prop_addUnit :: N -> Bool)
-  quickCheck (prop_mulUnit :: N -> Bool)
-  quickCheck (prop_addCommutativeLaw :: N -> N -> Bool)
-  quickCheck (prop_mulCommutativeLaw  :: N -> N -> Bool)
-  quickCheck (prop_addAssociativeLaw :: N -> N -> N -> Bool)
-  quickCheck (prop_mulAssociativeLaw :: N -> N -> N -> Bool)
-  quickCheck (prop_mulDistributiveLaw :: N -> N -> N -> Bool)
+  trace "NDivMod0" $ quickCheck prop_NDivMod0
+  trace "NDivMod1" $ quickCheck prop_NDivMod1
+  trace "NDivMod" $ quickCheck prop_NDivMod
+  trace "addUnit" $ quickCheck (prop_addUnit :: N -> Bool)
+  trace "mulUnit" $ quickCheck (prop_mulUnit :: N -> Bool)
+  trace "addCommutativeLaw" $ quickCheck (prop_addCommutativeLaw :: N -> N -> Bool)
+  trace "mulCommutativeLaw" $ quickCheck (prop_mulCommutativeLaw  :: N -> N -> Bool)
+  trace "addAssociativeLaw" $ quickCheck (prop_addAssociativeLaw :: N -> N -> N -> Bool)
+  trace "mulAssociativeLaw" $ quickCheck (prop_mulAssociativeLaw :: N -> N -> N -> Bool)
+  trace "mulDistributiveLaw" $ quickCheck (prop_mulDistributiveLaw :: N -> N -> N -> Bool)
 
-  quickCheck (prop_addUnit :: N0 -> Bool)
-  quickCheck (prop_mulUnit :: N0 -> Bool)
-  quickCheck (prop_addCommutativeLaw :: N0 -> N0 -> Bool)
-  quickCheck (prop_mulCommutativeLaw  :: N0 -> N0 -> Bool)
-  quickCheck (prop_addAssociativeLaw :: N0 -> N0 -> N0 -> Bool)
-  quickCheck (prop_mulAssociativeLaw :: N0 -> N0 -> N0 -> Bool)
-  quickCheck (prop_mulDistributiveLaw :: N0 -> N0 -> N0 -> Bool)
+  trace "addUnit" $ quickCheck (prop_addUnit :: N0 -> Bool)
+  trace "mulUnit" $ quickCheck (prop_mulUnit :: N0 -> Bool)
+  trace "addCommutativeLaw" $ quickCheck (prop_addCommutativeLaw :: N0 -> N0 -> Bool)
+  trace "mulCommutativeLaw" $ quickCheck (prop_mulCommutativeLaw  :: N0 -> N0 -> Bool)
+  trace "addAssociativeLaw" $ quickCheck (prop_addAssociativeLaw :: N0 -> N0 -> N0 -> Bool)
+  trace "mulAssociativeLaw" $ quickCheck (prop_mulAssociativeLaw :: N0 -> N0 -> N0 -> Bool)
+  trace "mulDistributiveLaw" $ quickCheck (prop_mulDistributiveLaw :: N0 -> N0 -> N0 -> Bool)
   
-
-
 checkZLaws :: IO ()
 checkZLaws = do
-  quickCheck (prop_addUnit :: Z -> Bool)
-  quickCheck (prop_subUnit :: Z -> Bool)
-  quickCheck (prop_mulUnit :: Z -> Bool)
-  quickCheck (prop_addSubDuality0 :: Z -> Z -> Bool)
-  quickCheck (prop_compareSub :: Z -> Z -> Bool)
-  quickCheck (prop_addCommutativeLaw :: Z -> Z -> Bool)
-  quickCheck (prop_mulCommutativeLaw  :: Z -> Z -> Bool)
-  quickCheck (prop_addAssociativeLaw :: Z -> Z -> Z -> Bool)
-  quickCheck (prop_mulAssociativeLaw :: Z -> Z -> Z -> Bool)
-  quickCheck (prop_mulDistributiveLaw :: Z -> Z -> Z -> Bool)
+  trace "addUnit" $ quickCheck (prop_addUnit :: Z -> Bool)
+  trace "subUnit" $ quickCheck (prop_subUnit :: Z -> Bool)
+  trace "mulUnit" $ quickCheck (prop_mulUnit :: Z -> Bool)
+  trace "addSubDuality0" $ quickCheck (prop_addSubDuality0 :: Z -> Z -> Bool)
+  trace "compareSub" $ quickCheck (prop_compareSub :: Z -> Z -> Bool)
+  trace "addCommutativeLaw" $ quickCheck (prop_addCommutativeLaw :: Z -> Z -> Bool)
+  trace "mulCommutativeLaw" $ quickCheck (prop_mulCommutativeLaw  :: Z -> Z -> Bool)
+  trace "addAssociativeLaw" $ quickCheck (prop_addAssociativeLaw :: Z -> Z -> Z -> Bool)
+  trace "mulAssociativeLaw" $ quickCheck (prop_mulAssociativeLaw :: Z -> Z -> Z -> Bool)
+  trace "mulDistributiveLaw" $ quickCheck (prop_mulDistributiveLaw :: Z -> Z -> Z -> Bool)
+
+
+checkDFLaws :: IO ()
+checkDFLaws = do
+  trace "addUnit" $ quickCheck (prop_addUnit :: DF -> Bool)
+  trace "subUnit" $ quickCheck (prop_subUnit :: DF -> Bool)
+  trace "mulUnit" $ quickCheck (prop_mulUnit :: DF -> Bool)
+  trace "addSubDuality0" $ quickCheck (prop_addSubDuality0 :: DF -> DF -> Bool)
+  trace "compareSub" $ quickCheck (prop_compareSub :: DF -> DF -> Bool)
+  trace "addCommutativeLaw" $ quickCheck (prop_addCommutativeLaw :: DF -> DF -> Bool)
+  trace "mulCommutativeLaw" $ quickCheck (prop_mulCommutativeLaw :: DF -> DF -> Bool)
+  trace "addAssociativeLaw" $ quickCheck (prop_addAssociativeLaw :: DF -> DF -> DF -> Bool)
+  trace "mulAssociativeLaw" $ quickCheck (prop_mulAssociativeLaw :: DF -> DF -> DF -> Bool)
+  trace "mulDistributiveLaw" $ quickCheck (prop_mulDistributiveLaw :: DF -> DF -> DF -> Bool)
 
 
 checkFLaws :: IO ()
 checkFLaws = do
-  quickCheck prop_PosDenom
-  quickCheck (prop_addUnit :: F -> Bool)
-  quickCheck (prop_subUnit :: F -> Bool)
-  quickCheck (prop_mulUnit :: F -> Bool)
-  quickCheck (prop_addSubDuality0 :: F -> F -> Bool)
-  quickCheck (prop_compareSub :: F -> F -> Bool)
-  quickCheck (prop_addCommutativeLaw :: F -> F -> Bool)
-  quickCheck (prop_mulCommutativeLaw  :: F -> F -> Bool)
-  quickCheck (prop_addAssociativeLaw :: F -> F -> F -> Bool)
-  quickCheck (prop_mulAssociativeLaw :: F -> F -> F -> Bool)
-  quickCheck (prop_mulDistributiveLaw :: F -> F -> F -> Bool)
+  trace "PosDenom" $ quickCheck prop_PosDenom
+  trace "addUnit" $ quickCheck (prop_addUnit :: F -> Bool)
+  trace "subUnit" $ quickCheck (prop_subUnit :: F -> Bool)
+  trace "mulUnit" $ quickCheck (prop_mulUnit :: F -> Bool)
+  trace "addSubDuality0" $ quickCheck (prop_addSubDuality0 :: F -> F -> Bool)
+  trace "compareSub" $ quickCheck (prop_compareSub :: F -> F -> Bool)
+  trace "addCommutativeLaw" $ quickCheck (prop_addCommutativeLaw :: F -> F -> Bool)
+  trace "mulCommutativeLaw" $ quickCheck (prop_mulCommutativeLaw  :: F -> F -> Bool)
+  trace "addAssociativeLaw" $ quickCheck (prop_addAssociativeLaw :: F -> F -> F -> Bool)
+  trace "mulAssociativeLaw" $ quickCheck (prop_mulAssociativeLaw :: F -> F -> F -> Bool)
+  trace "mulDistributiveLaw" $ quickCheck (prop_mulDistributiveLaw :: F -> F -> F -> Bool)
 
+
+banner :: String -> String
+banner title = dashline ++ "\n" ++ title ++ "\n" ++ dashline
+  where 
+    dashline = replicate 70 '-'
 
 -- I noticed that running this compiled is way much faster than in ghci
 main = do
-  trace "checking conversion..." checkThroughConversions
-  trace "checking for N..." checkNLaws
-  trace "checking for Z..." checkZLaws
-  trace "checking for F..." checkFLaws
+  trace (banner "checking conversion...") checkThroughConversions
+  trace (banner "checking for N...") checkNLaws
+  trace (banner "checking for Z...") checkZLaws
+  trace (banner "checking for DF...") checkDFLaws
+  trace (banner "checking for F...") checkFLaws

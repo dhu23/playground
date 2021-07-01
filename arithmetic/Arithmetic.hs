@@ -22,6 +22,9 @@ module Arithmetic
   , iZero
   , iOne
   , iMinusOne
+  , DF
+  , constructDF
+  , showDF
   , F
   , debugF
   , getDenom
@@ -480,12 +483,22 @@ divModN = divModN0
 -- when n > 0, gcd(n, 0) = n
 -- when both are zero, the above defintion is not enough. 
 -- it is commonly defined gcd(0, 0) = 0 to preserve usual identities for GCD
-gcdN :: N -> N -> N
-gcdN n m
+gcdN' :: N -> N -> N
+gcdN' n m
   | n == nZero || m == nZero = nZero
   | n == m = n -- n > 0 and m > 0 and n = m
-  | n > m = gcdN (subN n m) m -- Euclid's algorithm
-  | otherwise = gcdN (subN m n) n
+  | n > m = gcdN' (subN n m) m -- Euclid's algorithm slower when n >> m
+  | otherwise = gcdN' (subN m n) n
+
+gcdN :: N -> N -> N
+gcdN n m
+  | n == 0 = m
+  | m == 0 = n
+  | n == m = n
+  | n > m = case divModN n m of  -- Euclidean algorithm that's much faster
+    Nothing -> n -- when m is 0
+    Just (q, r) -> gcdN m r
+  | otherwise = gcdN m n
 
 -- A = a * gcd(A, B)
 -- B = b * gcd(A, B)
@@ -544,6 +557,9 @@ invertOrd :: Ordering -> Ordering
 invertOrd GT = LT
 invertOrd LT = GT
 invertOrd EQ = EQ
+
+showZ :: Z -> String
+showZ (Z (N ds) s) = "Z.n:" ++ show ds ++ ",Z.s:" ++ show s
 
 instance Show Z where
   show (Z n s)
@@ -645,10 +661,17 @@ simplifyDF (DF (Z (N ds) s) dec) = let (ds', dec') = run ((reverse ds), dec)
   in DF (Z (N $ reverse ds') s) dec'
   where 
     run :: ([D], N) -> ([D], N)
+    run ([], _) = ([D0], 0)
+    run ([D0], _) = ([D0], 0)
     run ((D0:ds), n)
       | n > 0 = run (ds, (subN n 1))
-      | otherwise = run (ds, n)
     run (ds, n) = (ds, n)
+
+constructDF :: Z -> N -> DF
+constructDF z n = simplifyDF (DF z n)
+
+showDF :: DF -> String
+showDF (DF z dec) = show z ++ "@" ++ show dec
 
 instance Show DF where
   show (DF (Z n s) dec)
@@ -664,6 +687,16 @@ instance Show DF where
         where 
           dCount = nDigitCount n
           ds = getDs n
+
+instance Eq DF where
+  df1@(DF z1 dec1) == df2@(DF z2 dec2) = z1 == z2 && dec1 == dec2
+
+instance Ord DF where
+  df1@(DF z1 dec1) `compare` df2@(DF z2 dec2) = z1' `compare` z2'
+    where 
+      dec' = max dec1 dec2
+      z1' = iterateN (subN dec' dec1) z1 (*10)
+      z2' = iterateN (subN dec' dec2) z2 (*10)
 
 mkDF :: String -> Maybe DF
 mkDF (' ':cs) = mkDF cs
@@ -718,10 +751,10 @@ mulDF (DF z1 dec1) (DF z2 dec2) = simplifyDF $ DF (z1*z2) (dec1+dec2)
 instance Num DF where
   (+) = addDF
   (*) = mulDF
-  abs (DF z dec) = DF (abs z) dec
-  signum (DF z _) = DF (signum z) 0
-  fromInteger i = DF (fromInteger i) 0
-  negate (DF z dec) = DF (negate z) dec
+  abs (DF z dec) = simplifyDF $ DF (abs z) dec
+  signum (DF z _) = simplifyDF $ DF (signum z) 0
+  fromInteger i = simplifyDF $ DF (fromInteger i) 0
+  negate (DF z dec) = simplifyDF $ DF (negate z) dec
 
 --------------------------- Fraction ----------------------------------
 data F = F N N Bool -- numerator, denominator and sign, denom > 0
@@ -730,7 +763,7 @@ debugF :: F -> String
 debugF (F (N n) (N d) s) = "F:" ++ show n ++ "/" ++ show d ++ "," ++ show s
 
 getDenom :: F -> N
-getDenom (F _ d _) = d
+getDenom (F _ d _) = trace ("d:" ++ show d) d
 
 instance Show F where
   show (F n1 n2 s)
