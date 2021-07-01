@@ -68,7 +68,8 @@ instance Arbitrary N where
     --l <- getSize
     l <- choose (0, 10) :: Gen Int
     ds <- M.replicateM l arbitrary
-    return $ trace ("\n\narbitrary::N -> l:" ++ show l ++ " " ++ show ds) nFromList ds
+    --ds <- arbitrary
+    return $ nFromList ds
 
 instance Arbitrary N0 where
   arbitrary = do 
@@ -95,12 +96,11 @@ instance Arbitrary F where
     num <- arbitrary
     denom <- arbitrary
     sign <- arbitrary
-    let denom' = trace ("num:" ++ show num ++ ",denom:" ++ show denom) $ max denom 1
-        x = constructF num denom' sign
-    return $ trace ("demon':" ++ show denom' ++ ",x:" ++ show x) x
+    let denom' = max denom 1
+    return $ constructF num denom' sign
 
 prop_PosDenom :: F -> Bool
-prop_PosDenom f = let x = trace "debug" $ getDenom f in trace ("f:" ++ show f ++ ",denom:" ++ show x) x > 0
+prop_PosDenom f = (getDenom f) > 0 
 
 prop_NDivMod0 :: N -> Bool
 prop_NDivMod0 n = n `divModN` nZero == Nothing

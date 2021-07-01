@@ -763,7 +763,7 @@ debugF :: F -> String
 debugF (F (N n) (N d) s) = "F:" ++ show n ++ "/" ++ show d ++ "," ++ show s
 
 getDenom :: F -> N
-getDenom (F _ d _) = trace ("d:" ++ show d) d
+getDenom (F _ d _) = d
 
 instance Show F where
   show (F n1 n2 s)
