@@ -1,6 +1,3 @@
--- the idea is to build a purely symbolic arithmetic library without relying
--- on any built-in Int/Integer operations at all. Otherwise, why not just use
--- Integer type, since it is already a big integer type. 
 
 module Arithmetic
   ( D(..) -- exposing the 10 digits
@@ -8,13 +5,12 @@ module Arithmetic
   , fromChar
   , N -- not exposing N internals. N is constructed only from mkN
   , mkN
+  , addN
   , subN
+  , mulN
   , divModN
-  , nZero
+  , nZero 
   , nOne
-  , nFromList
-  , N0
-  , n0FromMaybeDs
   , Z
   , posZFromN
   , negZFromN
@@ -24,7 +20,6 @@ module Arithmetic
   , iMinusOne
   , DF
   , constructDF
-  , showDF
   , F
   , debugF
   , getDenom
@@ -42,611 +37,286 @@ import qualified Data.List.Split as S (splitOn)
 
 import Debug.Trace
 
-class Evaluable e where
-  eval :: e -> e -- evaluate E to something simpler
-
-data D
-  = D0 | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 
-  deriving (Enum, Bounded, Eq, Ord, Show)
 
 
-fromChar :: Char -> Maybe D
-fromChar '0' = Just D0
-fromChar '1' = Just D1
-fromChar '2' = Just D2
-fromChar '3' = Just D3
-fromChar '4' = Just D4
-fromChar '5' = Just D5
-fromChar '6' = Just D6
-fromChar '7' = Just D7
-fromChar '8' = Just D8
-fromChar '9' = Just D9
-fromChar _ = Nothing
+instance HumanReadable D where
+  fromString s = case dropLead ' ' $ dropTrail ' ' s of 
+    [x] -> fromChar x
+    _ -> Nothing
 
-toChar :: D -> Char
-toChar D0 = '0'
-toChar D1 = '1'
-toChar D2 = '2'
-toChar D3 = '3'
-toChar D4 = '4'
-toChar D5 = '5'
-toChar D6 = '6'
-toChar D7 = '7'
-toChar D8 = '8'
-toChar D9 = '9'
-
-fromInt :: Integral a => a -> Maybe D
-fromInt d
-  | d >= 0 && d <= 9 = Just $ toEnum $ fromIntegral d
-  | otherwise = Nothing
-
-horner :: Num a => a -> a -> a
-horner acc d = acc*10 + d
-
------------------ Helper functions for type N ------------------------
-
--- least significant digit first
-mkDRlistFromInt :: Integral a => a -> Maybe [D]
-mkDRlistFromInt x
-  | x <= 0 = Just [D0]
-  | x < 10 = sequence [fromInt x] -- Just [D]
-  | otherwise = 
-    let (q, r) = x `divMod` 10
-    in (:) <$> fromInt r <*> mkDRlistFromInt q
-
--- for an init value, increase init while decreasing y to stop 
-addByCount :: D -> D -> D -> D
-addByCount init y stop
-  | y <= stop = init
-  | otherwise = addByCount (succ init) (pred y) stop
+  toString = return . toChar
 
 
-runAddByCount :: D -> D -> D -> (D, D)
-runAddByCount x y xcomp
-  | y == xcomp = (D1, D0)
-  | y > xcomp = let d = addByCount D0 y xcomp in (D1, d) --count y down to xcomp
-  | otherwise = let d = addByCount x y D0 in (D0, d) --count y down to D0
 
-
--- is the best way just mapping everything out by pattern matching exhaustively?
-addD :: D -> D -> (D, D)
-addD D0 x = (D0, x)
-addD D1 x = runAddByCount D1 x D9
-addD D2 x = runAddByCount D2 x D8
-addD D3 x = runAddByCount D3 x D7
-addD D4 x = runAddByCount D4 x D6
-addD D5 x = runAddByCount D5 x D5
-addD D6 x = runAddByCount D6 x D4
-addD D7 x = runAddByCount D7 x D3
-addD D8 x = runAddByCount D8 x D2
-addD D9 x = runAddByCount D9 x D1
-
-subD :: D -> D -> (Bool, D) -- Bool indicates borrow
-subD x y
-  | x == y = (False, D0)
-  | x > y = (False, addByCount D0 x y) -- increase y to x
-  | otherwise = let (_, ret) = addD x (addByCount D1 D9 y) in (True, ret)
-
-addDD :: (D, D) -> (D, D) -> (D, D) -- hundreds are ignored
-addDD (ten1, single1) (ten2, single2) = (ten, single)
-  where
-    (tenCarry, single) = addD single1 single2
-    (_, ten') = addD ten1 ten2
-    (_, ten) = addD ten' tenCarry
-
-
--- least significant digit comes first. Rlist = reversed list
-addDRlist :: [D] -> [D] -> [D]
-addDRlist [] ys = ys
-addDRlist xs [] = xs -- xs is not []
-addDRlist (x:xs) (y:ys) = case tens of 
-  D0 -> single:s'
-  otherwise -> addDRlist [single, tens] (D0:s')
-  where
-    (tens, single) = addD x y
-    s' = addDRlist xs ys
-
-
---most significant digit first
-addDlist :: [D] -> [D] -> [D]
-addDlist ds1 ds2 = reverse $ ds1 `add'` ds2
-  where
-    add' = addDRlist `F.on` reverse
-
-sumDRlists :: [[D]] -> [D]
-sumDRlists = foldr addDRlist [D0]
-
--- least significant digit comes first
--- the result will be at least zero
-subOneRlist :: [D] -> [D]
-subOneRlist [] = [D0]
-subOneRlist [D0] = [D0]
-subOneRlist (d:ds)
-  | d > D0 = (pred d):ds
-  | otherwise = D9:(subOneRlist ds)
-
--- digits in reversed order, least signficant digit comes first.
--- result is at least 0. Otherwise defining integer number subtraction
--- can be very tricky and ugly
-subDRlist :: [D] -> [D] -> [D]
-subDRlist xs [] = xs
-subDRlist [] ys = [D0]
-subDRlist (x:xs) (y:ys) = case subD x y of
-  (False, d) -> d:(subDRlist xs ys)
-  (True, d) -> d:(subDRlist (subOneRlist xs) ys)
-
---most significant digit first
-subDlist :: [D] -> [D] -> [D]
-subDlist ds1 ds2 = reverse $ ds1 `sub'` ds2
-  where
-    sub' = subDRlist `F.on` reverse
-
-mulD :: D -> D -> (D, D)
-mulD D0 _ = (D0, D0)  -- 0 addition
-mulD D1 x = (D0, x)   -- 0 addition
-mulD D2 x = addD x x  -- 1
-mulD D3 x = addDD (mulD D2 x) (mulD D1 x)  -- 2 additions
-mulD D4 x = let r = mulD D2 x in addDD r r -- 2 additions
-mulD D5 x = addDD (mulD D4 x) (mulD D1 x)  -- 3 additions
-mulD D6 x = let r = mulD D3 x in addDD r r -- 3 additions
-mulD D7 x = addDD (mulD D6 x) (mulD D1 x)  -- 4 additions
-mulD D8 x = let r = mulD D4 x in addDD r r -- 3 additions
-mulD D9 x = addDD (mulD D8 x) (mulD D1 x)  -- 4 additions
-
--- least significant digit comes first
-mulDRlistByD :: [D] -> D -> [D]
-mulDRlistByD [] m = []
-mulDRlistByD (d:ds) m = case ten of 
-  D0 -> single:(mulDRlistByD ds m)
-  _ -> single:(addDRlist [ten] (mulDRlistByD ds m))
-  where
-    (ten, single) = mulD d m
-
-
--- least significant digit comes first
-mulDRlist :: [D] -> [D] -> [D]
-mulDRlist ns ms = sumDRlists rows
-  where
-    -- [7, 9, 8] -> [(7, []), (9, [7]), (8, [9, 7])]
-    helper :: [a] -> [(a, [a])] 
-    helper xs = reverse $ helper2 $ reverse xs
-      where 
-        helper2 :: [a] -> [(a, [a])]
-        helper2 [] = []
-        helper2 (a:as) = (a, as):(helper2 as)
-    mul' ms (d, countList) = mulDRlistByTens (mulDRlistByD ms d) countList
-    rows = map (mul' ns) $ helper ms
-    -- the first argument is in least significant digit format
-    mulDRlistByTens :: [D] -> [a] -> [D]
-    mulDRlistByTens x [] = x
-    mulDRlistByTens x (_:rest) = mulDRlistByTens (D0:x) rest
-
--- most significant digit first
-mulDlist :: [D] -> [D] -> [D]
-mulDlist ds1 ds2 = reverse $ ds1 `mul'` ds2
-  where
-    mul' = mulDRlist `F.on` reverse
-
-dropLead :: Eq a => a -> [a] -> [a]
-dropLead a = dropWhile (== a)
-
-dropTrail :: Eq a => a -> [a] -> [a]
-dropTrail a = reverse . dropLead a . reverse
-
-dropLeadZero = dropLead D0
-
-dropTrailZero = dropTrail D0
-
-compareDs :: [D] -> [D] -> Ordering
-compareDs ds1 ds2 
-  | len1 > len2 = GT
-  | len1 < len2 = LT
-  | otherwise = ds1' `compare` ds2' -- use list lexicographical comparison
-  where 
-    ds1' = dropLeadZero ds1
-    ds2' = dropLeadZero ds2
-    len1 = length ds1'
-    len2 = length ds2'
-
--- most significant digit comes first
-divModDlist :: [D] -> [D] -> Maybe ([D], [D])
-divModDlist _ ds2
-  | length (dropLeadZero ds2) == 0 = Nothing
-divModDlist [] _ = Just ([D0], [D0])
-divModDlist ds1 ds2 = Just $ foldl runDiv ([], []) ds1 
-  where 
-    ds2' = reverse ds2
-    runDiv :: ([D], [D]) -> D -> ([D], [D]) 
-    runDiv (qr, n) d = (q:qr, dropTrailZero rr)
-      where
-        (q, rr) = divModRlistForD0 (d:n) ds2'
-
--- least signficant digit comes first
--- the quotient will be a single largest possible digit
--- remainder will be produced in a most signficant first format
--- the results also follows least significant first format
+----------------- alternative implementation for Natural Number ------------
+-- data N' = N' (NE.NonEmpty D)
 -- 
--- this method resembles a manual long division process 
--- suppose we have x digits in the dividend and y digits (y << x) in the divisor
--- so the entire process is linear to the (x-y) as that's the number 
--- of long division we have to perform. 
---
+-- newtype N0 = N0 { getN :: Maybe [D] }
+-- n0FromMaybeDs = N0
+-- 
+-- mkN0 :: String -> N0
+-- mkN0 cs = N0 $ mkN cs >>= \(N ds) -> return ds 
+-- 
+-- mkN' :: String -> Maybe N'
+-- mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
+-- 
+-- instance Show N0 where
+--   show n = case getN n of 
+--     Nothing -> "NaN"
+--     Just [] -> "0"
+--     Just ds -> fmap toChar ds
+-- 
+-- instance Show N' where
+--   show (N' ds) = fmap toChar $ NE.toList ds
+-- 
+-- instance Enum N0 where
+--   fromEnum n = case getN n of
+--     Nothing -> -1
+--     Just ds -> foldl horner 0 $ fmap fromEnum ds
+-- 
+--   toEnum d
+--     | d > 0 = case (dropLeadZero . reverse) <$> mkDRlistFromInt d of
+--       Nothing -> N0 Nothing --this really shouldn't happen
+--       Just [] -> N0 Nothing --this really shouldn't happen
+--       n -> N0 $ n
+--     | d == 0 = N0 $ Just [D0]
+--     | otherwise = N0 Nothing
+-- 
+-- instance Eq N0 where
+--   (N0 Nothing) == (N0 Nothing) = True
+--   (N0 Nothing) == _ = False
+--   (N0 (Just _)) == (N0 Nothing) = False
+--   (N0 (Just ds1)) == (N0 (Just ds2)) = ds1 `eq` ds2
+--     where
+--       eq = (==) `F.on` dropLeadZero
+-- 
+-- instance Eq N' where
+--   (N' ds1) == (N' ds2) = ds1 == ds2
+-- 
+-- -- NaN is defined as positive infinitity
+-- instance Ord N0 where
+--   (N0 Nothing) `compare` (N0 Nothing) = EQ
+--   (N0 Nothing) `compare` _ = GT
+--   (N0 (Just _)) `compare` (N0 Nothing) = LT
+--   (N0 (Just ds1)) `compare` (N0 (Just ds2)) = ds1 `comp` ds2
+--     where
+--       comp = compareDs `F.on` dropLeadZero
+-- 
+-- instance Ord N' where
+--   (N' ds1) `compare` (N' ds2) = (NE.toList ds1) `compare` (NE.toList ds2)
+-- 
+-- instance Num N0 where
+--   (N0 n1) + (N0 n2) = N0 $ addDlist <$> n1 <*> n2
+--   (N0 n1) * (N0 n2) = N0 $ mulDlist <$> n1 <*> n2
+--   abs = id
+--   signum n
+--     | n == (N0 (Just [D0])) = n
+--     | otherwise = N0 (Just [D1])
+--   fromInteger i 
+--     | i == 0 = N0 (Just [D0])
+--     | i > 0 = N0 $ (dropLeadZero . reverse) <$> (mkDRlistFromInt i)
+--     | otherwise = N0 Nothing
+--   negate n
+--     | n == (N0 (Just [D0])) = n
+--     | otherwise = N0 Nothing
+-- 
+-- mkN' :: [D] -> N'
+-- mkN' xs = case dropLeadZero xs of 
+--   [] -> N' $ D0 NE.:| []
+--   xs -> N' $ NE.fromList xs
+-- 
+-- nZero' :: N'
+-- nZero' = N' $ D0 NE.:| []
+-- 
+-- addN' :: N' -> N' -> N'
+-- addN' (N' ns) (N' ms) = mkN' $ reverse $ addDRlist ns' ms'
+--   where
+--     ns' = NE.toList $ NE.reverse ns
+--     ms' = NE.toList $ NE.reverse ms
 
-divModRlistForD0 :: [D] -> [D] -> (D, [D])
-divModRlistForD0 num denom = case dropWhile greaterThanNum attempts of
-  [] -> (D0, num)
-  ((i, val):_) -> (i, subDRlist num val)
-  where 
-    mul' = mulDRlistByD denom 
-    attempts = fmap (\x -> (x, mul' x)) $ reverse [D1 .. D9]
-    greaterThanNum (_, x) = (reverse x) `compareDs` (reverse num) == GT
 
 ---------------------- Natural number -------------------------
--- the most significant digit comes first. 
--- the value constructor should not be exported
-newtype N = N { getDs :: [D] }
-data N' = N' (NE.NonEmpty D)
-
-newtype N0 = N0 { getN :: Maybe [D] }
-
-n0FromMaybeDs = N0
-
-mkN :: String -> Maybe N
-mkN cs = (N . dropLeadZero) <$> (mapM fromChar cs)
-
-mkN0 :: String -> N0
-mkN0 cs = N0 $ mkN cs >>= \(N ds) -> return ds 
-
-mkN' :: String -> Maybe N'
-mkN' cs = N' <$> (fmap dropLeadZero (mapM fromChar cs) >>= NE.nonEmpty)
-
-nToInteger :: Num a =>  N -> a
-nToInteger (N ds) = foldl horner 0 $ fmap (fromIntegral . fromEnum) ds
-
-nDigitCount :: N -> N
-nDigitCount n = if null ds then N [D1] else foldr count (N [D0]) ds
-  where 
-    ds = dropLeadZero (getDs n)
-    count :: D -> N -> N
-    count _ x = x + 1
-
-instance Show N where
-  show (N []) = "0"
-  show (N ds) = fmap toChar ds
-
-instance Show N0 where
-  show n = case getN n of 
-    Nothing -> "NaN"
-    Just [] -> "0"
-    Just ds -> fmap toChar ds
-
-instance Show N' where
-  show (N' ds) = fmap toChar $ NE.toList ds
-
-instance Enum N where
-  fromEnum (N []) = 0
-  fromEnum (N ds) = foldl horner 0 $ fmap fromEnum ds
-
-  -- unfortunately due to the function type dictated by the standard library
-  -- we have to write this partial function
-  toEnum d
-    | d > 0 = case (nFromList . dropLeadZero . reverse) <$> mkDRlistFromInt d of
-      Nothing -> undefined
-      Just n -> n
-    | d == 0 = nZero
-    | otherwise = undefined
-
-instance Enum N0 where
-  fromEnum n = case getN n of
-    Nothing -> -1
-    Just ds -> foldl horner 0 $ fmap fromEnum ds
-
-  toEnum d
-    | d > 0 = case (dropLeadZero . reverse) <$> mkDRlistFromInt d of
-      Nothing -> N0 Nothing --this really shouldn't happen
-      Just [] -> N0 Nothing --this really shouldn't happen
-      n -> N0 $ n
-    | d == 0 = N0 $ Just [D0]
-    | otherwise = N0 Nothing
-
-instance Eq N where
-  (N ds1) == (N ds2) = ds1 `eq` ds2
-    where
-      eq = (==) `F.on` dropLeadZero
-
-instance Eq N0 where
-  (N0 Nothing) == (N0 Nothing) = True
-  (N0 Nothing) == _ = False
-  (N0 (Just _)) == (N0 Nothing) = False
-  (N0 (Just ds1)) == (N0 (Just ds2)) = ds1 `eq` ds2
-    where
-      eq = (==) `F.on` dropLeadZero
-
-instance Eq N' where
-  (N' ds1) == (N' ds2) = ds1 == ds2
-
-instance Ord N where
-  (N ds1) `compare` (N ds2) = ds1 `comp` ds2
-    where
-      comp = compareDs `F.on` dropLeadZero
-
--- NaN is defined as positive infinitity
-instance Ord N0 where
-  (N0 Nothing) `compare` (N0 Nothing) = EQ
-  (N0 Nothing) `compare` _ = GT
-  (N0 (Just _)) `compare` (N0 Nothing) = LT
-  (N0 (Just ds1)) `compare` (N0 (Just ds2)) = ds1 `comp` ds2
-    where
-      comp = compareDs `F.on` dropLeadZero
-
-instance Ord N' where
-  (N' ds1) `compare` (N' ds2) = (NE.toList ds1) `compare` (NE.toList ds2)
-
-instance Num N where
-  (+) = addN
-  (*) = mulN
-  abs = id
-  signum n
-    | n == nZero = nZero
-    | otherwise = nOne
-  fromInteger i 
-    | i == 0 = nZero
-    | i > 0 = case mkDRlistFromInt i of
-      Just n -> nFromList (reverse n)
-      Nothing -> nZero
-    | otherwise = undefined
-  negate = undefined
-
-instance Real N where
-  toRational = nToInteger
-
-instance Integral N where
-  -- since it is for natural numbers only, quotRem and divMod are identical
-  n1 `quotRem` n2 = case n1 `divModN` n2 of
-    Nothing -> error "divide by zero for type N"
-    Just ret -> ret
-  n1 `divMod` n2 = n1 `quotRem` n2 -- otherwise it depends on negate function from Num class
-  toInteger = nToInteger
-
-instance Num N0 where
-  (N0 n1) + (N0 n2) = N0 $ addDlist <$> n1 <*> n2
-  (N0 n1) * (N0 n2) = N0 $ mulDlist <$> n1 <*> n2
-  abs = id
-  signum n
-    | n == (N0 (Just [D0])) = n
-    | otherwise = N0 (Just [D1])
-  fromInteger i 
-    | i == 0 = N0 (Just [D0])
-    | i > 0 = N0 $ (dropLeadZero . reverse) <$> (mkDRlistFromInt i)
-    | otherwise = N0 Nothing
-  negate n
-    | n == (N0 (Just [D0])) = n
-    | otherwise = N0 Nothing
-
-nZero :: N
-nZero = N [D0]
-
-nOne :: N
-nOne = N [D1]
-
-nZero' :: N'
-nZero' = N' $ D0 NE.:| []
-
-nFromList :: [D] -> N
-nFromList xs = N $ dropLeadZero xs
-
-nFromList' :: [D] -> N'
-nFromList' xs = case dropLeadZero xs of 
-  [] -> N' $ D0 NE.:| []
-  xs -> N' $ NE.fromList xs
 
 
-addN :: N -> N -> N 
-addN (N ns) (N ms) = nFromList $ addDlist ns ms
+
+--mkN :: String -> Maybe N
+--mkN cs = (N . dropLeadZero) <$> (mapM fromChar cs)
+
+instance HumanReadable N where
+  fromString s = case dropLead ' ' $ dropTrail ' ' s of
+    [] -> Nothing
+    cs -> (N. dropLeadZero) <$> (mapM fromChar cs)
+
+  toString n = case getDs n of 
+    [] -> "0"
+    ds -> fmap toChar ds
 
 
-addN' :: N' -> N' -> N'
-addN' (N' ns) (N' ms) = nFromList' $ reverse $ addDRlist ns' ms'
-  where
-    ns' = NE.toList $ NE.reverse ns
-    ms' = NE.toList $ NE.reverse ms
+  --(N ds1) == (N ds2) = ds1 `eq` ds2
+  --  where
+  --    eq = (==) `F.on` getDs
 
+  --(N ds1) `compare` (N ds2) = ds1 `comp` ds2
+  --  where
+  --    comp = compareDs `F.on` dropLeadZero
 
-subN :: N -> N -> N
-subN (N ns) (N ms) = nFromList $ subDlist ns ms
+-- instance Num N where
+--   (+) = addN
+--   (*) = mulN
+--   abs = id
+--   signum n
+--     | n == nZero = nZero
+--     | otherwise = nOne
+--   fromInteger i 
+--     | i == 0 = nZero
+--     | i > 0 = case mkDRlistFromInt i of
+--       Just n -> mkN (reverse n)
+--       Nothing -> nZero
+--     | otherwise = undefined
+--   negate = undefined
 
-mulN :: N -> N -> N
-mulN (N ns) (N ms) = nFromList $ mulDlist ns ms
+-- instance Real N where
+--   toRational = nToInteger
 
-divModN0 :: N -> N -> Maybe (N, N)
-divModN0 (N ns) (N ms) = Bf.bimap toN toN <$> divModDlist ns ms
-  where 
-    toN = nFromList . dropLeadZero . reverse
+-- instance Integral N where
+--   -- since it is for natural numbers only, quotRem and divMod are identical
+--   n1 `quotRem` n2 = case n1 `divModN` n2 of
+--     Nothing -> error "divide by zero for type N"
+--     Just ret -> ret
+--   n1 `divMod` n2 = n1 `quotRem` n2 -- otherwise it depends on negate function from Num class
+--   toInteger = nToInteger
 
--- this provides a method that is not linearly scaled by the number 
--- of digits difference between the dividend and divisor. 
--- Suppose dividend has 30 extra digits, so there answer is at 10^30 level.
--- It takes on average ~30 long divisions to figure out each digit. 
--- or when we use binary representation of the result, in the format 
--- of b(n)*2^n + b(n-1)*2^(n-1) + ... + b(1)*2^1 + b(0)*2^0
--- b(x) is either 0 or 1
--- there will more digits to work on, however each digit might take fewer 
--- tries to find out
-divModN1 :: N -> N -> Maybe (N, N)
-divModN1 num denom
-  | denom == nZero = Nothing
-  | otherwise = undefined
-
-divModN = divModN0
-
--- when n > 0 and m > 0, gcd(n, m) gives the greatest common divisor
--- when n > 0, gcd(n, 0) = n
--- when both are zero, the above defintion is not enough. 
--- it is commonly defined gcd(0, 0) = 0 to preserve usual identities for GCD
-gcdN' :: N -> N -> N
-gcdN' n m
-  | n == nZero || m == nZero = nZero
-  | n == m = n -- n > 0 and m > 0 and n = m
-  | n > m = gcdN' (subN n m) m -- Euclid's algorithm slower when n >> m
-  | otherwise = gcdN' (subN m n) n
-
-gcdN :: N -> N -> N
-gcdN n m
-  | n == 0 = m
-  | m == 0 = n
-  | n == m = n
-  | n > m = case divModN n m of  -- Euclidean algorithm that's much faster
-    Nothing -> n -- when m is 0
-    Just (q, r) -> gcdN m r
-  | otherwise = gcdN m n
-
--- A = a * gcd(A, B)
--- B = b * gcd(A, B)
--- lcm = a * b * gcd(A, B)
--- lcm(0, a) = 0 for all a
-lcmN :: N -> N -> N
-lcmN n m
-  | n == nZero || m == nZero = nZero
-  | otherwise = case divModN (mulN n m) (gcdN n m) of
-    Nothing -> nZero -- this means both n and m are zero, won't happen
-    Just (q, _) -> q
 
 
 --------------------- number based utility functions ---------------------
 replicateN :: N -> a -> [a]
 replicateN n x
-  | n == 0 = []
-  | otherwise = x:(replicateN (subN n 1) x)
+  | n == nZero = []
+  | otherwise = x:(replicateN (subN n nOne) x)
           
 chunkN :: N -> [a] -> ([a], [a], N)
-chunkN n xs | n == 0 = ([], xs, 0)
-chunkN n [] = ([], [], 0)
-chunkN n (x:xs) = (x:front, back, n'+1)
+chunkN n xs | n == nZero = ([], xs, nZero)
+chunkN n [] = ([], [], nZero)
+chunkN n (x:xs) = (x:front, back, subN n' nOne)
   where
-    (front, back, n') = chunkN (subN n 1) xs -- n > 0 here
+    (front, back, n') = chunkN (subN n nOne) xs -- n > 0 here
 
 ---------------------------- Integer Number -----------------------------
-data Z = Z N Bool -- True means positive, 0 can be either way 
+data Z 
+  = Z 
+  { getZAbs :: N 
+  , getSign :: Bool -- True means positive, 0 can be either way 
+  } deriving Show
 
-posZFromN :: N -> Z
-posZFromN n = Z n True
+mkZ :: N -> Bool -> Z
+mkZ n s
+  | n == nZero = Z nZero True
+  | otherwise = Z n s
 
-negZFromN :: N -> Z
-negZFromN n = Z n False
+instance HumanReadable Z where
+  fromString s = case dropLead ' ' $ dropTrail ' ' s of 
+    ('-':cs) -> mkZ <$> fromString cs <*> pure False
+    cs -> mkZ <$> fromString cs <*> pure True
 
-mkZ :: String -> Maybe Z
-mkZ ('-':cs) = Z <$> mkN cs <*> pure False
-mkZ cs = Z <$> mkN cs <*> pure True
+  toString z = if getSign z then zabs else "-" ++ zabs
+    where 
+      zabs = toString (getZAbs z)
 
-iZero :: Z
-iZero = Z nZero True
+zZero :: Z
+zZero = mkZ nZero True
 
-iPosFromList :: [D] -> Z
-iPosFromList = posZFromN . nFromList
+zOne :: Z
+zOne = mkZ nOne True
 
-iNegFromList :: [D] -> Z
-iNegFromList = negZFromN . nFromList
-
-iOne :: Z
-iOne = iPosFromList [D1]
-
-iMinusOne :: Z
-iMinusOne = iNegFromList [D1]
+zMinusOne :: Z
+zMinusOne = mkZ nOne False
 
 invertOrd :: Ordering -> Ordering
 invertOrd GT = LT
 invertOrd LT = GT
 invertOrd EQ = EQ
 
-showZ :: Z -> String
-showZ (Z (N ds) s) = "Z.n:" ++ show ds ++ ",Z.s:" ++ show s
-
-instance Show Z where
-  show (Z n s)
-    | s = show n
-    | otherwise = if n == nZero then show n else "-" ++ show n
-
 instance Enum Z where
-  fromEnum (Z n s) = let val = fromEnum n in if s then val else -val
-  toEnum d 
-    | d == 0 = iZero
-    | d > 0 = posZFromN $ (toEnum d)
-    | otherwise = negZFromN $ toEnum (-d)
+  fromEnum z = let val = fromEnum (getZAbs z) 
+    in if getSign z then val else negate val
+  toEnum d
+    | d == 0 = zZero
+    | d > 0 = mkZ (toEnum d) True
+    | otherwise = mkZ (toEnum (-d)) False
 
 instance Eq Z where
-  (Z n1 s1) == (Z n2 s2)
-    | isZero1 && isZero2 = True
-    | not isZero1 && not isZero2 = if s1 == s2 then n1 == n2 else False 
-    | otherwise = False  
-    where
-      isZero1 = nZero == n1
-      isZero2 = nZero == n2
+  z1 == z2 = (getZAbs z1) == (getZAbs z2) && (getSign z1) == (getSign z2)
 
 instance Ord Z where
-  (Z n1 s1) `compare` (Z n2 s2)
-    | isZero1 && isZero2 = EQ
-    | not isZero1 && isZero2 = if s1 then GT else LT
-    | isZero1 && not isZero2 = if s2 then LT else GT
+  z1 `compare` z2 
+    | n1 == nZero && n2 == nZero = EQ
+    | n1 /= nZero && n2 == nZero = if s1 then GT else LT
+    | n1 == nZero && n2 /= nZero = if s2 then LT else GT
     | s1 && s2 = n1 `compare` n2
     | s1 && not s2 = GT
-    | not s1 && not s2 = invertOrd $ n1 `compare` n2
-    | otherwise = LT --not s1 && s2
+    | not s1 && not s2 = n2 `compare` n1
+    | otherwise = LT -- not s1 && s2
     where 
-      isZero1 = n1 == nZero
-      isZero2 = n2 == nZero
+      n1 = getZAbs z1
+      n2 = getZAbs z2
+      s1 = getSign z1
+      s2 = getSign z2
 
 addZ :: Z -> Z -> Z
-addZ i1@(Z n1 s1) i2@(Z n2 s2)
-  | n1 == nZero = i2
-  | n2 == nZero = i1
-  | s1 && s2 = Z (addN n1 n2) True
-  | not s1 && not s2 = Z (addN n1 n2) False
-  | s1 && not s2 = if n1 < n2 then negZFromN (subN n2 n1) else posZFromN (subN n1 n2)
-  | not s1 && s2 = if n1 > n2 then negZFromN (subN n1 n2) else posZFromN (subN n2 n1)
+addZ z1 z2 
+  | z1 == zZero = z2
+  | z2 == zZero = z1
+  | s1 && s2 = mkZ (addN n1 n2) True
+  | not s1 && not s2 = mkZ (addN n1 n2) False
+  | s1 && not s2 = if n1 > n2 then mkZ (subN n1 n2) True else mkZ (subN n2 n1) False
+  | otherwise = if n2 > n1 then mkZ (subN n2 n1) False else mkZ (subN n1 n2) True -- not s1 && s2
+  where 
+    n1 = getZAbs z1
+    n2 = getZAbs z2
+    s1 = getSign z1
+    s2 = getSign z2
 
 mulZ :: Z -> Z -> Z
-mulZ (Z n1 s1) (Z n2 s2)
-  | n1 == nZero || n2 == nZero = iZero
-  | s1 == s2 = Z (mulN n1 n2) True
-  | otherwise = Z (mulN n1 n2) False
+mulZ z1 z2 = mkZ zabs sign
+  where 
+    zabs = mulN (getZAbs z1) (getZAbs z2)
+    sign = (getSign z1) && (getSign z2)
 
 instance Num Z where
   (+) = addZ
   (*) = mulZ
-  abs (Z n s) = Z n True
+  abs z = mkZ (getZAbs z) True
   signum i
-    | i == 0 = iZero
-    | i > 0 = iOne
-    | otherwise = iMinusOne 
+    | i == 0 = zZero
+    | i > 0 = zOne
+    | otherwise = zMinusOne 
   fromInteger i
-    | i == 0 = iZero
-    | i > 0 = Z (fromInteger i) True
+    | i == 0 = zZero
+    | i > 0 = case nFromInteger i of 
+      Just n -> mkZ n True
+      _ -> zZero -- shouldn't happen
     | otherwise = negate $ fromInteger $ negate i
-  negate (Z n s)
-    | n == nZero = iZero
-    | otherwise = Z n (not s)
+  negate z = mkZ (getZAbs z) (not $ getSign z)
 
 instance Real Z where
-  toRational (Z n s)
-    | n >= nZero = toRational n
-    | otherwise = negate $ toRational n
+  toRational z = (if getSign z then id else negate) $ nToInteger (getZAbs z)
 
-quotRemZ :: Z -> Z -> (Z, Z)
-quotRemZ i1@(Z n1 s1) i2@(Z n2 s2)
-  | i2 == iZero = error "divide by zero for type Z"
-  | i1 == iZero = (iZero, iZero)
-  | s1 && s2 = (posZFromN q, posZFromN r)
-  | s1 && not s2 = (negZFromN q, posZFromN r)
-  | not s1 && s2 = (negZFromN q, negZFromN r)
-  | otherwise = (posZFromN q, negZFromN r) -- not s1 && not s2
-  where 
-    (q, r) = n1 `quotRem` n2
+--quotRemZ :: Z -> Z -> (Z, Z)
+--quotRemZ i1@(Z n1 s1) i2@(Z n2 s2)
+--  | i2 == iZero = error "divide by zero for type Z"
+--  | i1 == iZero = (iZero, iZero)
+--  | s1 && s2 = (posZFromN q, posZFromN r)
+--  | s1 && not s2 = (negZFromN q, posZFromN r)
+--  | not s1 && s2 = (negZFromN q, negZFromN r)
+--  | otherwise = (posZFromN q, negZFromN r) -- not s1 && not s2
+--  where 
+--    (q, r) = n1 `quotRem` n2
 
-instance Integral Z where
-  quotRem = quotRemZ
-  toInteger (Z n s)
-    | n >= nZero = toInteger n
-    | otherwise = negate $ toInteger n
+--instance Integral Z where
+--  quotRem = quotRemZ
+--  toInteger (Z n s)
+--    | n >= nZero = toInteger n
+--    | otherwise = negate $ toInteger n
 
 
 ---------------- Decimal fraction representation -----------------------
@@ -670,12 +340,29 @@ simplifyDF (DF (Z (N ds) s) dec) = let (ds', dec') = run ((reverse ds), dec)
 constructDF :: Z -> N -> DF
 constructDF z n = simplifyDF (DF z n)
 
-showDF :: DF -> String
-showDF (DF z dec) = show z ++ "@" ++ show dec
+instance Eq DF where
+  df1@(DF z1 dec1) == df2@(DF z2 dec2) = z1 == z2 && dec1 == dec2
 
-instance Show DF where
-  show (DF (Z n s) dec)
-    | n == 0 = "0"
+instance Ord DF where
+  df1@(DF z1 dec1) `compare` df2@(DF z2 dec2) = z1' `compare` z2'
+    where 
+      dec' = max dec1 dec2
+      z1' = iterateN (subN dec' dec1) z1 (*10)
+      z2' = iterateN (subN dec' dec2) z2 (*10)
+
+instance HumanReadable DF where
+  fromString cs = case S.splitOn "." $ dropLead ' ' $ dropTrail ' ' cs of
+    [] -> Nothing
+    [s] -> DF <$> fromString s <*> pure (N [D0])
+    [s, d] -> let
+        d' = dropTrail '0' d
+        dec = ((toInteger . length) <$> (mapM fromChar d')) >>= nFromInteger
+        z = fromString (s ++ d')
+      in DF <$> z <*> dec
+    _ -> Nothing -- incorrect format with too many dots
+
+  toString (DF (Z n s) dec)
+    | n == nZero = "0"
     | s = display n dec
     | otherwise = "-" ++ display n dec
     where
@@ -688,35 +375,13 @@ instance Show DF where
           dCount = nDigitCount n
           ds = getDs n
 
-instance Eq DF where
-  df1@(DF z1 dec1) == df2@(DF z2 dec2) = z1 == z2 && dec1 == dec2
-
-instance Ord DF where
-  df1@(DF z1 dec1) `compare` df2@(DF z2 dec2) = z1' `compare` z2'
-    where 
-      dec' = max dec1 dec2
-      z1' = iterateN (subN dec' dec1) z1 (*10)
-      z2' = iterateN (subN dec' dec2) z2 (*10)
-
-mkDF :: String -> Maybe DF
-mkDF (' ':cs) = mkDF cs
-mkDF cs = case S.splitOn "." cs of
-  [] -> Nothing
-  [s] -> DF <$> mkZ s <*> pure (N [D0])
-  [s, d] -> let
-      d' = dropTrail '0' d
-      dec = (fromInteger . toInteger . length) <$> (mapM fromChar d')
-      z = mkZ (s ++ d')
-    in DF <$> z <*> dec
-  _ -> Nothing -- incorrect format with too many dots
-
 isInteger :: DF -> Bool
-isInteger = (== 0) . getDecimalPlaces
+isInteger = (== nZero) . getDecimalPlaces
 
 intPart :: DF -> Z
 intPart (DF z@(Z n@(N ds) s) dec)
-  | dec == 0 = z
-  | n == 0 = 0
+  | dec == nZero = z
+  | n == nZero = 0
   | otherwise = Z (N ds') s
   where
     ds' = (reverse . drop (fromInteger $ toInteger dec) . reverse) $ ds
@@ -724,19 +389,19 @@ intPart (DF z@(Z n@(N ds) s) dec)
 mulByTen :: DF -> DF
 mulByTen (DF z dec) 
   | dec == 0 = DF (z*10) dec
-  | otherwise = DF z (subN dec 1)
+  | otherwise = DF z (subN dec nOne)
 
 divByTen :: DF -> DF
 divByTen (DF z@(Z n s) dec)
-  | dec > 0 = DF z (dec+1)
+  | dec > nZero = DF z (dec+nOne)
   | otherwise = case reverse $ getDs n of
-    D0:rest -> DF (Z (N $ reverse rest) s) 0
-    ds' -> DF z 1
+    D0:rest -> DF (Z (N $ reverse rest) s) nZero
+    ds' -> DF z nOne
 
 iterateN :: N -> a -> (a -> a) -> a
 iterateN n x f = last $ take n' $ iterate f x
   where
-    n' = fromInteger $ toInteger $ n+1
+    n' = fromInteger $ toInteger $ n+nOne
 
 addDF :: DF -> DF -> DF
 addDF (DF z1 dec1) (DF z2 dec2) = simplifyDF $ DF (z1'+z2') dec'
@@ -752,8 +417,8 @@ instance Num DF where
   (+) = addDF
   (*) = mulDF
   abs (DF z dec) = simplifyDF $ DF (abs z) dec
-  signum (DF z _) = simplifyDF $ DF (signum z) 0
-  fromInteger i = simplifyDF $ DF (fromInteger i) 0
+  signum (DF z _) = simplifyDF $ DF (signum z) nZero
+  fromInteger i = simplifyDF $ DF (fromInteger i) nZero
   negate (DF z dec) = simplifyDF $ DF (negate z) dec
 
 --------------------------- Fraction ----------------------------------
@@ -764,14 +429,6 @@ debugF (F (N n) (N d) s) = "F:" ++ show n ++ "/" ++ show d ++ "," ++ show s
 
 getDenom :: F -> N
 getDenom (F _ d _) = d
-
-instance Show F where
-  show (F n1 n2 s)
-    | n2 == nZero = error "divide by zero in type F"
-    | n2 == nOne = show (Z n1 s)
-    | otherwise = if s then frac else "-" ++ frac
-    where 
-      frac = show n1 ++ "/" ++ show n2
 
 simplify :: (N, N) -> (N, N)
 simplify (num, denom)
@@ -797,15 +454,22 @@ constructF n1 n2 s
   | n2 == 0 = constructF n1 1 s
   | otherwise = let (n1', n2') = simplify (n1, n2) in F n1' n2' s
 
-mkF :: String -> Maybe F
-mkF ('-':cs) = negate <$> mkF cs
-mkF cs = case rest of
-  [] -> fFromZ <$> (Z <$> num <*> pure True)
-  ('/':cs') -> F <$> num <*> mkN cs' <*> pure True
-  _ -> Nothing 
-  where
-    num = mkN $ takeWhile (/= '/') cs
-    rest = dropWhile (/= '/') cs
+instance HumanReadable F where
+  fromString ('-':cs) = negate <$> fromString cs
+  fromString cs = case rest of
+    [] -> fFromZ <$> (Z <$> num <*> pure True)
+    ('/':cs') -> F <$> num <*> fromString cs' <*> pure True
+    _ -> Nothing 
+    where
+      num = fromString $ takeWhile (/= '/') cs
+      rest = dropWhile (/= '/') cs
+
+  toString (F n1 n2 s)
+    | n2 == nZero = error "divide by zero in type F"
+    | n2 == nOne = toString (Z n1 s)
+    | otherwise = if s then frac else "-" ++ frac
+    where 
+      frac = toString n1 ++ "/" ++ toString n2
 
 
 posFFromNs :: N -> N -> Maybe F
