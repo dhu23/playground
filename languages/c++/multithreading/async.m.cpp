@@ -2,6 +2,12 @@
 #include <chrono>
 #include <iostream>
 
+// added for dot product example
+#include <random>
+#include <vector>
+#include <numeric>
+#include <algorithm>
+
 void factorial0(int n)
 {
     int res = 1;
@@ -143,6 +149,200 @@ void test6()
     // auto y = f.get() or void y = f.get() cannot compile
 }
 
+// Eager or lazy evaluation
+void test7()
+{
+    auto begin = std::chrono::system_clock::now();
+    auto asyncLazy = std::async(
+        std::launch::deferred, 
+        []{ return std::chrono::system_clock::now(); });
+    auto asyncEager = std::async(
+        std::launch::async, 
+        []{ return std::chrono::system_clock::now(); });
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    auto lazyStart = asyncLazy.get() - begin;
+    auto eagerStart = asyncEager.get() - begin;
+
+    auto lazyDuration = std::chrono::duration<double>(lazyStart).count();
+    auto eagerDuration = std::chrono::duration<double>(eagerStart).count();
+
+    std::cout 
+        << "asyncLazy evaluated after: " << lazyDuration << " seconds" 
+        << std::endl;
+
+    std::cout 
+        << "asyncEager evaluated after: " << eagerDuration << " seconds"
+        << std::endl;
+
+    std::cout << std::endl;
+}
+
+void test8()
+{
+    std::vector<std::future<int>> futs;
+    for (auto i = 0; i < 4; ++i)
+    {
+        futs.emplace_back(std::async([idx=i] { return idx; }));
+    }
+
+    int ret = 0;
+    std::for_each(
+        futs.begin(), futs.end(), 
+        [&ret](std::future<int>& x) 
+        {
+            ret += x.get();
+            // std::cout << x.get() << std::endl; 
+        });
+    std::cout << "final:" << ret << std::endl; // prints out 6
+}
+
+// dot product async manner
+// chop the two vectors into 4 pieces and calculate them independently
+long long getDotProduct(std::vector<int>& v, std::vector<int>& w) 
+{
+    auto future1 = std::async(
+        [&]
+        {
+            return std::inner_product(
+                &v[0], &v[v.size()/4],
+                &w[0], 0LL);
+        });
+
+    auto future2 = std::async(
+        [&]
+        {
+            return std::inner_product(
+                &v[v.size()/4], &v[v.size()/2],
+                &w[v.size()/4], 0LL);
+        });
+
+    auto future3 = std::async(
+        [&]
+        {
+            return std::inner_product(
+                &v[v.size()/2], &v[v.size()*3/4],
+                &w[v.size()/2], 0LL);
+        });
+
+    auto future4 = std::async(
+        [&]
+        {
+            return std::inner_product(
+                &v[v.size()*3/4], &v[v.size()],
+                &w[v.size()*3/4], 0LL);
+        });
+
+    return future1.get() + future2.get() + future3.get() + future4.get();
+}
+
+long long getDotProdByN(
+    const std::vector<int>& v, const std::vector<int>& w,
+    size_t n)
+{
+    std::vector<std::future<long long>> futs;
+
+    for (decltype(n) i = 0; i < n; ++i)
+    {
+        auto fut = std::async(
+            [&,i=i] // to capture i by copy, otherwise there will be funny bugs
+            {
+                return std::inner_product(
+                    &v[v.size()*i/n], &v[v.size()*(i+1)/n],
+                    &w[v.size()*i/n], 0LL);
+            });
+        futs.emplace_back(std::move(fut));
+    }
+
+    long long ret = 0;
+    for (decltype(n) idx = 0; idx < n; ++idx)
+    {
+        ret += futs[idx].get();
+    }
+    return ret;
+}
+
+template<typename T>
+void printVec(std::vector<T>& vec)
+{
+    auto len = vec.size();
+    decltype(len) count = 0;
+    while (count < 10 && count < len)
+    {
+        std::cout << vec[count++] << ",";
+    }
+    if (len > 10) 
+    {
+        std::cout << "...";
+    }
+    std::cout << std::endl;
+}
+
+void test9()
+{
+    std::random_device seed;
+
+    std::mt19937 engine(seed());
+
+    std::uniform_int_distribution<int> dist(0, 100);
+
+    const int NUM = 100000000;
+    // const int NUM = 4;
+    std::vector<int> v(NUM);
+    std::vector<int> w(NUM);
+
+    for (int i = 0; i < NUM; ++i)
+    {
+        v.push_back(dist(engine));
+        w.push_back(dist(engine));
+    }
+
+    printVec(v);
+    printVec(w);
+
+    std::chrono::system_clock::time_point start0 =
+        std::chrono::system_clock::now();
+    std::cout 
+        << "inner_product(v, w):" 
+        << std::inner_product(v.begin(), v.end(), w.begin(), 0LL) 
+        << std::endl;
+    std::chrono::duration<double> dur0 = 
+        std::chrono::system_clock::now() - start0;
+    std::cout << "original exeuction:" << dur0.count() << std::endl;
+
+
+    std::chrono::system_clock::time_point start = 
+        std::chrono::system_clock::now();
+    std::cout << "getDotProduct(v, w):" << getDotProduct(v, w) << std::endl;
+    std::chrono::duration<double> dur = 
+        std::chrono::system_clock::now() - start;
+    std::cout << "Parallel execution:" << dur.count() << std::endl;
+
+
+    std::chrono::system_clock::time_point start1 = 
+        std::chrono::system_clock::now();
+    std::cout << "getDotProdBy4(v, w):" << getDotProdByN(v, w, 4) << std::endl;
+    std::chrono::duration<double> dur1 = 
+        std::chrono::system_clock::now() - start1;
+    std::cout << "Parallel execution:" << dur1.count() << std::endl;
+
+
+    std::chrono::system_clock::time_point start2 = 
+        std::chrono::system_clock::now();
+    std::cout << "getDotProdBy16(v, w):" << getDotProdByN(v, w, 16) << std::endl;
+    std::chrono::duration<double> dur2 = 
+        std::chrono::system_clock::now() - start2;
+    std::cout << "Parallel execution:" << dur2.count() << std::endl;
+
+    std::chrono::system_clock::time_point start3 = 
+        std::chrono::system_clock::now();
+    std::cout << "getDotProdBy128(v, w):" << getDotProdByN(v, w, 128) << std::endl;
+    std::chrono::duration<double> dur3 = 
+        std::chrono::system_clock::now() - start3;
+    std::cout << "Parallel execution:" << dur3.count() << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
     // test0();
@@ -151,6 +351,9 @@ int main(int argc, char* argv[])
     // test3();
     // test4();
     // test5();
-    test6();
+    // test6();
+    // test7();
+    test8();
+    test9();
     return 0;
 }
