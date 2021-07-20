@@ -130,13 +130,27 @@ void test5()
     std::cout << "get result : " << x << std::endl;
 }
 
+// async task that returns void
+void doSomething(int x)
+{
+    std::cout << "received:" << x << std::endl;
+}
+
+void test6()
+{
+    std::future<void> f = std::async(doSomething, 5);
+    f.get(); // do nothing. 
+    // auto y = f.get() or void y = f.get() cannot compile
+}
+
 int main(int argc, char* argv[])
 {
     // test0();
     // test1();
     // test2();
     // test3();
-    test4();
-    test5();
+    // test4();
+    // test5();
+    test6();
     return 0;
 }
