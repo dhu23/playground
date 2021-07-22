@@ -298,8 +298,11 @@ void test9()
         w.push_back(dist(engine));
     }
 
-    printVec(v);
-    printVec(w);
+    //printVec(v);
+    //printVec(w);
+
+    // when compiled with -O3, 
+    // the huge difference between dur0 and dur disappears.
 
     std::chrono::system_clock::time_point start0 =
         std::chrono::system_clock::now();
