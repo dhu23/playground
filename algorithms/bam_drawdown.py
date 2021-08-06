@@ -127,6 +127,42 @@ def draw_down(rets, n):
 
 # use the new algorithm
 drawdowncalc = draw_down
+
+## for streaming data processing
+class DDTracker(object):
+    def __init__(self):
+        self.dds = []
+        self.start_idx, self.end_idx = 0, 0
+        self.perf = [1.0]
+        self.cumprod = 1.0
+        self.idx = 0
+
+    def _append_dds(self, dds):
+        if dds:
+            last_start, last_end = dds[-1]
+            if (
+                self.perf[last_start] > self.perf[self.start_idx] and 
+                self.perf[last_end] > self.perf[self.end_idx]
+            ):
+                dds.pop()
+                dds.append((last_start, self.end_idx))
+                return
+
+        dds.append((self.start_idx, self.end_idx))
+
+    def add(self, x):
+        self.idx += 1
+        self.cumprod *= 1+x
+        self.perf.append(self.cumprod)
+
+        if x < 0: 
+            self.end_idx = idx
+        else:
+            if self.start_idx < self.end_idx:
+                _append_dds(self.dds)
+
+            self.start_idx, self.end_idx = self.idx, self.idx
+
         
 if __name__ == '__main__':
     fptr = open(os.environ['OUTPUT_PATH'], 'w')
