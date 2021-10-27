@@ -22,6 +22,9 @@ import time
 class Consumer(MessageHandler):
     def on_message(self, message: InboundMessage):
         print(message)
+        payload_bytes = message.get_payload_as_bytes()
+        print(payload_bytes)
+        print(type(payload_bytes))
 
 
 class ConsumerReconnectionHandler(ReconnectionListener):
@@ -61,7 +64,7 @@ if __name__ == '__main__':
     msg_service.add_reconnection_attempt_listener(ConsumerReconnectingHandler())
     msg_service.add_service_interruption_listener(ConsumerServiceInterruptionHandler())
 
-    topic_sub = [TopicSubscription.of(t) for t in ['topic/try/me',]]
+    topic_sub = [TopicSubscription.of(t) for t in ['try-me',]]
 
     direct_receiver = msg_service.create_direct_message_receiver_builder() \
         .with_subscriptions(topic_sub).build()
