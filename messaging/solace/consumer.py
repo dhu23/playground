@@ -17,14 +17,18 @@ from solace.messaging.receiver.message_receiver import (
 )
 
 import time
-
+import json
 
 class Consumer(MessageHandler):
     def on_message(self, message: InboundMessage):
         print(message)
+        print(type(message))
         payload_bytes = message.get_payload_as_bytes()
         print(payload_bytes)
         print(type(payload_bytes))
+        # pyobj = json.load(message)
+        # print(pyobj)
+        # print(type(pyobj))
 
 
 class ConsumerReconnectionHandler(ReconnectionListener):
