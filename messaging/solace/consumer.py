@@ -26,9 +26,9 @@ class Consumer(MessageHandler):
         payload_bytes = message.get_payload_as_bytes()
         print(payload_bytes)
         print(type(payload_bytes))
-        # pyobj = json.load(message)
-        # print(pyobj)
-        # print(type(pyobj))
+        pyobj = json.load(message.get_payload_as_bytes())
+        print(pyobj)
+        print(type(pyobj))
 
 
 class ConsumerReconnectionHandler(ReconnectionListener):
