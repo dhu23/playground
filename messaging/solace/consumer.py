@@ -21,14 +21,13 @@ import json
 
 class Consumer(MessageHandler):
     def on_message(self, message: InboundMessage):
-        print(message)
-        print(type(message))
         payload_bytes = message.get_payload_as_bytes()
-        print(payload_bytes)
-        print(type(payload_bytes))
-        pyobj = json.load(message.get_payload_as_bytes())
-        print(pyobj)
-        print(type(pyobj))
+        try:
+            pyobj = json.loads(payload_bytes) 
+            print(pyobj)
+            print(type(pyobj))
+        except:
+            print("not a good json obj:", payload_bytes)
 
 
 class ConsumerReconnectionHandler(ReconnectionListener):

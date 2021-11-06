@@ -5,3 +5,8 @@
 5. run `pip-compile --output-file requirments.txt requirements.in`
 6. run `pip-sync requirements.txt`
 
+
+
+
+# Solace management port
+http://localhost:8080
