@@ -52,7 +52,12 @@ x = 0
 xlock = threading.Lock()
 def task3():
     global x
-    for _ in range(1000000):
+    for i in range(1000000):
+        if i % 10000 == 0:
+            # even with this 50ms break,
+            # it is very hard to replicate the case where numbers get messed up
+            time.sleep(0.01) 
+            # pass
         #xlock.acquire()
         x += 1
         #xlock.release()
