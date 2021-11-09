@@ -67,7 +67,6 @@ if __name__ == '__main__':
     direct_publisher.start()
     print(f'direct publisher ready? {direct_publisher.is_ready()}')
 
-    msg_body = 'This is the body of the msg'
     outbound_msg_builder = msg_service.message_builder() \
         .with_application_message_id('sample_id') \
         .with_property('application', 'samples') \
@@ -81,22 +80,23 @@ if __name__ == '__main__':
                 topic = Topic.of('try-me')
                 outbound_msg = outbound_msg_builder \
                     .with_application_message_id(f'NEW {count}') \
-                    .build(f'{msg_body} + {total_count}')
+                    .build(f'"{total_count}"') # just sending over incremental numbers
 
                 direct_publisher.publish(destination=topic, message=outbound_msg)
 
-                # print(f'published message on {topic}')
+                print(f'published message on {topic}, {outbound_msg}')
                 count += 1
                 total_count += 1
 
                 if total_count % 500 == 0:
                     print(f'sent {total_count} messages')
 
-                #time.sleep(0.01)
+                time.sleep(1)
 
             #print('\n a new batch')
             count = 1
             time.sleep(0.1)
+            break # test to send only a few messages
 
     except KeyboardInterrupt:
         print('\nTerminating publisher')

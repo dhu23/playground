@@ -19,6 +19,7 @@ from solace.messaging.receiver.message_receiver import (
 import time
 import json
 import threading
+from queue import Queue
 
 x = 0
 main_thread_counter = 0
@@ -45,9 +46,19 @@ def report_threads(fn):
     print('-------------------- END --------------------')
 
 
+def get_snapshot(data_queue):
+    time.sleep(15)
+    print('putting snapshot 5 in queue')
+    data_queue.put(5)
+
+
 class Consumer(MessageHandler):
+    def __init__(self, data_queue):
+        self._data_queue = data_queue
+
     def on_message(self, message: InboundMessage):
         payload_bytes = message.get_payload_as_bytes()
+        print(f'receive {payload_bytes}')
 
         # report_threads('consumer-on-message')
 
@@ -67,6 +78,10 @@ class Consumer(MessageHandler):
         except:
             #print("not a good json obj:", payload_bytes)
             pass
+
+        # ignore the data that's sent in. Instead use the the counter
+        print(f'putting {callback_counter} in queue')
+        data_queue.put(callback_counter-1)
 
 
 class ConsumerReconnectionHandler(ReconnectionListener):
@@ -88,6 +103,15 @@ class ConsumerServiceInterruptionHandler(ServiceInterruptionListener):
         report_threads('service-interruption-on-service-interrupted')
         print('\non_service_interruptted')
         print(e)
+
+
+def process_data(data_queue):
+    while True:
+        x = data_queue.get()
+        if x < 0:
+            break
+        print(x)
+        data_queue.task_done()
 
 
 if __name__ == '__main__':
@@ -124,11 +148,21 @@ if __name__ == '__main__':
     report_threads('main-after direct_receiver.start()')
 
     try:
-        direct_receiver.receive_async(Consumer()) # just register the callback
+
+        data_queue = Queue()
+        direct_receiver.receive_async(Consumer(data_queue)) # just register the callback
         report_threads('main-after direct_receiver.receive_async()')
+
+        snapshot_t = threading.Thread(target=get_snapshot, args=(data_queue,))
+        process_t = threading.Thread(target=process_data, args=(data_queue,))
+
+        snapshot_t.start()
+        snapshot_t.join()
+
+
         try:
             while True:
-                #time.sleep(0.01)
+                time.sleep(0.1)
                 counter = 0
                 if main_thread_counter >= 8000000: 
                     continue
