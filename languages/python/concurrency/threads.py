@@ -22,7 +22,7 @@ def report():
     print('# of threads: {}'.format(threading.active_count()))
 
 
-if __name__ == '__main__':
+def test_thread_name():
     print('ID of process running main program: {}'.format(os.getpid()))
 
     print('main thread name: {}'.format(threading.current_thread().name))
@@ -47,3 +47,29 @@ if __name__ == '__main__':
 
     time.sleep(10) # shows only the main thread
 
+
+x = 0
+xlock = threading.Lock()
+def task3():
+    global x
+    for _ in range(1000000):
+        #xlock.acquire()
+        x += 1
+        #xlock.release()
+
+
+def test_threaded_sum():
+    t1 = threading.Thread(target=task3)
+    t2 = threading.Thread(target=task3)
+
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    global x
+    print('x={}'.format(x))
+
+
+if __name__ == '__main__':
+    test_threaded_sum()

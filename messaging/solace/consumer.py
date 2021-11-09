@@ -20,6 +20,22 @@ import time
 import json
 import threading
 
+x = 0
+main_thread_counter = 0
+callback_counter = 0
+
+xlock = threading.Lock()
+
+
+def report_globals():
+    print('x={}'.format(x))
+    print('main-thread-counter:{}'.format(main_thread_counter))
+    print('callback-counter:{}'.format(callback_counter))
+    sum_counters = main_thread_counter + callback_counter
+    print(f'sum of counters:{sum_counters}')
+    print(f'good? {x == sum_counters}') 
+    print(f'small x? {x < sum_counters}, diff:{sum_counters-x}')
+
 
 def report_threads(fn):
     print('-------------------- START ------------------')
@@ -32,15 +48,25 @@ def report_threads(fn):
 class Consumer(MessageHandler):
     def on_message(self, message: InboundMessage):
         payload_bytes = message.get_payload_as_bytes()
-        report_threads('consumer-on-message')
+
+        # report_threads('consumer-on-message')
+
         # during my test, htop shows that there are 4 threads running.
         # and this call-back runs on 'Thread-2'
+        global x, xlock
+        #xlock.acquire()
+        x += 1
+        #xlock.release()
+
+        global callback_counter
+        callback_counter += 1
         try:
             pyobj = json.loads(payload_bytes)
-            print(pyobj)
-            print(type(pyobj))
+            #print(pyobj)
+            #print(type(pyobj))
         except:
-            print("not a good json obj:", payload_bytes)
+            #print("not a good json obj:", payload_bytes)
+            pass
 
 
 class ConsumerReconnectionHandler(ReconnectionListener):
@@ -98,14 +124,32 @@ if __name__ == '__main__':
     report_threads('main-after direct_receiver.start()')
 
     try:
-        direct_receiver.receive_async(Consumer())
+        direct_receiver.receive_async(Consumer()) # just register the callback
+        report_threads('main-after direct_receiver.receive_async()')
         try:
             while True:
-                time.sleep(1)
+                #time.sleep(0.01)
+                counter = 0
+                if main_thread_counter >= 8000000: 
+                    continue
+                while counter < 20000: 
+                    # some logic to simulate another thread accessing
+                    # x from a different thread, without any locking
+                    #xlock.acquire()
+                    x += 1
+                    #xlock.release()
+                    counter += 1
+                    main_thread_counter += 1
         except KeyboardInterrupt:
             print('\nDisconnecting messaging service')
     finally:
+        report_threads('main-before direct_receiver.terminate()')
         print('\nTerminating receiver')
         direct_receiver.terminate()
+        report_threads('main-before msg_service.disconnect()')
         print('\nDisconnecting Messaging Service')
         msg_service.disconnect()
+
+        report_globals() # to verify unprotected shared data access
+
+        report_threads('main-last line()')
