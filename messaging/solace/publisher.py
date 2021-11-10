@@ -72,31 +72,48 @@ if __name__ == '__main__':
         .with_property('application', 'samples') \
         .with_property('language', 'Python')
 
+    def _create_msg(idx, key):
+        outbound_msg = outbound_msg_builder \
+            .with_application_message_id(f'New {idx}') \
+            .build(f'{{"{key}":{idx}}}')
+        print(f'outbound message {outbound_msg}')
+        print(f'payload as bytes: {outbound_msg.get_payload_as_bytes()}')
+        print(f'payload as string: {outbound_msg.get_payload_as_string()}')
+        return outbound_msg
+
+    def _publish_a(idx, topic):
+        direct_publisher.publish(
+            destination=topic, 
+            message=_create_msg(idx, 'a')
+        )
+
+    def _publish_b(idx, topic):
+        if idx % 3 == 0:
+            direct_publisher.publish(
+                destination=topic,
+                message=_create_msg(idx, 'b')
+            )
+
+    def _publish_c(idx, topic):
+        if idx % 5 == 0:
+            direct_publisher.publish(
+                destination=topic,
+                message=_create_msg(idx, 'c')
+            )
+
     total_count = 0
     try:
-        count = 1
-        while True:
-            while count <= 50: # send 5 in a batch, continuously
-                topic = Topic.of('try-me')
-                outbound_msg = outbound_msg_builder \
-                    .with_application_message_id(f'NEW {count}') \
-                    .build(f'"{total_count}"') # just sending over incremental numbers
+        idx = 0
+        while idx <= 20: # send 5 in a batch, continuously
+            topic = Topic.of('try-me')
 
-                direct_publisher.publish(destination=topic, message=outbound_msg)
+            _publish_a(idx, topic)
+            _publish_b(idx, topic)
+            _publish_c(idx, topic)
 
-                print(f'published message on {topic}, {outbound_msg}')
-                count += 1
-                total_count += 1
-
-                if total_count % 500 == 0:
-                    print(f'sent {total_count} messages')
-
-                time.sleep(1)
-
-            #print('\n a new batch')
-            count = 1
-            time.sleep(0.1)
-            break # test to send only a few messages
+            idx += 1
+            total_count += 3
+            time.sleep(1)
 
     except KeyboardInterrupt:
         print('\nTerminating publisher')

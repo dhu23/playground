@@ -21,35 +21,49 @@ import json
 import threading
 from queue import Queue
 
-x = 0
-main_thread_counter = 0
-callback_counter = 0
-
-xlock = threading.Lock()
-
-
-def report_globals():
-    print('x={}'.format(x))
-    print('main-thread-counter:{}'.format(main_thread_counter))
-    print('callback-counter:{}'.format(callback_counter))
-    sum_counters = main_thread_counter + callback_counter
-    print(f'sum of counters:{sum_counters}')
-    print(f'good? {x == sum_counters}') 
-    print(f'small x? {x < sum_counters}, diff:{sum_counters-x}')
-
 
 def report_threads(fn):
-    print('-------------------- START ------------------')
-    print('reporting in {}'.format(fn))
-    print('# of threads: {}'.format(threading.active_count()))
-    print('current thread name: {}'.format(threading.current_thread().name))
-    print('-------------------- END --------------------')
+    #print('-------------------- START ------------------')
+    #print('reporting in {}'.format(fn))
+    #print('# of threads: {}'.format(threading.active_count()))
+    #print('current thread name: {}'.format(threading.current_thread().name))
+    #print('-------------------- END --------------------')
+    pass
 
 
 def get_snapshot(data_queue):
-    time.sleep(15)
+    time.sleep(9)
     print('putting snapshot 5 in queue')
-    data_queue.put(5)
+    data_queue.put({'a': 11, 'b': 9, 'c': 5})
+
+
+class DataStore(object):
+    def __init__(self):
+        self._data = {}
+        self._snapshot_received = False
+
+    @property
+    def snapshot_received(self):
+        return self._snapshot_received
+
+    def on_update(self, key, upd):
+        print('on-update')
+        if key not in self._data:
+            self._data[key] = upd
+            return True
+        else:
+            if self._data[key] < upd:
+                self._data[key] = upd
+                return True
+            else:
+                print(f'ignore upd:{upd}')
+        return False
+
+    def on_snapshot(self, snapshot):
+        print('on-snapshot------')
+        for k, u in snapshot.items():
+            self.on_update(k, u)
+        self._snapshot_received = True
 
 
 class Consumer(MessageHandler):
@@ -57,31 +71,25 @@ class Consumer(MessageHandler):
         self._data_queue = data_queue
 
     def on_message(self, message: InboundMessage):
-        payload_bytes = message.get_payload_as_bytes()
-        print(f'receive {payload_bytes}')
+        #print(f'receive message: {message}')
+        #print(f'receive bytes: {message.get_payload_as_bytes()}')
+        #print(f'receive string: {message.get_payload_as_string()}')
 
         # report_threads('consumer-on-message')
-
         # during my test, htop shows that there are 4 threads running.
         # and this call-back runs on 'Thread-2'
-        global x, xlock
-        #xlock.acquire()
-        x += 1
-        #xlock.release()
 
-        global callback_counter
-        callback_counter += 1
         try:
-            pyobj = json.loads(payload_bytes)
-            #print(pyobj)
-            #print(type(pyobj))
+            s = message.get_payload_as_string()
+            print('payload as string:', s, type(s))
+            pyobj = json.loads(s)
+            # print('pyobj=', pyobj, type(pyobj), len(pyobj))
+            # should have only one key
+            assert len(pyobj) == 1
+            key = list(pyobj.keys())[0]
+            self._data_queue.put((key, pyobj[key]))
         except:
-            #print("not a good json obj:", payload_bytes)
-            pass
-
-        # ignore the data that's sent in. Instead use the the counter
-        print(f'putting {callback_counter} in queue')
-        data_queue.put(callback_counter-1)
+            print("not a good json obj:", message)
 
 
 class ConsumerReconnectionHandler(ReconnectionListener):
@@ -104,14 +112,30 @@ class ConsumerServiceInterruptionHandler(ServiceInterruptionListener):
         print('\non_service_interruptted')
         print(e)
 
-
-def process_data(data_queue):
+output = []
+def process_data(data_queue, data_store):
+    global output
     while True:
+        print('popping.......')
         x = data_queue.get()
-        if x < 0:
-            break
+        print(f'poped {x}')
         print(x)
+        if isinstance(x, dict):
+            data_store.on_snapshot(x)
+            to_output = True
+        elif isinstance(x, tuple):
+            k, u = x
+            to_output = data_store.on_update(k, u)
+        elif isinstance(x, int) and x == -1:
+            break
+        else:
+            print('unknown data:%s, %s' % (x, type(x)))
+            to_output = False
         data_queue.task_done()
+
+        if data_store.snapshot_received:
+            print('adding to the output =====>')
+            output.append((x, to_output))
 
 
 if __name__ == '__main__':
@@ -148,32 +172,24 @@ if __name__ == '__main__':
     report_threads('main-after direct_receiver.start()')
 
     try:
-
         data_queue = Queue()
         direct_receiver.receive_async(Consumer(data_queue)) # just register the callback
         report_threads('main-after direct_receiver.receive_async()')
 
         snapshot_t = threading.Thread(target=get_snapshot, args=(data_queue,))
-        process_t = threading.Thread(target=process_data, args=(data_queue,))
+
+        data_store = DataStore()
+        print(f'received snapshot? {data_store.snapshot_received}')
+        process_t = threading.Thread(target=process_data, args=(data_queue, data_store))
 
         snapshot_t.start()
-        snapshot_t.join()
+        process_t.start()
 
+        snapshot_t.join()
 
         try:
             while True:
                 time.sleep(0.1)
-                counter = 0
-                if main_thread_counter >= 8000000: 
-                    continue
-                while counter < 20000: 
-                    # some logic to simulate another thread accessing
-                    # x from a different thread, without any locking
-                    #xlock.acquire()
-                    x += 1
-                    #xlock.release()
-                    counter += 1
-                    main_thread_counter += 1
         except KeyboardInterrupt:
             print('\nDisconnecting messaging service')
     finally:
@@ -183,7 +199,11 @@ if __name__ == '__main__':
         report_threads('main-before msg_service.disconnect()')
         print('\nDisconnecting Messaging Service')
         msg_service.disconnect()
-
-        report_globals() # to verify unprotected shared data access
-
+        print('msg svc disconnected')
         report_threads('main-last line()')
+
+        data_queue.join()
+        print('data-queue joined')
+        data_queue.put(-1)
+        process_t.join()
+        print(output)
