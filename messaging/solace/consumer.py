@@ -67,7 +67,7 @@ class DataStore(object):
 
 
 class Consumer(MessageHandler):
-    def __init__(self, data_queue):
+    def __init__(self, data_queue: Queue):
         self._data_queue = data_queue
 
     def on_message(self, message: InboundMessage):
@@ -127,6 +127,7 @@ def process_data(data_queue, data_store):
             k, u = x
             to_output = data_store.on_update(k, u)
         elif isinstance(x, int) and x == -1:
+            data_queue.task_done()  # otherwise q can't join
             break
         else:
             print('unknown data:%s, %s' % (x, type(x)))
@@ -185,7 +186,9 @@ if __name__ == '__main__':
         snapshot_t.start()
         process_t.start()
 
-        snapshot_t.join()
+        #process_data(data_queue, data_store)
+
+        snapshot_t.join() # this thread can technically be merged with main
 
         try:
             while True:
@@ -202,8 +205,12 @@ if __name__ == '__main__':
         print('msg svc disconnected')
         report_threads('main-last line()')
 
-        data_queue.join()
-        print('data-queue joined')
         data_queue.put(-1)
         process_t.join()
         print(output)
+        print('process-t joined')
+
+        print(data_queue.qsize())
+
+        data_queue.join()
+        print('data-queue joined')
