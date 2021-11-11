@@ -139,6 +139,39 @@ def process_data(data_queue, data_store):
             output.append((x, to_output))
 
 
+class SolaceSubscriber(object):
+    def __init__(self, broker_props, topics):
+
+        self.props = broker_props
+        self.msg_svc = MessagingService.builder().from_properties(self.props) \
+            .with_reconnection_retry_strategy(
+                RetryStrategy.forever_retry(retry_interval=5000) # every 5 sec
+            ).build()
+
+        self.msg_svc.add_reconnection_listener(ConsumerReconnectionHandler())
+        self.msg_svc.add_reconnection_attempt_listener(ConsumerReconnectingHandler())
+        self.msg_svc.add_service_interruption_listener(ConsumerServiceInterruptionHandler())
+
+        self.topic_sub = [TopicSubscription.of(t) for t in topics]
+        self.direct_receiver = self.msg_svc.create_direct_message_receiver_builder() \
+            .with_subscriptions(self.topic_sub).build()
+
+    def start(self, data_handler):
+        '''start receive async message for a given data handler'''
+        self.msg_svc.connect()
+        print('messaging service connected')
+        self.direct_receiver.start()
+        print(f'direct subscriber is running? {self.direct_receiver.is_running()}')
+        self.direct_receiver.receive_async(data_handler)
+
+    def stop(self):
+        print('Terminating receiver...')
+        self.direct_receiver.terminate()
+        print('Disconnecting messaging service...')
+        self.msg_svc.disconnect()
+        print('Messaging service disconnected.')
+
+
 if __name__ == '__main__':
     report_threads('main')
     broker_props = {
@@ -148,33 +181,36 @@ if __name__ == '__main__':
         'solace.messaging.authentication.scheme.basic.password': ''
     }
 
-    msg_service = MessagingService.builder().from_properties(broker_props) \
-        .with_reconnection_retry_strategy(RetryStrategy.parametrized_retry(20, 3)) \
-        .build()
+    sol_sub = SolaceSubscriber(broker_props, ['try-me'])
 
-    msg_service.connect()
-    print('message_service connected')
+    #msg_service = MessagingService.builder().from_properties(broker_props) \
+    #    .with_reconnection_retry_strategy(RetryStrategy.parametrized_retry(20, 3)) \
+    #    .build()
 
-    report_threads('main-after msg_service.connect()')
+    #msg_service.add_reconnection_listener(ConsumerReconnectionHandler())
+    #msg_service.add_reconnection_attempt_listener(ConsumerReconnectingHandler())
+    #msg_service.add_service_interruption_listener(ConsumerServiceInterruptionHandler())
 
-    msg_service.add_reconnection_listener(ConsumerReconnectionHandler())
-    msg_service.add_reconnection_attempt_listener(ConsumerReconnectingHandler())
-    msg_service.add_service_interruption_listener(ConsumerServiceInterruptionHandler())
+    #msg_service.connect()
+    #print('message_service connected')
 
-    report_threads('main-after adding listeners')
+    #report_threads('main-after msg_service.connect()')
 
-    topic_sub = [TopicSubscription.of(t) for t in ['try-me',]]
+    #report_threads('main-after adding listeners')
 
-    direct_receiver = msg_service.create_direct_message_receiver_builder() \
-        .with_subscriptions(topic_sub).build()
+    #topic_sub = [TopicSubscription.of(t) for t in ['try-me',]]
 
-    direct_receiver.start()
-    print(f'direct subscriber is running? {direct_receiver.is_running()}')
-    report_threads('main-after direct_receiver.start()')
+    #direct_receiver = msg_service.create_direct_message_receiver_builder() \
+    #    .with_subscriptions(topic_sub).build()
+
+    #direct_receiver.start()
+    #print(f'direct subscriber is running? {direct_receiver.is_running()}')
+    #report_threads('main-after direct_receiver.start()')
 
     try:
         data_queue = Queue()
-        direct_receiver.receive_async(Consumer(data_queue)) # just register the callback
+        sol_sub.start(Consumer(data_queue))
+        #direct_receiver.receive_async(Consumer(data_queue)) # just register the callback
         report_threads('main-after direct_receiver.receive_async()')
 
         snapshot_t = threading.Thread(target=get_snapshot, args=(data_queue,))
@@ -196,14 +232,15 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print('\nDisconnecting messaging service')
     finally:
-        report_threads('main-before direct_receiver.terminate()')
-        print('\nTerminating receiver')
-        direct_receiver.terminate()
-        report_threads('main-before msg_service.disconnect()')
-        print('\nDisconnecting Messaging Service')
-        msg_service.disconnect()
-        print('msg svc disconnected')
-        report_threads('main-last line()')
+        #report_threads('main-before direct_receiver.terminate()')
+        #print('\nTerminating receiver')
+        #direct_receiver.terminate()
+        #report_threads('main-before msg_service.disconnect()')
+        #print('\nDisconnecting Messaging Service')
+        #msg_service.disconnect()
+        #print('msg svc disconnected')
+        #report_threads('main-last line()')
+        sol_sub.stop()
 
         data_queue.put(-1)
         process_t.join()
