@@ -21,20 +21,86 @@ import json
 import threading
 from queue import Queue
 
+snapshot_lock = threading.Lock()
+cond = threading.Condition(snapshot_lock)
+need_for_snapshot = False
+keep_snapshot_thread = True
 
 def report_threads(fn):
     #print('-------------------- START ------------------')
     #print('reporting in {}'.format(fn))
     #print('# of threads: {}'.format(threading.active_count()))
     #print('current thread name: {}'.format(threading.current_thread().name))
+    #for i, t in enumerate(threading.enumerate()):
+    #    print(f'thread {i} - {t.name}')
     #print('-------------------- END --------------------')
     pass
 
 
-def get_snapshot(data_queue):
+def get_snapshot():
     time.sleep(9)
-    print('putting snapshot 5 in queue')
-    data_queue.put({'a': 11, 'b': 9, 'c': 5})
+    return {'a': 11, 'b': 9, 'c': 5}
+
+
+def fetch_snapshot(data_queue):
+    global need_for_snapshot
+    global keep_snapshot_thread
+
+    def _need_snapshot():
+        global need_for_snapshot
+        return need_for_snapshot
+
+    while True:
+        with cond:
+            cond.wait_for(_need_snapshot)
+            print(f'need snapshot thread? {keep_snapshot_thread}')
+            if not keep_snapshot_thread:
+                break
+            print('going for another loop...')
+            ss = get_snapshot()
+            data_queue.put(ss)
+            need_for_snapshot = False
+
+
+output = []
+def process_data(data_queue, data_store):
+    '''
+    dict -> snapshot data
+    tuple -> key/value pair update
+    -1 -> terminate
+    -2 -> get-snapshot
+    '''
+    global output
+    global need_for_snapshot
+    while True:
+        print('popping.......')
+        x = data_queue.get()
+        print(f'poped {x}')
+        print(x)
+        if isinstance(x, dict):
+            data_store.on_snapshot(x)
+            to_output = True
+        elif isinstance(x, tuple):
+            k, u = x
+            to_output = data_store.on_update(k, u)
+        elif isinstance(x, int):
+            if x == -1:
+                data_queue.task_done()  # otherwise q can't join
+                break
+            elif x == -2: # get snapshots
+                #print('need to get a snapshot, sleeping for a few seconds...')
+                #get_snapshot(data_queue) # it'll be nice to move blocker out
+                with cond:
+                    need_for_snapshot = True
+                    cond.notify()
+        else:
+            print('unknown data:%s, %s' % (x, type(x)))
+            to_output = False
+        data_queue.task_done()
+
+        if data_store.snapshot_received:
+            print('adding to the output =====>')
+            output.append((x, to_output))
 
 
 class DataStore(object):
@@ -68,6 +134,7 @@ class DataStore(object):
 
 class Consumer(MessageHandler):
     def __init__(self, data_queue: Queue):
+        super().__init__()
         self._data_queue = data_queue
 
     def on_message(self, message: InboundMessage):
@@ -75,7 +142,7 @@ class Consumer(MessageHandler):
         #print(f'receive bytes: {message.get_payload_as_bytes()}')
         #print(f'receive string: {message.get_payload_as_string()}')
 
-        # report_threads('consumer-on-message')
+        report_threads('consumer-on-message')
         # during my test, htop shows that there are 4 threads running.
         # and this call-back runs on 'Thread-2'
 
@@ -93,9 +160,14 @@ class Consumer(MessageHandler):
 
 
 class ConsumerReconnectionHandler(ReconnectionListener):
+    def __init__(self, data_queue: Queue):
+        super().__init__()
+        self.data_queue = data_queue
+
     def on_reconnected(self, e: ServiceEvent):
         report_threads('reconnection-handler-on-reconnected')
         print('\non_reconnected')
+        self.data_queue.put(-2)
         print(e)
 
 
@@ -112,35 +184,9 @@ class ConsumerServiceInterruptionHandler(ServiceInterruptionListener):
         print('\non_service_interruptted')
         print(e)
 
-output = []
-def process_data(data_queue, data_store):
-    global output
-    while True:
-        print('popping.......')
-        x = data_queue.get()
-        print(f'poped {x}')
-        print(x)
-        if isinstance(x, dict):
-            data_store.on_snapshot(x)
-            to_output = True
-        elif isinstance(x, tuple):
-            k, u = x
-            to_output = data_store.on_update(k, u)
-        elif isinstance(x, int) and x == -1:
-            data_queue.task_done()  # otherwise q can't join
-            break
-        else:
-            print('unknown data:%s, %s' % (x, type(x)))
-            to_output = False
-        data_queue.task_done()
-
-        if data_store.snapshot_received:
-            print('adding to the output =====>')
-            output.append((x, to_output))
-
 
 class SolaceSubscriber(object):
-    def __init__(self, broker_props, topics):
+    def __init__(self, broker_props, data_queue):
 
         self.props = broker_props
         self.msg_svc = MessagingService.builder().from_properties(self.props) \
@@ -148,18 +194,17 @@ class SolaceSubscriber(object):
                 RetryStrategy.forever_retry(retry_interval=5000) # every 5 sec
             ).build()
 
-        self.msg_svc.add_reconnection_listener(ConsumerReconnectionHandler())
+        self.msg_svc.add_reconnection_listener(ConsumerReconnectionHandler(data_queue))
         self.msg_svc.add_reconnection_attempt_listener(ConsumerReconnectingHandler())
         self.msg_svc.add_service_interruption_listener(ConsumerServiceInterruptionHandler())
 
-        self.topic_sub = [TopicSubscription.of(t) for t in topics]
-        self.direct_receiver = self.msg_svc.create_direct_message_receiver_builder() \
-            .with_subscriptions(self.topic_sub).build()
-
-    def start(self, data_handler):
+    def start(self, topics, data_handler):
         '''start receive async message for a given data handler'''
         self.msg_svc.connect()
         print('messaging service connected')
+        _topic_sub = [TopicSubscription.of(t) for t in topics]
+        self.direct_receiver = self.msg_svc.create_direct_message_receiver_builder() \
+            .with_subscriptions(_topic_sub).build()
         self.direct_receiver.start()
         print(f'direct subscriber is running? {self.direct_receiver.is_running()}')
         self.direct_receiver.receive_async(data_handler)
@@ -181,50 +226,24 @@ if __name__ == '__main__':
         'solace.messaging.authentication.scheme.basic.password': ''
     }
 
-    sol_sub = SolaceSubscriber(broker_props, ['try-me'])
-
-    #msg_service = MessagingService.builder().from_properties(broker_props) \
-    #    .with_reconnection_retry_strategy(RetryStrategy.parametrized_retry(20, 3)) \
-    #    .build()
-
-    #msg_service.add_reconnection_listener(ConsumerReconnectionHandler())
-    #msg_service.add_reconnection_attempt_listener(ConsumerReconnectingHandler())
-    #msg_service.add_service_interruption_listener(ConsumerServiceInterruptionHandler())
-
-    #msg_service.connect()
-    #print('message_service connected')
-
-    #report_threads('main-after msg_service.connect()')
-
-    #report_threads('main-after adding listeners')
-
-    #topic_sub = [TopicSubscription.of(t) for t in ['try-me',]]
-
-    #direct_receiver = msg_service.create_direct_message_receiver_builder() \
-    #    .with_subscriptions(topic_sub).build()
-
-    #direct_receiver.start()
-    #print(f'direct subscriber is running? {direct_receiver.is_running()}')
-    #report_threads('main-after direct_receiver.start()')
+    data_queue = Queue()
+    sol_sub = SolaceSubscriber(broker_props, data_queue)
 
     try:
-        data_queue = Queue()
-        sol_sub.start(Consumer(data_queue))
-        #direct_receiver.receive_async(Consumer(data_queue)) # just register the callback
+        sol_sub.start(['try-me'], Consumer(data_queue))
         report_threads('main-after direct_receiver.receive_async()')
 
-        snapshot_t = threading.Thread(target=get_snapshot, args=(data_queue,))
+        #snapshot_t = threading.Thread(target=get_snapshot, args=(data_queue,))
+        snapshot_t = threading.Thread(target=fetch_snapshot, args=(data_queue,))
 
         data_store = DataStore()
-        print(f'received snapshot? {data_store.snapshot_received}')
+        # print(f'received snapshot? {data_store.snapshot_received}')
         process_t = threading.Thread(target=process_data, args=(data_queue, data_store))
 
         snapshot_t.start()
         process_t.start()
+        data_queue.put(-2)
 
-        #process_data(data_queue, data_store)
-
-        snapshot_t.join() # this thread can technically be merged with main
 
         try:
             while True:
@@ -232,22 +251,22 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print('\nDisconnecting messaging service')
     finally:
-        #report_threads('main-before direct_receiver.terminate()')
-        #print('\nTerminating receiver')
-        #direct_receiver.terminate()
-        #report_threads('main-before msg_service.disconnect()')
-        #print('\nDisconnecting Messaging Service')
-        #msg_service.disconnect()
-        #print('msg svc disconnected')
-        #report_threads('main-last line()')
         sol_sub.stop()
 
-        data_queue.put(-1)
-        process_t.join()
+        # final processing of the queue messaging and clean-up
+
+        keep_snapshot_thread = False
+        with cond:
+            need_for_snapshot = True
+            cond.notify()
+        snapshot_t.join() # this thread can technically be merged with main
+
         print(output)
         print('process-t joined')
 
         print(data_queue.qsize())
 
+        data_queue.put(-1)
+        process_t.join()
         data_queue.join()
         print('data-queue joined')
