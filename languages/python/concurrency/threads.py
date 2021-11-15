@@ -1,4 +1,5 @@
 import threading
+import queue
 import os
 import time
 
@@ -76,5 +77,44 @@ def test_threaded_sum():
     print('x={}'.format(x))
 
 
+def do_work(evt, q):
+    while not evt.is_set():
+        try:
+            print('trying to get an item from the queue')
+            job = q.get(timeout=5)
+        except:
+            print('get exception. continue...')
+            continue
+        if job == 1:
+            print('processing job == 1')
+            q.task_done()
+        elif job == 2:
+            print('processing job == 2')
+            q.task_done()
+        else:
+            print(f'bad job {job}')
+            q.task_done()
+
+
+def test_event():
+    evt = threading.Event()
+    que = queue.Queue()
+    work_thread = threading.Thread(target=do_work, args=(evt, que))
+    work_thread.start()
+
+    while True:
+        try:
+            time.sleep(2)
+            que.put(1)
+        except KeyboardInterrupt:
+            print('user terminating...')
+            break
+
+    evt.set()
+    work_thread.join()
+    que.join()
+
+
 if __name__ == '__main__':
-    test_threaded_sum()
+    #test_threaded_sum()
+    test_event()
