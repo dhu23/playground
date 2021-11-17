@@ -157,6 +157,24 @@ def fetch_snapshot(evt, q, cond, flag):
             flag[0] = False
 
 
+def fetch_snapshot2(evt, q, evt2): #evt2 == True means snapshot is needed
+    while not evt.is_set():
+        print(f'{datetime.now()} fetcher2: start snapshot evt block')
+        while not evt2.wait(10): # looping while evt2 is not set
+            print(f'{datetime.now()} fetcher2: snapshot evt timed-out')
+            continue
+
+        if evt.is_set():
+            print(f'{datetime.now()} fetcher2: ending fetcher2')
+            break
+
+        # we are here because evt2 is set to true
+        ss = get_snapshot_long()
+        q.put(ss)
+        evt2.clear()
+
+
+
 def test_snapshot_with_event():
     stop_worker_thread_evt = threading.Event()
 
@@ -165,6 +183,8 @@ def test_snapshot_with_event():
     cond = threading.Condition(flag_lock)
     run_snapshot = [False] # just so I can modify in other threads
 
+    snapshot_evt = threading.Event()
+
     q = queue.Queue()
 
     # -------------------------------------------------------
@@ -172,9 +192,13 @@ def test_snapshot_with_event():
         target=process_job,
         args=(stop_worker_thread_evt, q, cond))
 
+    #snapshot_thread = threading.Thread(
+    #    target=fetch_snapshot,
+    #    args=(stop_snapshot_thread_evt, q, cond, run_snapshot))
+
     snapshot_thread = threading.Thread(
-        target=fetch_snapshot,
-        args=(stop_snapshot_thread_evt, q, cond, run_snapshot))
+        target=fetch_snapshot2,
+        args=(stop_snapshot_thread_evt, q, snapshot_evt))
 
     work_thread.start()
     snapshot_thread.start()
@@ -186,19 +210,21 @@ def test_snapshot_with_event():
         try:
             time.sleep(5)
             q.put(1)
-            count += 1
             if count % 5 == 0:
                 print(f'{datetime.now()} main: trying to notify snapshot thread...')
-                with cond:
-                    run_snapshot[0] = True
-                    cond.notify()
+                #with cond:
+                #    run_snapshot[0] = True
+                #    cond.notify()
+                snapshot_evt.set()
                 print(f'{datetime.now()} main: snapshot notified')
+            count += 1
         except KeyboardInterrupt:
             print(f'{datetime.now()} main: user terminating...')
             break
 
     # -------------------------------------------------------
     stop_snapshot_thread_evt.set()
+    snapshot_evt.set()
     print(f'{datetime.now()} main: marked events set')
 
     snapshot_thread.join()
@@ -216,7 +242,58 @@ def test_snapshot_with_event():
     print(f'{datetime.now()} main: q joined. DONE')
 
 
+# object-oriented implementation for the previous solution
+class Worker(object):
+    def __init__(self):
+        self._q = queue.Queue()
+        self._evt = threading.Event()
+        #passing self works too for a unbound class method
+        #self._t = threading.Thread(target=Worker.process, args=(self, 2))
+        self._t = threading.Thread(target=self.process)
+
+    def start(self):
+        self._t.start()
+
+    def process(self, pop_time_out):
+        while not self._evt.is_set():
+            try:
+                print(f'{datetime.now()} worker.process: popping a queue')
+                job = self._q.get(timeout=pop_time_out)
+            except:
+                print(f'{datetime.now()} worker.process: q timed-out. continue...')
+                continue
+            print(f'print job {job}')
+            self._q.task_done()
+
+    def stop(self):
+        print(f'{datetime.now()} worker.stop: stopping...')
+        self._evt.set()
+        print(f'{datetime.now()} worker.stop: event set')
+        self._t.join()
+        print(f'{datetime.now()} worker.stop: thread joined')
+
+    def add_job(self, job):
+        self._q.put(job)
+
+
+def test_object_thread():
+    worker = Worker()
+
+    worker.start()
+    count = 0
+    while True:
+        try:
+            time.sleep(3)
+            worker.add_job(count)
+            count += 1
+        except KeyboardInterrupt:
+            break
+
+    worker.stop()
+
+
 if __name__ == '__main__':
     #test_threaded_sum()
     #test_event()
-    test_snapshot_with_event()
+    #test_snapshot_with_event()
+    test_object_thread()
