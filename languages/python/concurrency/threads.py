@@ -244,12 +244,12 @@ def test_snapshot_with_event():
 
 # object-oriented implementation for the previous solution
 class Worker(object):
-    def __init__(self):
-        self._q = queue.Queue()
+    def __init__(self, data_queue):
+        self._q = data_queue
         self._evt = threading.Event()
         #passing self works too for a unbound class method
         #self._t = threading.Thread(target=Worker.process, args=(self, 2))
-        self._t = threading.Thread(target=self.process)
+        self._t = threading.Thread(target=self.process, args=(2,))
 
     def start(self):
         self._t.start()
@@ -277,7 +277,8 @@ class Worker(object):
 
 
 def test_object_thread():
-    worker = Worker()
+    data_queue = queue.Queue()
+    worker = Worker(data_queue)
 
     worker.start()
     count = 0
@@ -292,8 +293,117 @@ def test_object_thread():
     worker.stop()
 
 
+class SnapshotController(object):
+    def __init__(self, data_queue):
+        self._stop_thread = threading.Event()
+        self._flag_lock = threading.Lock()
+        self._flag = False
+        self._cond = threading.Condition()
+        self._snapshot_failure_wait = threading.Event()
+
+        self._q = data_queue
+        self._thread = threading.Thread(target=self._fetch)
+
+    def start(self):
+        self._thread.start()
+
+    def stop(self):
+        self._snapshot_failure_wait.set()
+        self._stop_thread.set()
+        if self._thread.is_alive():
+            self._thread.join()
+
+    def request(self):
+        with self._cond:
+            if not self._flag:
+                self._flag = True
+                self._cond.notify()
+                return True # indicates the request is acknowledged
+            else:
+                return False # indicates the request is ignored
+
+    def _fetch0(self):
+        while not self._stop_thread.is_set():
+            # this basically keeps the lock forever if exceptions keep happening
+            with self._cond: 
+                if not self._cond.wait_for(lambda: self._flag, timeout=5):
+                    print(f'{datetime.now()} ctrl._fetch0 wait_for timedout')
+                    continue
+                print(f'{datetime.now()} ctrl._fetch0 getting snapshot')
+
+                while True:
+                    try:
+                        if True:
+                            raise RuntimeError('test-error')
+                        self._q.put(0)
+                        self._flag = False
+                    except:
+                        print(f'{datetime.now()} ctrl._fetch0 exception')
+
+                    print(f'{datetime.now()} ctrl._fetch0 waiting for 10 sec')
+                    if self._snapshot_failure_wait.wait(timeout=10):
+                        print(f'{datetime.now()} ctrl._fetch0 not more 10 sec wait')
+                        break
+                    else:
+                        print(f'{datetime.now()} ctrl._fetch0 another attempt')
+
+    def _fetch(self):
+        while not self._stop_thread.is_set():
+            print(f'{datetime.now()} starting fetch while loop')
+            with self._cond:
+                if not self._cond.wait_for(lambda: self._flag, timeout=15):
+                    print(f'{datetime.now()} ctrl._fetch wait_for timedout')
+                    continue
+                print(f'{datetime.now()} ctrl._fetch getting snapshot')
+
+                try:
+                    #if True:
+                    #    raise RuntimeError('test-error')
+                    self._q.put(0)
+                    self._flag = False
+                except:
+                    print(f'{datetime.now()} ctrl._fetch exception')
+
+            # once a while release the lock and block. Without this part, 
+            # when a snapshot is need but not successfully retrieved, 
+            # the containing while loop can go crazy!
+            print(f'{datetime.now()} ctrl._fetch waiting for 10 sec')
+            if self._snapshot_failure_wait.wait(timeout=10):
+                print(f'{datetime.now()} ctrl._fetch not more 10 sec wait')
+                break
+            else:
+                print(f'{datetime.now()} ctrl._fetch another attempt')
+
+
+def test_snapshot_contention():
+    data_queue = queue.Queue()
+    worker = Worker(data_queue)
+    ctrl = SnapshotController(data_queue)
+    worker.start()
+    ctrl.start()
+
+    ctrl.request()
+
+    count = 0
+    while True:
+        try:
+            time.sleep(2)
+            print(f'{datetime.now()} qsize={data_queue.qsize()}')
+            if count % 5 == 0:
+                print(f'{datetime.now()} main requesting count={count} *****')
+                ctrl.request() # request would get blocked forever if _fetch0 is used
+            count += 1
+        except:
+            print(f'{datetime.now()} terminating')
+            break
+    print(f'count final {count}')
+    ctrl.stop()
+    worker.stop()
+
+
 if __name__ == '__main__':
     #test_threaded_sum()
     #test_event()
     #test_snapshot_with_event()
-    test_object_thread()
+    #test_object_thread()
+    test_snapshot_contention()
