@@ -351,7 +351,7 @@ class SnapshotController(object):
         while not self._stop_thread.is_set():
             print(f'{datetime.now()} starting fetch while loop')
             with self._cond:
-                if not self._cond.wait_for(lambda: self._flag, timeout=15):
+                if not self._cond.wait_for(lambda: self._flag, timeout=5):
                     print(f'{datetime.now()} ctrl._fetch wait_for timedout')
                     continue
                 print(f'{datetime.now()} ctrl._fetch getting snapshot')
@@ -367,9 +367,9 @@ class SnapshotController(object):
             # once a while release the lock and block. Without this part, 
             # when a snapshot is need but not successfully retrieved, 
             # the containing while loop can go crazy!
-            print(f'{datetime.now()} ctrl._fetch waiting for 10 sec')
-            if self._snapshot_failure_wait.wait(timeout=10):
-                print(f'{datetime.now()} ctrl._fetch not more 10 sec wait')
+            print(f'{datetime.now()} ctrl._fetch waiting for 15 sec')
+            if self._snapshot_failure_wait.wait(timeout=15):
+                print(f'{datetime.now()} ctrl._fetch not more 15 sec wait')
                 break
             else:
                 print(f'{datetime.now()} ctrl._fetch another attempt')
@@ -382,7 +382,7 @@ def test_snapshot_contention():
     worker.start()
     ctrl.start()
 
-    ctrl.request()
+    #ctrl.request()
 
     count = 0
     while True:
@@ -391,7 +391,7 @@ def test_snapshot_contention():
             print(f'{datetime.now()} qsize={data_queue.qsize()}')
             if count % 5 == 0:
                 print(f'{datetime.now()} main requesting count={count} *****')
-                ctrl.request() # request would get blocked forever if _fetch0 is used
+                #ctrl.request() # request would get blocked forever if _fetch0 is used
             count += 1
         except:
             print(f'{datetime.now()} terminating')
