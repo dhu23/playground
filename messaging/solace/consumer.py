@@ -27,13 +27,13 @@ need_for_snapshot = False
 keep_snapshot_thread = True
 
 def report_threads(fn):
-    #print('-------------------- START ------------------')
-    #print('reporting in {}'.format(fn))
-    #print('# of threads: {}'.format(threading.active_count()))
-    #print('current thread name: {}'.format(threading.current_thread().name))
+    print('-------------------- START ------------------')
+    print('reporting in {}'.format(fn))
+    print('# of threads: {}'.format(threading.active_count()))
+    print('current thread name: {}'.format(threading.current_thread().name))
     #for i, t in enumerate(threading.enumerate()):
     #    print(f'thread {i} - {t.name}')
-    #print('-------------------- END --------------------')
+    print('-------------------- END --------------------')
     pass
 
 

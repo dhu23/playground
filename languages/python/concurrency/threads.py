@@ -1,6 +1,7 @@
 import threading
 import queue
 import os
+import sys
 import time
 from datetime import datetime
 
@@ -401,9 +402,57 @@ def test_snapshot_contention():
     worker.stop()
 
 
+def slow_func():
+    for _ in range(20):
+        time.sleep(1)
+
+
+def test_exit_before_join():
+    t = threading.Thread(target=func)
+    t.start()
+    print('exiting...')
+    sys.exit(1)
+
+
+def func_with_except():
+    time.sleep(5)
+    raise RuntimeError('just-to-make-the-thread-fail')
+
+
+def func_infinite(evt):
+    while not evt.is_set():
+        time.sleep(2)
+        print('in func infinite')
+
+
+def test_thread_exception():
+    t = threading.Thread(target=func_with_except)
+    evt = threading.Event()
+    t2 = threading.Thread(target=func_infinite, args=(evt,))
+    print(f'is t alive before start? {t.is_alive()}')
+    print(f'is t2 alive before start? {t2.is_alive()}')
+    t.start()
+    t2.start()
+    print(f'is t alive before exception? {t.is_alive()}')
+    time.sleep(10)
+    print(f'is t alive after exception? {t.is_alive()}')
+    #t.join() # having it or not doesn't seem to matter. 
+    #At least the program doesn't crash like in C++
+    print(f'is t2 alive before evt set? {t2.is_alive()}')
+    #evt.set()
+    #print(f'is t2 alive after evt set? {t2.is_alive()}')
+    # you don't have to join t2 and the program doesn't block
+    print('joining t2')
+    t2.join(3)
+    print('t2 joined')
+    print(f'is t2 still alive after a timed-out join? {t2.is_alive()}')
+
+
 if __name__ == '__main__':
     #test_threaded_sum()
     #test_event()
     #test_snapshot_with_event()
     #test_object_thread()
-    test_snapshot_contention()
+    #test_snapshot_contention()
+    #test_exit_before_join()
+    test_thread_exception()
