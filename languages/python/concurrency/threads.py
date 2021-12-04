@@ -311,6 +311,9 @@ class SnapshotController(object):
     def stop(self):
         self._snapshot_failure_wait.set()
         self._stop_thread.set()
+        # use notfiy if wait_for is called without a timeout in _fetch
+        with self._cond: 
+            self._cond.notify()
         if self._thread.is_alive():
             self._thread.join()
 
@@ -352,8 +355,13 @@ class SnapshotController(object):
         while not self._stop_thread.is_set():
             print(f'{datetime.now()} starting fetch while loop')
             with self._cond:
-                if not self._cond.wait_for(lambda: self._flag, timeout=5):
-                    print(f'{datetime.now()} ctrl._fetch wait_for timedout')
+                if not self._cond.wait_for(
+                    #lambda: self._flag,
+                    # using stop_thread.is_set() for more responsive program at stop
+                    lambda: self._flag or self._stop_thread.is_set(),
+                    #timeout=5
+                ):
+                    print(f'{datetime.now()} ctrl._fetch wait_for timedout ======')
                     continue
                 print(f'{datetime.now()} ctrl._fetch getting snapshot')
 
@@ -362,6 +370,7 @@ class SnapshotController(object):
                     #    raise RuntimeError('test-error')
                     self._q.put(0)
                     self._flag = False
+                    continue
                 except:
                     print(f'{datetime.now()} ctrl._fetch exception')
 
@@ -392,7 +401,7 @@ def test_snapshot_contention():
             print(f'{datetime.now()} qsize={data_queue.qsize()}')
             if count % 5 == 0:
                 print(f'{datetime.now()} main requesting count={count} *****')
-                #ctrl.request() # request would get blocked forever if _fetch0 is used
+                ctrl.request() # request would get blocked forever if _fetch0 is used
             count += 1
         except:
             print(f'{datetime.now()} terminating')
@@ -453,6 +462,6 @@ if __name__ == '__main__':
     #test_event()
     #test_snapshot_with_event()
     #test_object_thread()
-    #test_snapshot_contention()
+    test_snapshot_contention()
     #test_exit_before_join()
-    test_thread_exception()
+    #test_thread_exception()
