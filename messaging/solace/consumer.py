@@ -147,6 +147,17 @@ class Consumer(MessageHandler):
         # and this call-back runs on 'Thread-2'
 
         try:
+            print(repr(message))
+            print(str(message))
+            print(dir(message))
+            print('get-destination-name', message.get_destination_name())
+            print('get-application-message-id', message.get_application_message_id())
+            print('get-sender-id', message.get_sender_id())
+            print('get-sender-timestamp', message.get_sender_timestamp())
+            print('get-time-stamp', message.get_time_stamp())
+            print('message-id', message.message_id)
+            print('get-properties', message.get_properties())
+
             s = message.get_payload_as_string()
             print('payload as string:', s, type(s))
             pyobj = json.loads(s)

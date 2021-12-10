@@ -6,6 +6,7 @@ Position = namedtuple('Position', 'x y')
 
 def _run(x, **kwargs):
     try:
+        print('------------------------')
         run(x, **kwargs)
     except Exception as e:
         print('encountered error:%s' % str(e))
@@ -14,7 +15,7 @@ def _run(x, **kwargs):
 
 @functools.singledispatch
 def run(x, **kwargs):
-    raise RuntimeError('not impl')
+    raise RuntimeError(f'not impl for {type(x)}')
 
 @run.register(int)
 def _(x):
@@ -42,7 +43,11 @@ def _(x):
 def nothing(x):
     print('is NONE')
 
-run.register(type(None), nothing)
+#NOTE Both ways work for None
+#run.register(type(None), nothing) 
+@run.register(type(None))
+def _(x):
+    print('is None')
 
 @run.register(dict)
 def _(x):
