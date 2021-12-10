@@ -1,3 +1,5 @@
+import json
+from datetime import datetime
 from confluent_kafka import (
     Consumer,
     KafkaError,
@@ -27,6 +29,9 @@ if __name__ == '__main__':
                 continue # timed-out
             elif not msg.error():
                 print(f'received message: {msg.value()}')
+                data = json.loads(msg.value())
+                data['ts'] = datetime.strptime(data['ts'], '%Y-%m-%d %H:%M:%S.%f')
+                print(f'recieved message in python format: {data}')
             elif msg.error().code() == KafkaError._PARTITION_EOF:
                 pritn(f'End of partition: {msg.topic()}/{msg.partition()}')
             else:

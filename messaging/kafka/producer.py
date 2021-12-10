@@ -1,3 +1,5 @@
+import json
+from datetime import datetime
 from confluent_kafka import Producer
 
 
@@ -15,7 +17,15 @@ def produce_with_callback(p):
 
     try:
         for val in range(1, 200):
-            p.produce('first-topic', f'myvalue {val}', on_delivery=_acked)
+            msg = {
+                'value': f'myvalue {val}',
+                'ts': datetime.now(),
+            }
+            p.produce(
+                'first-topic',
+                value=json.dumps(msg, default=str),
+                on_delivery=_acked
+            )
             p.poll(0.5) # time-out in seconds
 
     except KeyboardInterrupt:
