@@ -1,4 +1,3 @@
 fn main() {
-    // ! means it's a macro.
     println!("Hello, world!");
 }
