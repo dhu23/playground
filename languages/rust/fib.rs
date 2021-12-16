@@ -7,13 +7,13 @@
 fn main() {
     let fib2 = fib_slow(2);
     let fib10 = fib_slow(10);
-    let fib15 = fib_slow(15);
-    println!("fib(2) = {}, fib(10) = {}, fib(15) = {}", fib2, fib10, fib15);
+    let fib20 = fib_slow(20);
+    println!("fib(2) = {}, fib(10) = {}, fib(20) = {}", fib2, fib10, fib20);
     
     let fib2 = fib_fast(2);
     let fib10 = fib_fast(10);
-    let fib15 = fib_fast(15);
-    println!("fib(2) = {}, fib(10) = {}, fib(15) = {}", fib2, fib10, fib15);
+    let fib20 = fib_fast(20);
+    println!("fib(2) = {}, fib(10) = {}, fib(20) = {}", fib2, fib10, fib20);
 }
 
 fn fib_slow(n: u32) -> u32 {
