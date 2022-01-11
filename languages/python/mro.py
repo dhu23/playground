@@ -2,6 +2,7 @@ class Base(object):
     def __init__(self):
         print('running Base.__init__')
         super(Base, self).__init__()
+        print('Base.__init__ done')
 
 
 class First(Base):
@@ -31,14 +32,15 @@ class Fourth(Second, Third):
         super(Fourth, self).__init__()
         print('Fourth.__init__ done')
 
-        print(super(Fourth, self))
-        print(super(Fourth, self).__init__)
+        #print(super(Fourth, self))
+        #print(super(Fourth, self).__init__)
 
 
 class Fifth(object):
     def __init__(self):
         print('running Fifth.__init__')
         super(Fifth, self).__init__()
+        print('Fifth.__init__ done')
 
 
 class Sixth(Fourth, Fifth):
