@@ -6,7 +6,7 @@ import random
 import re
 import sys
 
-
+# This is BAM interview question
 
 #
 # Complete the 'drawdowncalc' function below.
@@ -21,10 +21,10 @@ def drawdowncalc(rets, N):
     # Write your code here
     #print(rets)
     #print(N)
-    
+
     #vals = list(map(lambda x : x+1, rets))
     #print(vals)
-    
+
     drawdowns = [] # a list of drawdowns
     current_drawdown = 1.0
     current_drawdown_min = current_drawdown
@@ -32,11 +32,11 @@ def drawdowncalc(rets, N):
     # current_drawdown_min tracks the mininum drawdown that
     # happened within this run (before the reset of current_drawdown)
     # this is before subtracting it by 1.0
-    
+
     for idx, x in enumerate(rets):
         #print("at idx=", idx, ",val=", x, ",dd=", current_drawdown)
         new_drawdown = current_drawdown*(1.0+x)
-        
+
         if new_drawdown >= 1.0:
             # back to profit
             if current_drawdown < 1.0:
@@ -51,14 +51,14 @@ def drawdowncalc(rets, N):
                 #print('new dd min:', current_drawdown_min)
             current_drawdown = new_drawdown
             #print('new drawdown:', current_drawdown)
-        
+
     # to count for the new update due to the last one
     if current_drawdown_min < 1.0:
         #print('adding dd at the end:', current_drawdown_min)
         drawdowns.append(current_drawdown_min-1.0)
-            
+
     #print(drawdowns)
-    
+
     nidx = N-1
     if nidx >= len(drawdowns):
         return len(drawdowns)
@@ -67,7 +67,7 @@ def drawdowncalc(rets, N):
         drawdowns.sort()
         #print(drawdowns)
         return round(drawdowns[nidx], 4)
-        
+
 # I realized that I need to merge drawdowns in the algorithm, basically
 # using the idea of my linear algorithm, by the time of 1/15, using the 
 # example plot, there should be two smaller drawdowns from 1/13 to 1/14 and
@@ -81,42 +81,43 @@ def drawdowncalc(rets, N):
 
 import numpy as np
 def draw_down(rets, n):
-    performance = np.cumprod(np.array([1.0] + rets)+1.0)
-    
+    performance = np.cumprod(np.array([1.0] + rets)+1.0) # should be [0.0]
+
     dds = [] # indices for beginning and ending of a drawdown
     # as of the timepoint
-    
-    def _append_dds(start, end):
+
+    def _append_dds(start_idx, end_idx):
         if dds:
             # find the last dd
             last_start, last_end = dds[-1]
             if (
                 performance[last_start] > performance[start_idx] and
-                performance[last_end] > performance[end_idx]):
+                performance[last_end] > performance[end_idx]
+            ):
                 dds.pop()
                 dds.append((last_start, end_idx))
-                return    
+                return
         dds.append((start_idx, end_idx))
-            
+
     start_idx, end_idx = 0, 0
     for idx, x in enumerate(rets, start=1):
         if x < 0:
             end_idx = idx
         if x >= 0:
             if start_idx < end_idx:
-                _append_dds(start_idx, end_idx)    
-                    
+                _append_dds(start_idx, end_idx)
+
             start_idx, end_idx = idx, idx
-    
+
     if start_idx < end_idx:
         _append_dds(start_idx, end_idx)
-            
+
     dd_vals = []
     for _start, _end in dds:
         dd_vals.append(performance[_end]/performance[_start]-1.0)
-        
+
     print(dd_vals)
-    
+
     nidx = N-1
     if nidx >= len(dd_vals):
         return len(dd_vals)
