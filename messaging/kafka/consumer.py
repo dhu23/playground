@@ -18,7 +18,7 @@ if __name__ == '__main__':
     }
 
     c = Consumer(settings)
-    c.subscribe(['first-topic'])
+    c.subscribe(['strange-topic'])
     # don't call it again with a second topic. The 2nd subscribe overwrites
     # the first specification. 
 
