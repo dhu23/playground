@@ -50,5 +50,16 @@ class Sixth(Fourth, Fifth):
         print('Sixth.__init__ done')
 
 
+class A(object):
+    def __init__(self, a):
+        self.a = a
+
+class B(A):
+    def __init__(self, b, **kwargs):
+        super(B, self).__init__(**kwargs)
+        self.b = b
+
+
 if __name__ == '__main__':
     sixth = Sixth()
+    bobj = B(a=1, b=2)
