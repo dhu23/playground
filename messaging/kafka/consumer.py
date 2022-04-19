@@ -18,7 +18,7 @@ if __name__ == '__main__':
     }
 
     c = Consumer(settings)
-    c.subscribe(['strange-topic'])
+    c.subscribe(['topic-with-3-part'])
     # don't call it again with a second topic. The 2nd subscribe overwrites
     # the first specification. 
 
@@ -31,7 +31,9 @@ if __name__ == '__main__':
                 print(f'received message: {msg.value()}')
                 data = json.loads(msg.value())
                 data['ts'] = datetime.strptime(data['ts'], '%Y-%m-%d %H:%M:%S.%f')
-                print(f'recieved message in python format: {data}')
+                print(
+                    f'recieved data => key: {msg.key()} offset: {msg.offset()} '
+                    f'part: {msg.partition()} payload: omitted')
             elif msg.error().code() == KafkaError._PARTITION_EOF:
                 pritn(f'End of partition: {msg.topic()}/{msg.partition()}')
             else:
