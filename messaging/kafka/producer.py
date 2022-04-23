@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from confluent_kafka import Producer
+from confluent_kafka import Producer, KafkaException
 from confluent_kafka.admin import AdminClient, NewTopic
 import sys
 
@@ -40,13 +40,16 @@ def produce_with_callback(p, topic):
                 },
             }
             #print(f'{datetime.now()} before produce()')
-            p.produce(
-                topic,
-                value=json.dumps(msg, default=str),
-                key=str(val),
-                partition=val%3,
-                on_delivery=_acked,
-            )
+            try:
+                p.produce(
+                    topic,
+                    value=json.dumps(msg, default=str),
+                    key=str(val),
+                    partition=val,
+                    on_delivery=_acked,
+                )
+            except KafkaException as ke:
+                print(f'kafka error: {str(ke)}')
             #print(f'{datetime.now()} after produce(), before poll()')
             p.poll(0.5) # time-out in seconds
             #print(f'{datetime.now()} after poll()')
@@ -57,6 +60,7 @@ def produce_with_callback(p, topic):
 
     except KeyboardInterrupt:
         pass
+
 
 
 if __name__ == '__main__':
