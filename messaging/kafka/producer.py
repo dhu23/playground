@@ -3,6 +3,7 @@ from datetime import datetime
 from confluent_kafka import Producer, KafkaException
 from confluent_kafka.admin import AdminClient, NewTopic
 import sys
+from threading import current_thread
 
 def simple_produce(p, topic):
     p.produce(topic, key=None, value='test message') # non-blocking
@@ -11,16 +12,17 @@ def simple_produce(p, topic):
 def produce_with_callback(p, topic):
 
     def _acked(err, msg):
+        #print(f'act running in thread:{current_thread().name}')
         if err is not None:
             print(f'failed to deliver message: {msg.value()}, {err.str()}')
         else:
             #print(f'message produced: {msg.value()}')
-            pass
+            print(f'ack topic:{msg.topic()}, partition:{msg.partition()}, offset:{msg.offset()}')
 
     try:
         print(f'starting loop {datetime.now()}')
         count = 0
-        for val in range(1, 1000):
+        for val in range(1, 20):
             msg = {
                 'value': f'myvalue {val}',
                 'ts': datetime.now(),
@@ -45,7 +47,7 @@ def produce_with_callback(p, topic):
                     topic,
                     value=json.dumps(msg, default=str),
                     key=str(val),
-                    partition=val,
+                    #partition=val,
                     on_delivery=_acked,
                 )
             except KafkaException as ke:
@@ -54,8 +56,8 @@ def produce_with_callback(p, topic):
             p.poll(0.5) # time-out in seconds
             #print(f'{datetime.now()} after poll()')
             count += 1
-            if count % 100 == 0:
-                print(f'just finished {count}, {datetime.now()}')
+            if count % 10 == 0:
+                print(f'just finished {count}, {datetime.now()}, in thread: {current_thread().name}')
         print(f'closing loop {datetime.now()}')
 
     except KeyboardInterrupt:
