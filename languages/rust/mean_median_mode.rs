@@ -1,7 +1,19 @@
+// read from understanding-rust-loops article online
+// Since `into_iter` consumes the ownership for each item passed in, then the
+// collection of values from the range will not be available after the loop.
+// assigning it to a variable and trying to use it later won't work
+//
+// when looping over a collection, you have a few different ways to choose
+// ownership of the items used.
+//
+// * iter() - iterates over &T (a borrowed reference to the item)
+// * iter_mut() - iterates over &mut T (an editable borrowed reference to the item)
+// * into_iter() - iterates over T (takes/consumes ownership)
+
 fn main() {
     let mut list = vec![10, 14, 10, 12, 9, -2, 14, 10, 14];
     let mean = get_mean(&list);
-    let median = get_median(&mut list);
+    let median = get_median(&mut list); // mutability for sorting
     let mode = get_mode(&list);
     println!("mean={:?}, median={:?}, mode={:?}", mean, median, mode);
 
@@ -87,10 +99,18 @@ fn get_list_stats(list: &mut Vec<i32>) -> (Option<f64>, Option<f64>, Vec<i32>) {
         let mut sum: f64 = 0.0;
         let mut counter = HashMap::new();
         for &mut i in &mut *list { // I don't understand &mut *list
-            sum += f64::from(i); // why can't I use *i?!
+            sum += f64::from(i);
             let count = counter.entry(i).or_insert(0);
             *count += 1;
         }
+        // for i in &*list {
+        //     sum += f64::from(*i);
+        //     let count = counter.entry(*i).or_insert(0);
+        //     *count += 1;
+        // }
+        
+        // for &mut i in list { // why does this move list? isn't a reference?
+        // }
 
         let len = list.len();
         let median = if len % 2 == 0 {
