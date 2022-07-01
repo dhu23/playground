@@ -37,6 +37,12 @@ fn loop1(list: &Vec<i32>) -> Option<f64> {
         Some(sum/list.len() as f64)
     }
 }
+// from stackoverflow by Chayim Friedman
+// for x in y, x here is a pattern, so x is not just a name, but a pattern
+// an irrefutable pattern. 
+// therefore, in loop1, &i is matched against &i32 because the loops iterates
+// over &Vec<i32>, the result is that i is matched to i32. With the same 
+// reasoning, in loop2 i is matched it &i32
 
 fn loop2(list: &Vec<i32>) -> Option<f64> {
     if list.is_empty() {
@@ -90,6 +96,14 @@ fn loop2(list: &Vec<i32>) -> Option<f64> {
 //         Some(sum/list.len() as f64)
 //     }
 // }
+// By Chayim Friedman
+// shared references are Copy and so you can access list even after it is moved
+// by the loop, but mutable references are not, we have to *reborrow*
+// A reborrow is either &* or &mut*
+// it is important for mutable reference, because you can't copy it
+// this gives you an access to a potentially-shorter lifttime, without affecting
+// the original reference. ONce the reborrowed reference is no longer needed, 
+// you can discard it and use the original reference
 
 fn loop4(list: &mut Vec<i32>) -> Option<f64> {
     if list.is_empty() {
