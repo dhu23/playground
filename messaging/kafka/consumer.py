@@ -3,7 +3,9 @@ from datetime import datetime
 from confluent_kafka import (
     Consumer,
     KafkaError,
+    TopicPartition,
 )
+from threading import current_thread
 
 if __name__ == '__main__':
     settings = {
@@ -18,25 +20,34 @@ if __name__ == '__main__':
     }
 
     def my_assign(consumer, partitions):
+        my_parts = []
         for part in partitions:
-            print(f'received assignment: {part.topic}/{part.partition}/{part.offset}')
+            print(f'received assignment: {part.topic}/{part.partition}/{part.offset} in {current_thread().name}')
             if part.partition == 0:
                 #part.offset = 2299
                 pass
             elif part.partition == 1:
-                part.offset = 2420
-                #pass
+                #part.offset = 2420
+                pass
             elif part.partition == 2:
-                part.offset = 2380
+                part.offset = 2396
                 #pass
             else:
                 pass
+            my_parts.append(part)
             print(f'adjusted assignment: {part.topic}/{part.partition}/{part.offset}')
-        consumer.assign(partitions)
+            #my_parts.append(part)
+            #    TopicPartition(
+            #        part.topic, part.partition,
+            #        part.offset-1 if part.offset > 2000 else part.offset
+            #    )
+            #)
+        consumer.assign(my_parts)
 
 
     c = Consumer(settings)
-    c.subscribe(['topic-with-3-part'], on_assign=my_assign)
+    #c.subscribe(['topic-with-3-part'], on_assign=my_assign)
+    c.assign()
     # don't call it again with a second topic. The 2nd subscribe overwrites
     # the first specification. 
 
@@ -51,7 +62,7 @@ if __name__ == '__main__':
                 data['ts'] = datetime.strptime(data['ts'], '%Y-%m-%d %H:%M:%S.%f')
                 print(
                     f'recieved data => key: {msg.key()} offset: {msg.offset()} '
-                    f'part: {msg.partition()} payload: omitted')
+                    f'part: {msg.partition()} payload: omitted, in {current_thread().name}')
             elif msg.error().code() == KafkaError._PARTITION_EOF:
                 print(f'End of partition: {msg.topic()}/{msg.partition()}')
             else:

@@ -10,3 +10,5 @@
 
 # Solace management port
 http://localhost:8080
+# login/pw
+admin/admin

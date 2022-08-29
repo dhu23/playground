@@ -208,6 +208,7 @@ class SolaceSubscriber(object):
         self.msg_svc.add_reconnection_listener(ConsumerReconnectionHandler(data_queue))
         self.msg_svc.add_reconnection_attempt_listener(ConsumerReconnectingHandler())
         self.msg_svc.add_service_interruption_listener(ConsumerServiceInterruptionHandler())
+        self.direct_receiver = None
 
     def start(self, topics, data_handler):
         '''start receive async message for a given data handler'''
@@ -221,8 +222,9 @@ class SolaceSubscriber(object):
         self.direct_receiver.receive_async(data_handler)
 
     def stop(self):
-        print('Terminating receiver...')
-        self.direct_receiver.terminate()
+        if self.direct_receiver:
+            print('Terminating receiver...')
+            self.direct_receiver.terminate()
         print('Disconnecting messaging service...')
         self.msg_svc.disconnect()
         print('Messaging service disconnected.')
