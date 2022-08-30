@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a9db531a891533eddd9fc987a8b77bee068d8051f0bc71e044fe822f6c39460d
+-- hash: f11abceaf1eb0d3823f2a59e655e2402671130d1677f8ca9fc94dfc5582d7885
 
 name:           arithmetic
 version:        0.1.0.0
@@ -27,6 +27,9 @@ source-repository head
 
 library
   exposed-modules:
+      Arithmetic.Digit
+      Arithmetic.Evaluable.Class
+      Arithmetic.Natural
       Lib
   other-modules:
       Paths_arithmetic
@@ -38,8 +41,6 @@ library
 
 executable arithmetic-exe
   main-is: Main.hs
-  other-modules:
-      Paths_arithmetic
   hs-source-dirs:
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N

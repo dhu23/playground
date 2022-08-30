@@ -35,6 +35,9 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - arithmetic
+    when:
+    - condition:         false
+      other-modules:     Paths_arithmetic
 
 tests:
   arithmetic-test:
