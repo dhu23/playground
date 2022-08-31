@@ -13,7 +13,7 @@ module Arithmetic.Digit
 
 
 import qualified Data.Function as F (on)
-
+import qualified Data.Bifunctor as Bf (bimap)
 
 data D
   = D0 | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 
@@ -67,7 +67,7 @@ addDlist ds1 ds2 = reverse $ ds1 `add'` ds2
 
 --most significant digit first
 subDlist :: [D] -> [D] -> [D]
-subDlist ds1 ds2 = reverse $ ds1 `sub'` ds2
+subDlist ds1 ds2 = dropLeadZero $ reverse $ ds1 `sub'` ds2
   where
     sub' = subDRlist `F.on` reverse
 
@@ -94,8 +94,9 @@ divModDlist :: [D] -> [D] -> Maybe ([D], [D])
 divModDlist _ ds2
   | length (dropLeadZero ds2) == 0 = Nothing
 divModDlist [] _ = Just ([D0], [D0])
-divModDlist ds1 ds2 = Just $ foldl runDiv ([], []) ds1 
-  where 
+divModDlist ds1 ds2 = Just $ Bf.bimap reverse' reverse' $ foldl runDiv ([], []) ds1
+  where
+    reverse' = dropLeadZero . reverse
     ds2' = reverse ds2
     runDiv :: ([D], [D]) -> D -> ([D], [D]) 
     runDiv (qr, n) d = (q:qr, dropTrailZero rr)

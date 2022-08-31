@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f11abceaf1eb0d3823f2a59e655e2402671130d1677f8ca9fc94dfc5582d7885
+-- hash: 8e8045799d43d3582daaa2fb497ce2b69fde6603d99403c0e70f28a2e6ce237a
 
 name:           arithmetic
 version:        0.1.0.0
@@ -53,6 +53,8 @@ test-suite arithmetic-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      QC.TestDigit
+      QC.TestNatural
       Paths_arithmetic
   hs-source-dirs:
       test
@@ -60,4 +62,5 @@ test-suite arithmetic-test
   build-depends:
       arithmetic
     , base >=4.7 && <5
+    , QuickCheck
   default-language: Haskell2010

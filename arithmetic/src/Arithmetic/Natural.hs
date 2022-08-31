@@ -69,7 +69,7 @@ mulN :: N -> N -> N
 mulN n1 n2 = mkN $ mulDlist (getDs n1) (getDs n2)
 
 divModN :: N -> N -> Maybe (N, N)
-divModN n1 n2 = Bf.bimap toN toN <$> divModDlist (getDs n1) (getDs n2)
+divModN n1 n2 = Bf.bimap mkN mkN <$> divModDlist (getDs n1) (getDs n2)
   where 
     toN = mkN . reverse
 
