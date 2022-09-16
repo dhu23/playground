@@ -28,7 +28,6 @@ source-repository head
 library
   exposed-modules:
       Arithmetic.Digit
-      Arithmetic.Evaluable.Class
       Arithmetic.Natural
       Lib
   other-modules:

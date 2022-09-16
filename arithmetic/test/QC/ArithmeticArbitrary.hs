@@ -3,6 +3,9 @@ module QC.ArithmeticArbitrary
   , AnyN(..)
   , SmallN(..)
   , toDs
+  , prop_monoidUnit
+  , prop_commutativity
+  , prop_associativity
   ) where
 
 import Test.QuickCheck
@@ -56,4 +59,16 @@ instance Arbitrary SmallN where
     anyds <- CM.replicateM l arbitrary
     return $ SmallN $ mkN $ toDs anyds
 
+
+prop_monoidUnit :: (Eq m, Monoid m) => m -> Bool
+prop_monoidUnit x = test1 && test2
+  where
+    test1 = (x <> mempty) == x
+    test2 = (mempty <> x) == x
     
+prop_commutativity :: (Eq m, Semigroup m) => m -> m -> Bool
+prop_commutativity x y = (x <> y) == (y <> x)
+
+prop_associativity :: (Eq m, Monoid m) => m -> m -> m ->  Bool
+prop_associativity x y z = (x <> y) <> z == x <> (y <> z)
+
