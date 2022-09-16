@@ -53,9 +53,9 @@ test-suite arithmetic-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      QC.TestDigit
-      -- QC.TestNatural
       QC.ArithmeticArbitrary
+      QC.TestDigit
+      QC.TestNatural
       Paths_arithmetic
   hs-source-dirs:
       test
