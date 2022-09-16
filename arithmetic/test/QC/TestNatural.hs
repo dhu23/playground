@@ -14,6 +14,8 @@ import Arithmetic.Natural
   , subN
   , mulN
   , divModN
+  , nToInteger
+  , nFromInteger
   )
 import QC.ArithmeticArbitrary
   ( AnyN(..)
@@ -36,6 +38,12 @@ prop_NEnum :: SmallN -> Bool
 prop_NEnum (SmallN n) = n' == n
   where 
     n' = toEnum (fromEnum n) :: N
+
+
+prop_NIntegerConv :: N -> Bool
+prop_NIntegerConv n = case nFromInteger (nToInteger n) of
+  Nothing -> False
+  Just n' -> n == n'
 
 
 prop_subUnit :: N -> Bool
@@ -83,6 +91,7 @@ checkNatural = do
   putStrLn "testing Arithmetic.Natural"
   quickCheck prop_NFromInt
   quickCheck prop_NEnum
+  quickCheck prop_NIntegerConv'
   quickCheck prop_addUnit
   quickCheck prop_mulUnit
   quickCheck prop_addComm
@@ -96,6 +105,7 @@ checkNatural = do
   quickCheck prop_divByOne'
   quickCheck prop_compare'
   where
+    prop_NIntegerConv' (AnyN n) = prop_NIntegerConv n
     prop_addUnit (AnyN n) = prop_monoidUnit (SumN n)
     prop_mulUnit (AnyN n) = prop_monoidUnit (ProdN n)
     prop_addComm (AnyN x) (AnyN y) = prop_commutativity (SumN x) (SumN y)

@@ -29,6 +29,7 @@ library
   exposed-modules:
       Arithmetic.Digit
       Arithmetic.Natural
+      Arithmetic.Integer
       Lib
   other-modules:
       Paths_arithmetic
@@ -55,6 +56,7 @@ test-suite arithmetic-test
       QC.ArithmeticArbitrary
       QC.TestDigit
       QC.TestNatural
+      QC.TestInteger
       Paths_arithmetic
   hs-source-dirs:
       test

@@ -12,6 +12,8 @@ module Arithmetic.Natural
   , quotRemN
   , gcdN
   , lcmN
+  , nToInteger
+  , nFromInteger
   ) where
 
 
