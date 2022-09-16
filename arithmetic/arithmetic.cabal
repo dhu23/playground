@@ -54,7 +54,8 @@ test-suite arithmetic-test
   main-is: Spec.hs
   other-modules:
       QC.TestDigit
-      QC.TestNatural
+      -- QC.TestNatural
+      QC.ArithmeticArbitrary
       Paths_arithmetic
   hs-source-dirs:
       test
