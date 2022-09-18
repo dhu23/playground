@@ -3,6 +3,8 @@ module Arithmetic.Digit
   , fromChar
   , toChar
   , fromInt
+  , fromStr
+  , toStr
   , addD
   , subD
   , mulD
@@ -11,11 +13,21 @@ module Arithmetic.Digit
 
 import qualified Data.Function as F (on)
 import qualified Data.Bifunctor as Bf (bimap)
-
+import Arithmetic.Readable 
+  ( Readable
+  , fromStr
+  , toStr
+  )
 
 data D
   = D0 | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 
   deriving (Enum, Bounded, Eq, Ord, Show)
+
+instance Readable D where
+  fromStr [c] = fromChar c
+  fromStr _ = Nothing
+
+  toStr = let singleton x = [x] in singleton . toChar
 
 
 fromChar :: Char -> Maybe D

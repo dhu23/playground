@@ -1,6 +1,8 @@
 module Arithmetic.Integer
   ( Z
   , mkZ
+  , fromStr
+  , toStr
   , posZ
   , negZ
   , SumZ(..)
@@ -10,6 +12,7 @@ module Arithmetic.Integer
   , nz'1
   , zToInteger
   , zFromInteger
+  , quotRemZ
   ) where
 
 
@@ -25,6 +28,11 @@ import Arithmetic.Natural
   , quotRemN
   , nToInteger
   , nFromInteger
+  )
+import Arithmetic.Readable 
+  ( Readable
+  , fromStr
+  , toStr
   )
 
 data Z
@@ -50,6 +58,16 @@ negZ n
 z'0 = posZ n'0
 pz'1 = posZ n'1
 nz'1 = negZ n'1
+
+
+instance Readable Z where
+  fromStr ('-':cs) = negZ <$> fromStr cs
+  fromStr cs = posZ <$> fromStr cs
+
+  toStr (Z n s) = if s then output else '-':output
+    where
+      output = toStr n
+
 
 instance Eq Z where
   (Z nx sx) == (Z ny sy) = nx == ny && sx == sy
@@ -101,6 +119,14 @@ instance Num Z where
     | otherwise = Z n (not s)
   fromInteger = zFromInteger
 
+instance Real Z where
+  toRational z = toRational $ zToInteger z
+
+instance Integral Z where
+  toInteger = zToInteger
+  x `quotRem` y = case x `quotRemZ` y of
+    Nothing -> error "divided by zero"
+    Just (q, r) -> (q, r)
 
 zFromInteger :: Integer -> Z
 zFromInteger i
@@ -129,5 +155,59 @@ addZ zx@(Z nx _) zy@(Z ny _)
     else posZ $ ny `subN` nx
 
 mulZ :: Z -> Z -> Z
-mulZ (Z nx sx) (Z ny sy) = mkZ (nx `mulN` ny) (sx && sy)
-    
+mulZ (Z nx sx) (Z ny sy) = mkZ (nx `mulN` ny) (sx == sy)
+
+-- divMod is integer division and modulo that truncates towards negative
+-- infinity while quotRem is integer division and modulo that behaves like
+-- C-style operators which truncate towards zero
+-- divide 14 by 5 step by step
+-- steps | value
+-- ------+-------
+--    0  |   14
+--    1  |    9
+--    2  |    4  # 14 `divMod` 5 == 14 `quotRem` 5 == (2, 4)
+--
+-- divide 14 by -5 step by step
+-- steps | value 
+-- ------+-------
+--    0  |   14
+--   -1  |    9
+--   -2  |    4  # quotRem stops here. 14 `quotRem` (-5) == (-2, 4)
+--   -3  |   -1  # divMod stops here. 14 `divMod` (-5) == (-3, -1)
+--
+-- divide -14 by 5 step by step
+-- steps | value
+-- ------+-------
+--    0  |  -14
+--   -1  |   -9
+--   -2  |   -4  # quotRem stops here. (-14) `quotRem` 5 == (-2, -4)
+--   -3  |    1  # divMod stops here. (-14) `divMod` 5 == (-3, 1)
+--
+-- divide -14 by -5 step by step
+-- steps | value
+-- ------+-------
+--    0  |  -14
+--    1  |   -9
+--    2  |   -4 # quotRem stops here. (-14) `quotRem` (-5) == (2, -4)
+--    3  |    1 # divMod stops here. (-14) `divMod` (-5) == (3, 1)
+-- quotRem stops as soon as the remaining value is less in magnitude 
+-- than that of the divisor
+-- divMod will happily cross its value pass zero for the final step, if
+-- it will help move the total number of steps towards negative infinity
+quotRemZ :: Z -> Z -> Maybe (Z, Z)
+quotRemZ zx@(Z nx sx) zy@(Z ny sy)
+  | zy == z'0 = Nothing
+  | zx == z'0 = Just (z'0, z'0)
+  -- now zx and zy are not zeros
+  | zx > z'0 && zy > z'0 = case quotRemN nx ny of 
+    Just (q, r) -> Just (posZ q, posZ r)
+    Nothing -> Nothing -- shouldn't happen
+  | zx > z'0 && zy < z'0 = case quotRemN nx ny of 
+    Just (q, r) -> Just (negZ q, posZ r)
+    Nothing -> Nothing -- shouldn't happen
+  | zx < z'0 && zy > z'0 = case quotRemN nx ny of
+    Just (q, r) -> Just (negZ q, negZ r)
+    Nothing -> Nothing -- shouldn't happen
+  | otherwise = case quotRemN nx ny of 
+    Just (q, r) -> Just (posZ q, negZ r)
+    Nothing -> Nothing -- shouldn't happen

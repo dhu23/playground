@@ -7,6 +7,8 @@ import Arithmetic.Natural
   ( N
   , SumN(..)
   , ProdN(..)
+  , fromStr
+  , toStr
   , n'0
   , n'1
   , mkN
@@ -24,6 +26,12 @@ import QC.ArithmeticArbitrary
   , prop_commutativity
   , prop_associativity
   )
+
+
+prop_readable :: N -> Bool
+prop_readable n = case fromStr $ toStr n of
+  Nothing -> False
+  Just n' -> n' == n
 
 
 prop_NFromInt :: Int -> Bool
@@ -65,17 +73,10 @@ prop_mulByZero n = n'0 == n `mulN` n'0
 prop_divByZero :: N -> Bool
 prop_divByZero n = Nothing == n `divModN` n'0
 
-
 prop_divByOne :: N -> Bool
 prop_divByOne n = case n `divModN` n'1 of
   Just (q, r) -> q == n && r == n'0
   Nothing -> False
-
-prop_compare :: N -> N -> Bool
-prop_compare nx ny
-  | nx > ny = nx `subN` ny > n'0
-  | nx < ny = ny `subN` nx > n'0
-  | otherwise = nx `subN` ny == n'0
 
 prop_divMod :: N -> N -> Bool
 prop_divMod nx ny
@@ -85,10 +86,17 @@ prop_divMod nx ny
     Nothing -> False
     Just (q, r) -> r < ny && (nx == (ny `mulN` q) `addN` r)
 
+prop_compare :: N -> N -> Bool
+prop_compare nx ny
+  | nx > ny = nx `subN` ny > n'0
+  | nx < ny = ny `subN` nx > n'0
+  | otherwise = nx `subN` ny == n'0
+
 
 checkNatural :: IO ()
 checkNatural = do
   putStrLn "testing Arithmetic.Natural"
+  quickCheck prop_readable'
   quickCheck prop_NFromInt
   quickCheck prop_NEnum
   quickCheck prop_NIntegerConv'
@@ -105,6 +113,7 @@ checkNatural = do
   quickCheck prop_divByOne'
   quickCheck prop_compare'
   where
+    prop_readable' (AnyN n) = prop_readable n
     prop_NIntegerConv' (AnyN n) = prop_NIntegerConv n
     prop_addUnit (AnyN n) = prop_monoidUnit (SumN n)
     prop_mulUnit (AnyN n) = prop_monoidUnit (ProdN n)

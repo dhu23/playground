@@ -2,6 +2,8 @@ module Arithmetic.Natural
   ( N
   , SumN(..)
   , ProdN(..)
+  , fromStr
+  , toStr
   , n'0
   , n'1
   , mkN
@@ -30,7 +32,12 @@ import Arithmetic.Digit
 
 import qualified Data.Function as F (on)
 import qualified Data.Bifunctor as Bf (bimap)
-
+import qualified Control.Monad as CM (mapM)
+import Arithmetic.Readable 
+  ( Readable
+  , fromStr
+  , toStr
+  )
 
 -- the most significant digit comes first. 
 -- the value constructor should not be exported
@@ -55,6 +62,11 @@ n'7 = mkN [D7]
 n'8 = mkN [D8]
 n'9 = mkN [D9]
 n'10 = mkN [D1, D0]
+
+
+instance Readable N where
+  fromStr = fmap mkN . CM.mapM fromChar
+  toStr = show . nToInteger
 
 
 instance Eq N where
@@ -312,7 +324,6 @@ mkDRlistFromInt' x
   | otherwise = 
     let (q, r) = x `divMod` 10
     in (:) <$> fromInt r <*> mkDRlistFromInt' q
-
 
 
 -- least significant digit comes first. Rlist = reversed list
