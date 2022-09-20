@@ -43,7 +43,10 @@ import Arithmetic.Readable
 -- the value constructor should not be exported
 -- We prefer [] over [D0], though identical
 -- due to the logic to drop leading zeros
-newtype N = N { getDs :: [D] } deriving Show
+newtype N = N { getDs :: DList } deriving Show
+
+type DList = [D] -- sequence of digits with most significant digit first
+type DRList = [D] -- sequence of digits with least significant digit first
 
 -- the fundamental function to create N. This constructor is responsible for
 -- making sure that there is no leading D0 contained in the list
@@ -108,13 +111,16 @@ instance Monoid ProdN where
 
 
 addN :: N -> N -> N 
-addN n1 n2 = mkN $ addDlist (getDs n1) (getDs n2)
+addN (N dxs) (N dys) = let add' = addDRlist `F.on` reverse
+  in mkN $ reverse $ dxs `add'` dys
 
 subN :: N -> N -> N
-subN n1 n2 = mkN $ subDlist (getDs n1) (getDs n2)
+subN (N dxs) (N dys) = let sub' = subDRlist `F.on` reverse
+  in mkN $ reverse $ dxs `sub'` dys
 
 mulN :: N -> N -> N
-mulN n1 n2 = mkN $ mulDlist (getDs n1) (getDs n2)
+mulN (N dxs) (N dys) = let mul' = mulDRlist `F.on` reverse
+  in mkN $ reverse $ dxs `mul'` dys
 
 divModN :: N -> N -> Maybe (N, N)
 divModN n1 n2 = Bf.bimap mkN mkN <$> divModDlist (getDs n1) (getDs n2)
@@ -191,27 +197,70 @@ mkDlistFromInt :: Integral a => a -> Maybe [D]
 mkDlistFromInt = fmap reverse . mkDRlistFromInt'
 
 
---most significant digit first
-addDlist :: [D] -> [D] -> [D]
-addDlist ds1 ds2 = reverse $ ds1 `add'` ds2
+-- least significant digit comes first. Rlist = reversed list
+addDRlist :: DRList -> DRList -> DRList 
+addDRlist [] ys = ys
+addDRlist xs [] = xs -- xs is not []
+addDRlist (x:xs) (y:ys) = case tens of 
+  D0 -> single:s'
+  otherwise -> addDRlist [single, tens] (D0:s')
   where
-    add' = addDRlist `F.on` reverse
+    (tens, single) = addD x y
+    s' = addDRlist xs ys
 
+-- least significant digit comes first
+-- the result will be at least zero
+subOneDRlist :: DRList -> DRList
+subOneDRlist [] = []
+subOneDRlist (D0:ds) = D9:(subOneDRlist ds)
+subOneDRlist (d:ds) = (pred d):ds
 
---most significant digit first
-subDlist :: [D] -> [D] -> [D]
-subDlist ds1 ds2 = dropLeadZero $ reverse $ ds1 `sub'` ds2
+-- digits in reversed order, least signficant digit comes first.
+-- result is at least 0. Otherwise defining integer number subtraction
+-- can be very tricky and ugly
+subDRlist :: DRList -> DRList -> DRList 
+subDRlist xs [] = xs
+subDRlist [] ys = []
+subDRlist (x:xs) (y:ys) = case subD x y of
+  (False, d) -> d:(subDRlist xs ys)
+  (True, d) -> d:(subDRlist (subOneDRlist xs) ys)
+
+-- least significant digit comes first
+mulDRlistByD :: DRList -> D -> DRList
+mulDRlistByD [] m = []
+mulDRlistByD (d:ds) m = case ten of 
+  D0 -> single:(mulDRlistByD ds m)
+  _ -> single:(addDRlist [ten] (mulDRlistByD ds m))
   where
-    sub' = subDRlist `F.on` reverse
+    (ten, single) = mulD d m
+
+mulDRlistByTen :: DRList -> DRList
+mulDRlistByTen [] = []
+mulDRlistByTen ds = D0:ds
 
 
--- most significant digit first
-mulDlist :: [D] -> [D] -> [D]
-mulDlist ds1 ds2 = reverse $ ds1 `mul'` ds2
+---    1245  DList
+--- x   987  DList
+--------------------
+-- ==  1245 * 9 * 100 + 1245 * 8 * 10 + 1245 * 7 * 1
+-- should be interpretted as
+--     5421  DRList
+-- x    987  DList
+-- -----------------
+-- ==  ((0 * 10 + 5421(dr) * 9) * 10 + 5421(dr) * 8) * 10 + 5421(dr) * 7 (NOT foldr)
+-- or 
+--     5421  DRList
+-- x    789  DRList
+-- -----------------
+-- ==  ((0 * 10 + 5421(dr) * 9) * 10 + 5421(dr) * 8) * 10 + 5421(dr) * 7 (now foldr)
+mulDRlist :: DRList -> DRList -> DRList
+mulDRlist [] _ = []
+mulDRlist _ [] = []
+mulDRlist xs ys = foldr run [] ys
   where
-    mul' = mulDRlist `F.on` reverse
+    run d acc = (mulDRlistByTen acc) `addDRlist` (xs `mulDRlistByD` d)
 
-compareDlist :: [D] -> [D] -> Ordering
+compareDlist :: DList -> DList -> Ordering
 compareDlist ds1 ds2 
   | len1 > len2 = GT
   | len1 < len2 = LT
@@ -223,7 +272,7 @@ compareDlist ds1 ds2
     len2 = length ds2'
 
 -- most significant digit comes first
-divModDlist :: [D] -> [D] -> Maybe ([D], [D])
+divModDlist :: DList -> DList -> Maybe (DList, DList)
 divModDlist _ ds2
   | length (dropLeadZero ds2) == 0 = Nothing
 divModDlist [] _ = Just ([D0], [D0])
@@ -235,60 +284,6 @@ divModDlist ds1 ds2 = Just $ Bf.bimap reverse' reverse' $ foldl runDiv ([], []) 
     runDiv (qr, n) d = (q:qr, dropTrailZero rr)
       where
         (q, rr) = divModRlistForD0 (d:n) ds2'
-
-
-sumDRlists :: [[D]] -> [D]
-sumDRlists = foldr addDRlist [D0]
-
--- least significant digit comes first
--- the result will be at least zero
-subOneRlist :: [D] -> [D]
-subOneRlist [] = [D0]
-subOneRlist [D0] = [D0]
-subOneRlist (d:ds)
-  | d > D0 = (pred d):ds
-  | otherwise = D9:(subOneRlist ds)
-
--- digits in reversed order, least signficant digit comes first.
--- result is at least 0. Otherwise defining integer number subtraction
--- can be very tricky and ugly
-subDRlist :: [D] -> [D] -> [D]
-subDRlist xs [] = xs
-subDRlist [] ys = [D0]
-subDRlist (x:xs) (y:ys) = case subD x y of
-  (False, d) -> d:(subDRlist xs ys)
-  (True, d) -> d:(subDRlist (subOneRlist xs) ys)
-
-
-
-
--- least significant digit comes first
-mulDRlistByD :: [D] -> D -> [D]
-mulDRlistByD [] m = []
-mulDRlistByD (d:ds) m = case ten of 
-  D0 -> single:(mulDRlistByD ds m)
-  _ -> single:(addDRlist [ten] (mulDRlistByD ds m))
-  where
-    (ten, single) = mulD d m
-
-
--- least significant digit comes first
-mulDRlist :: [D] -> [D] -> [D]
-mulDRlist ns ms = sumDRlists rows
-  where
-    -- [7, 9, 8] -> [(7, []), (9, [7]), (8, [9, 7])]
-    helper :: [a] -> [(a, [a])] 
-    helper xs = reverse $ helper2 $ reverse xs
-      where 
-        helper2 :: [a] -> [(a, [a])]
-        helper2 [] = []
-        helper2 (a:as) = (a, as):(helper2 as)
-    mul' ms (d, countList) = mulDRlistByTens (mulDRlistByD ms d) countList
-    rows = map (mul' ns) $ helper ms
-    -- the first argument is in least significant digit format
-    mulDRlistByTens :: [D] -> [a] -> [D]
-    mulDRlistByTens x [] = x
-    mulDRlistByTens x (_:rest) = mulDRlistByTens (D0:x) rest
 
 
 dropLeadZero = dropLead D0
@@ -324,17 +319,5 @@ mkDRlistFromInt' x
   | otherwise = 
     let (q, r) = x `divMod` 10
     in (:) <$> fromInt r <*> mkDRlistFromInt' q
-
-
--- least significant digit comes first. Rlist = reversed list
-addDRlist :: [D] -> [D] -> [D]
-addDRlist [] ys = ys
-addDRlist xs [] = xs -- xs is not []
-addDRlist (x:xs) (y:ys) = case tens of 
-  D0 -> single:s'
-  otherwise -> addDRlist [single, tens] (D0:s')
-  where
-    (tens, single) = addD x y
-    s' = addDRlist xs ys
 
 
