@@ -16,6 +16,7 @@ module Arithmetic.Natural
   , lcmN
   , nToInteger
   , nFromInteger
+  , divModRlistForD0
   ) where
 
 
@@ -193,7 +194,7 @@ dropTrail a = reverse . dropLead a . reverse
 
 
 -- most significant digit first
-mkDlistFromInt :: Integral a => a -> Maybe [D]
+mkDlistFromInt :: Integral a => a -> Maybe DList 
 mkDlistFromInt = fmap reverse . mkDRlistFromInt'
 
 
@@ -286,11 +287,6 @@ divModDlist ds1 ds2 = Just $ Bf.bimap reverse' reverse' $ foldl runDiv ([], []) 
         (q, rr) = divModRlistForD0 (d:n) ds2'
 
 
-dropLeadZero = dropLead D0
-
-dropTrailZero = dropTrail D0
-
-
 -- least signficant digit comes first
 -- the quotient will be a single largest possible digit
 -- remainder will be produced in a most signficant first format
@@ -301,8 +297,16 @@ dropTrailZero = dropTrail D0
 -- so the entire process is linear to the (x-y) as that's the number 
 -- of long division we have to perform. 
 --
+-- 1462 % 463 
+--    1  % 463 = 0 ...   1  0x463 =    0
+--   14  % 463 = 0 ...  14  0x463 =    0
+--  146  % 463 = 0 ... 146  0x463 =    0
+-- 1462  % 463 = 3 ...  73  3x463 = 1389
+--  730  % 463 = 1 ... 267  1x463 =  463
+-- 2670  % 463 = 5 ... 355  5x463 = 2315
+-- 3550  % 463 = 7 ... 309  7x463 = 3241
 
-divModRlistForD0 :: [D] -> [D] -> (D, [D])
+divModRlistForD0 :: DRList -> DRList -> (D, DRList)
 divModRlistForD0 num denom = case dropWhile greaterThanNum attempts of
   [] -> (D0, num)
   ((i, val):_) -> (i, subDRlist num val)
@@ -311,8 +315,9 @@ divModRlistForD0 num denom = case dropWhile greaterThanNum attempts of
     attempts = fmap (\x -> (x, mul' x)) $ reverse [D1 .. D9]
     greaterThanNum (_, x) = (reverse x) `compareDlist` (reverse num) == GT
 
+
 -- least significant digit first
-mkDRlistFromInt' :: Integral a => a -> Maybe [D]
+mkDRlistFromInt' :: Integral a => a -> Maybe DRList
 mkDRlistFromInt' x
   | x <= 0 = Just [D0]
   | x < 10 = sequence [fromInt x] -- Just [D]
@@ -321,3 +326,6 @@ mkDRlistFromInt' x
     in (:) <$> fromInt r <*> mkDRlistFromInt' q
 
 
+dropLeadZero = dropLead D0
+
+dropTrailZero = dropTrail D0

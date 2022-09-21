@@ -194,20 +194,14 @@ mulZ (Z nx sx) (Z ny sy) = mkZ (nx `mulN` ny) (sx == sy)
 -- than that of the divisor
 -- divMod will happily cross its value pass zero for the final step, if
 -- it will help move the total number of steps towards negative infinity
+
 quotRemZ :: Z -> Z -> Maybe (Z, Z)
-quotRemZ zx@(Z nx sx) zy@(Z ny sy)
-  | zy == z'0 = Nothing
-  | zx == z'0 = Just (z'0, z'0)
-  -- now zx and zy are not zeros
-  | zx > z'0 && zy > z'0 = case quotRemN nx ny of 
-    Just (q, r) -> Just (posZ q, posZ r)
-    Nothing -> Nothing -- shouldn't happen
-  | zx > z'0 && zy < z'0 = case quotRemN nx ny of 
-    Just (q, r) -> Just (negZ q, posZ r)
-    Nothing -> Nothing -- shouldn't happen
-  | zx < z'0 && zy > z'0 = case quotRemN nx ny of
-    Just (q, r) -> Just (negZ q, negZ r)
-    Nothing -> Nothing -- shouldn't happen
-  | otherwise = case quotRemN nx ny of 
-    Just (q, r) -> Just (posZ q, negZ r)
-    Nothing -> Nothing -- shouldn't happen
+quotRemZ zx@(Z nx sx) zy@(Z ny sy) = case quotRemN nx ny of
+  Nothing -> Nothing
+  Just (q, r) -> formResult q r 
+  where 
+    formResult q r
+      | sx && sy = Just (posZ q, posZ r)
+      | sx && not sy = Just (negZ q, posZ r)
+      | not sx && sy = Just (negZ q, negZ r)
+      | otherwise = Just (posZ q, negZ r)
