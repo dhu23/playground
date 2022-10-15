@@ -6,3 +6,5 @@
 *~
 .*.swp
 a.out
+*.class
+.idea/
