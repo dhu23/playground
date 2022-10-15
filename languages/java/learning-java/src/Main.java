@@ -2,8 +2,8 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        // main2(args);
-        Math.pow(2, 3);
+        main2(args);
+        // Math.pow(2, 3);
     }
 
     public static void main2(String[] args) {
