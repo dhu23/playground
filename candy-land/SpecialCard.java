@@ -27,4 +27,8 @@ public class SpecialCard implements Card {
         }
         return initPos;
     }
+
+    public String toString() {
+        return _type.name() + " Card";
+    }
 }

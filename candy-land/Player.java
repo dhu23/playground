@@ -20,6 +20,15 @@ public class Player {
         _board = board;
     }
 
+    public String toString() {
+        String ret = _color.name() + " player at pos=" + _pos;
+        if (_penalty > 0) {
+            return ret + " with " + _penalty + " Penalties";
+        } else {
+            return ret;
+        }
+    }
+
     public PlayerColor getColor() {
         return _color;
     }

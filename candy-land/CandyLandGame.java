@@ -75,16 +75,20 @@ public class CandyLandGame {
 
     public void play() {
         while (true) {
-            // every round
+            // new round
+            System.out.println("New Round ------------>");
             Player player = this.nextPlayer();
+            System.out.println(player.toString() + " is playing...");
             if (player.canPlay()) {
                 // draw card and move
                 Card card = _deck.draw();
+                System.out.println("drew card: " + card.toString());
                 if (player.play(card)) {
                     System.out.println("We got a WINNER!!!!!");
                     break;
                 }
             } else {
+                System.out.println(player.toString() + " has to pass.");
                 player.pass();
             }
         }

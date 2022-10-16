@@ -36,4 +36,8 @@ public class ColorCard implements Card {
         }
         return pos;
     }
+
+    public String toString() {
+        return _type.name() + "(" + _count + ") Card";
+    }
 }
