@@ -1,6 +1,5 @@
 fn main() {
-    // println!("fib30 {}", fib_recursive(30));
-    println!("{}", time_test2());
+    println!("{}", time_test2(44)); // up to fib 43
 }
 
 fn fib_recursive(i: u32) -> u32 {
@@ -11,9 +10,9 @@ fn fib_recursive(i: u32) -> u32 {
     }
 }
 
-fn time_test2() -> u32 {
+fn time_test2(v: u32) -> u32 {
     let mut ret: u32 = 0;
-    for i in 1..40 {
+    for i in 1..v {
         ret += fib_recursive(i);
     }
     ret

@@ -204,10 +204,10 @@ void timeTest1()
     }
 }
 
-unsigned int timeTest2()
+unsigned int timeTest2(unsigned int v)
 {
     unsigned int ret = 0;
-    for (unsigned int i = 1; i < 40; ++i)
+    for (unsigned int i = 1; i < v; ++i)
     {
         ret += recursivefibonacci(i);
     }
@@ -216,6 +216,6 @@ unsigned int timeTest2()
 
 int main(int argc, char* argv[])
 {
-    cout << timeTest2() << endl;
+    cout << timeTest2(44) << endl; // up to fib 41
     return 0;
 }

@@ -36,15 +36,15 @@ public class Fibonacci {
         }
     }
 
-    public static int timeTest2() {
+    public static int timeTest2(int v) {
         int ret = 0;
-        for (int i = 1; i < 40; ++i) {
+        for (int i = 1; i < v; ++i) {
             ret += recursiveFib(i);
         }
         return ret;
     }
 
     public static void main(String[] args) {
-        System.out.println(timeTest2());
+        System.out.println(timeTest2(44)); // up to fib 43
     }
 }

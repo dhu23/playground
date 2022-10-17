@@ -82,12 +82,12 @@ def timeTest1():
             fibonacci_roll(i)
 
 
-def timeTest2():
+def timeTest2(v):
     ret = 0
-    for i in range(1, 40):
+    for i in range(1, v):
         ret += fib_recursive(i)
     return ret
 
 
 if __name__ == "__main__":
-    print(timeTest2())
+    print(timeTest2(40))
