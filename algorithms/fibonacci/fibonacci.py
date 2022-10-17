@@ -51,7 +51,14 @@ def fibonacci_binary(n):
     _, _, c, _ = matrix_pow2(m, n)
     return c
 
-if __name__ == "__main__":
+
+def fib_recursive(n):
+    if n < 2: 
+        return n
+    return fib_recursive(n-1) + fib_recursive(n-2)
+
+
+def test1():
     for i in range(10):
         print(i, fibonacci_roll(i), fibonacci_binary(i))
         
@@ -67,3 +74,20 @@ if __name__ == "__main__":
         t3 = now()
         assert f1 == f2
         print(i, t2-t1, t3-t2)
+
+
+def timeTest1():
+    for _ in range(100):
+        for i in range(1, 1000):
+            fibonacci_roll(i)
+
+
+def timeTest2():
+    ret = 0
+    for i in range(1, 40):
+        ret += fib_recursive(i)
+    return ret
+
+
+if __name__ == "__main__":
+    print(timeTest2())
