@@ -7,7 +7,10 @@ from collections import namedtuple
 
 
 Result = namedtuple('Result', 'arg ans start end')
-FIB_INPUTS = [10, 11, 12, 13, 14, 15, 16, 17]
+#FIB_INPUTS = [10, 11, 12, 13, 14, 15, 16, 17]
+#FIB_INPUTS = [20, 21, 22, 23, 24, 25, 26, 27]
+FIB_INPUTS = [30, 31, 32, 33]
+#BATCH_SLEEP_SECONDS = 0.002
 BATCH_SLEEP_SECONDS = None
 
 
@@ -53,24 +56,34 @@ def run_consumer_task(arg):
 
 
 # data producer
-def produce_data(evt: Event, q: Queue, results: list):
-    while not evt.is_set():
+def produce_data(evt: Event, q: Queue, repeat_limit: int, results: list):
+    repeated = 0
+    while True:
         for n in FIB_INPUTS:
             ret = run_producer_task(n)
             q.put(ret.ans)
             results.append(ret)
-        if BATCH_SLEEP_SECONDS:
-            time.sleep(BATCH_SLEEP_SECONDS)
+        repeated += 1
+        if repeated < repeat_limit:
+            if BATCH_SLEEP_SECONDS:
+                time.sleep(BATCH_SLEEP_SECONDS)
+        else:
+            break
+    evt.set()
 
 
 # data consumer
 def consume_data(evt: Event, q: Queue, results: list):
-    while not evt.is_set():
+    while True:
         try:
             x = q.get(timeout=1.5)
             results.append(run_consumer_task(x))
         except:
-            continue
+            _print('got a q.get() exception')
+            if not evt.is_set():
+                continue
+            else:
+                break
 
 
 
@@ -106,7 +119,7 @@ def consume_data(evt: Event, q: Queue, results: list):
 # 2022/10/26 22:43:18.280001: x=29, fib=514229, cost=0.14017987251281738
 
 def _show_fib_costs():
-    for x in range(30):
+    for x in range(40):
         start_t = time.time()
         ret = fib(x)
         end_t = time.time()
@@ -127,10 +140,11 @@ def _show_task_avg(task):
 
 
 def single_threaded_run(repeat_limit):
+    start_t = time.time()
     repeated = 0
     producer_results = []
     consumer_results = []
-    while repeated < repeat_limit:
+    while True:
         for n in FIB_INPUTS:
             producer_ret = run_producer_task(n)
             consumer_ret = run_consumer_task(producer_ret.ans)
@@ -138,14 +152,18 @@ def single_threaded_run(repeat_limit):
             consumer_results.append(consumer_ret)
 
         repeated += 1
-        if BATCH_SLEEP_SECONDS:
-            time.sleep(BATCH_SLEEP_SECONDS)
-    return make_df(producer_results), make_df(consumer_results)
+        if repeated < repeat_limit:
+            if BATCH_SLEEP_SECONDS:
+                time.sleep(BATCH_SLEEP_SECONDS)
+        else:
+            break
+    end_t = time.time()
+    return make_df(producer_results), make_df(consumer_results), end_t-start_t
 
 
-def multi_threaded_run(sleep_seconds):
-    producer_evt = Event()
-    consumer_evt = Event()
+def multi_threaded_run(repeat_limit):
+    start_t = time.time()
+    ctrl_evt = Event()
 
     producer_results = []
     consumer_results = []
@@ -154,25 +172,21 @@ def multi_threaded_run(sleep_seconds):
 
     producer_thread = Thread(
         target=produce_data,
-        args=(producer_evt, data_queue, producer_results)
+        args=(ctrl_evt, data_queue, repeat_limit, producer_results)
     )
     consumer_thread = Thread(
         target=consume_data,
-        args=(consumer_evt, data_queue, consumer_results)
+        args=(ctrl_evt, data_queue, consumer_results)
     )
 
     producer_thread.start()
     consumer_thread.start()
 
-    time.sleep(sleep_seconds)
-
-    producer_evt.set()
-    consumer_evt.set()
-
     producer_thread.join()
     consumer_thread.join()
 
-    return make_df(producer_results), make_df(consumer_results)
+    end_t = time.time()
+    return make_df(producer_results), make_df(consumer_results), end_t-start_t
 
 def make_df(results):
     data = {
@@ -185,8 +199,9 @@ def make_df(results):
     return pd.DataFrame(data=data)
 
 if __name__ == '__main__':
-    spdf, scdf = single_threaded_run(repeat_limit=30) # single threaded p/c dfs
-    mpdf, mcdf = multi_threaded_run(sleep_seconds=60) # multi threaded p/c dfs
+    repeat_limit = 15
+    spdf, scdf, scost_t = single_threaded_run(repeat_limit) # single threaded p/c dfs
+    mpdf, mcdf, mcost_t = multi_threaded_run(repeat_limit) # multi threaded p/c dfs
 
 
     sum_spdf = spdf.groupby("arg").agg({'ans': 'first', 'cost': ['mean', 'std']})
@@ -206,5 +221,6 @@ if __name__ == '__main__':
     # thru-put 
     multi_cost = float(mcdf.iloc[-1]['end']) - float(mpdf.iloc[0]['start'])
     multi_len = len(mcdf)
-    print(f'multi thread cost: {multi_cost}, len: {multi_len}')
-    print(f'avg: {multi_cost/multi_len}')
+    print(f'multi thread cost: {multi_cost}|{mcost_t}, len: {multi_len}')
+    print(f'avg: {multi_cost/multi_len}|{mcost_t/multi_len}')
+    print(f'threading start/stop overhead: {mcost_t - multi_cost}')
