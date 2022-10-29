@@ -1,4 +1,5 @@
 from threading import Event, Thread
+import multiprocessing as mp
 import pandas as pd
 from queue import Queue
 import time
@@ -188,6 +189,37 @@ def multi_threaded_run(repeat_limit):
     end_t = time.time()
     return make_df(producer_results), make_df(consumer_results), end_t-start_t
 
+
+def multi_process_run(repeat_limit):
+    start_t = time.time()
+
+    with mp.Manager() as m:
+        ctrl_evt = m.Event()
+        data_queue = mp.Queue()
+
+        producer_results = m.list()
+        consumer_results = m.list()
+
+        producer_process = mp.Process(
+            target=produce_data,
+            args=(ctrl_evt, data_queue, repeat_limit, producer_results)
+        )
+        consumer_process = mp.Process(
+            target=consume_data,
+            args=(ctrl_evt, data_queue, consumer_results)
+        )
+
+        producer_process.start()
+        consumer_process.start()
+
+        producer_process.join()
+        consumer_process.join()
+        end_t = time.time()
+
+        return make_df(list(producer_results)), make_df(list(consumer_results)), end_t-start_t
+
+
+
 def make_df(results):
     data = {
         'arg': [each.arg for each in results],
@@ -199,9 +231,10 @@ def make_df(results):
     return pd.DataFrame(data=data)
 
 if __name__ == '__main__':
-    repeat_limit = 15
+    repeat_limit = 5
     spdf, scdf, scost_t = single_threaded_run(repeat_limit) # single threaded p/c dfs
     mpdf, mcdf, mcost_t = multi_threaded_run(repeat_limit) # multi threaded p/c dfs
+    ppdf, pcdf, pcost_t = multi_process_run(repeat_limit) # multi processing p/c dfs
 
 
     sum_spdf = spdf.groupby("arg").agg({'ans': 'first', 'cost': ['mean', 'std']})
@@ -224,3 +257,14 @@ if __name__ == '__main__':
     print(f'multi thread cost: {multi_cost}|{mcost_t}, len: {multi_len}')
     print(f'avg: {multi_cost/multi_len}|{mcost_t/multi_len}')
     print(f'threading start/stop overhead: {mcost_t - multi_cost}')
+
+    sum_ppdf = ppdf.groupby("arg").agg({'ans': 'first', 'cost': ['mean', 'std']})
+    sum_pcdf = pcdf.groupby("ans").agg({'arg': 'first', 'cost': ['mean', 'std']})
+    print(f'\nMulti processing producer cost:\n {sum_ppdf}')
+    print(f'\nMulti processing consumer cost:\n {sum_pcdf}')
+    # thru-put 
+    mp_cost = float(pcdf.iloc[-1]['end']) - float(ppdf.iloc[0]['start'])
+    mp_len = len(pcdf)
+    print(f'multi processing cost: {mp_cost}|{pcost_t}, len: {mp_len}')
+    print(f'avg: {mp_cost/mp_len}|{pcost_t/mp_len}')
+    print(f'multi processing start/stop overhead: {pcost_t - mp_cost}')
