@@ -76,10 +76,11 @@ def test1():
         print(i, t2-t1, t3-t2)
 
 
-def timeTest1():
-    for _ in range(100):
-        for i in range(1, 1000):
-            fibonacci_roll(i)
+def timeTest1(v, w):
+    ret = 0
+    for i in range(v, w):
+        ret += fibonacci_roll(i)
+    return ret
 
 
 def timeTest2(v):
@@ -91,3 +92,4 @@ def timeTest2(v):
 
 if __name__ == "__main__":
     print(timeTest2(40))
+    # print(timeTest1(100, 200))
