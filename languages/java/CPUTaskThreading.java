@@ -14,7 +14,7 @@ public class CPUTaskThreading {
 
     // public static final List<Integer> FIB_INPUT = new ArrayList<Integer>(Arrays.asList(10, 11, 12, 13, 14, 15, 16, 17));
     // public static final List<Integer> FIB_INPUT = new ArrayList<Integer>(Arrays.asList(20, 21, 22, 23, 24, 25, 26, 27));
-    public static final List<Integer> FIB_INPUT = new ArrayList<Integer>(Arrays.asList(30, 31, 32, 33));
+    public static final List<Integer> FIB_INPUT = new ArrayList<Integer>(Arrays.asList(30, 31, 32, 33, 34, 35));
     public static final Long BATCH_SLEEP_MILLISECONDS = null;
     // public static final Long BATCH_SLEEP_MILLISECONDS = 100L;
 
@@ -312,7 +312,7 @@ public class CPUTaskThreading {
     }
 
     public static void main(String[] args) {
-        int repeatLimit = 100;
+        int repeatLimit = 40;
         try {
             RunResult sret = singleThreadRun(repeatLimit);
             RunResult mret = multiThreadRun(repeatLimit);
@@ -322,16 +322,16 @@ public class CPUTaskThreading {
             System.out.println("---------------- Single consumer -----------------");
             sret.crets.summarize();
             long sComputeCost = sret.crets.lastEnd-sret.prets.firstStart;
-            System.out.println("computing cost:" + sComputeCost);
-            System.out.println("total cost:" + sret.cost + " overhead:" + (sret.cost-sComputeCost));
+            System.out.printf("computing cost: %,d %n", sComputeCost);
+            System.out.printf("total cost: %,d  overhead: %,d %n", sret.cost, (sret.cost-sComputeCost));
 
             System.out.println("---------------- Multi producer -----------------");
             mret.prets.summarize();
             System.out.println("---------------- Multi consumer -----------------");
             mret.crets.summarize();
             long mComputeCost = mret.crets.lastEnd-mret.prets.firstStart;
-            System.out.println("computing cost:" + mComputeCost);
-            System.out.println("total cost:" + mret.cost + " overhead:" + (mret.cost-mComputeCost));
+            System.out.printf("computing cost: %,d %n", mComputeCost);
+            System.out.printf("total cost: %,d  overhead: %,d %n", mret.cost, (mret.cost-mComputeCost));
 
         } catch (InterruptedException e) {
         }
