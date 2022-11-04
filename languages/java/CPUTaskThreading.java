@@ -314,24 +314,26 @@ public class CPUTaskThreading {
     public static void main(String[] args) {
         int repeatLimit = 40;
         try {
-            RunResult sret = singleThreadRun(repeatLimit);
-            RunResult mret = multiThreadRun(repeatLimit);
-
-            System.out.println("---------------- Single producer -----------------");
-            sret.prets.summarize();
-            System.out.println("---------------- Single consumer -----------------");
-            sret.crets.summarize();
-            long sComputeCost = sret.crets.lastEnd-sret.prets.firstStart;
-            System.out.printf("computing cost: %,d %n", sComputeCost);
-            System.out.printf("total cost: %,d  overhead: %,d %n", sret.cost, (sret.cost-sComputeCost));
-
-            System.out.println("---------------- Multi producer -----------------");
-            mret.prets.summarize();
-            System.out.println("---------------- Multi consumer -----------------");
-            mret.crets.summarize();
-            long mComputeCost = mret.crets.lastEnd-mret.prets.firstStart;
-            System.out.printf("computing cost: %,d %n", mComputeCost);
-            System.out.printf("total cost: %,d  overhead: %,d %n", mret.cost, (mret.cost-mComputeCost));
+            {
+                RunResult sret = singleThreadRun(repeatLimit);
+                System.out.println("---------------- Single producer -----------------");
+                sret.prets.summarize();
+                System.out.println("---------------- Single consumer -----------------");
+                sret.crets.summarize();
+                long sComputeCost = sret.crets.lastEnd-sret.prets.firstStart;
+                System.out.printf("computing cost: %,d %n", sComputeCost);
+                System.out.printf("total cost: %,d  overhead: %,d %n", sret.cost, (sret.cost-sComputeCost));
+            }
+            {
+                RunResult mret = multiThreadRun(repeatLimit);
+                System.out.println("---------------- Multi producer -----------------");
+                mret.prets.summarize();
+                System.out.println("---------------- Multi consumer -----------------");
+                mret.crets.summarize();
+                long mComputeCost = mret.crets.lastEnd-mret.prets.firstStart;
+                System.out.printf("computing cost: %,d %n", mComputeCost);
+                System.out.printf("total cost: %,d  overhead: %,d %n", mret.cost, (mret.cost-mComputeCost));
+            }
 
         } catch (InterruptedException e) {
         }

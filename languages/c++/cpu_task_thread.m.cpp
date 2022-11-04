@@ -2,6 +2,7 @@
 #include <chrono>
 #include <ctime>
 #include <mutex>
+#include <thread>
 #include <condition_variable>
 #include <queue>
 #include <map>
@@ -43,10 +44,17 @@ public:
 
     T pop() {
         std::unique_lock<std::mutex> lock(m_mutex);
-        m_cond.wait(lock, [this]{return !this->m_queue.empty();});
-        T ret(std::move(m_queue.front()));
-        m_queue.pop();
-        return ret;
+        if (m_cond.wait_for(
+                lock, 
+                std::chrono::microseconds(2000),
+                [this]{return !this->m_queue.empty();}
+                )
+           ) {
+            T ret(std::move(m_queue.front()));
+            m_queue.pop();
+            return ret;
+        }
+        throw std::runtime_error("timeout");
     }
 };
 
@@ -148,14 +156,76 @@ RunResult singleThreadRun(int repeatLimit) {
     return std::move(rres);
 }
 
+void runProducer(ResultSummary& rsum, BlockingQueue<int>& queue, int& flag, int repeatLimit) {
+    int repeated = 0;
+    while (true) {
+        for (int n : FIB_INPUT) {
+            Result ret = runTask(fib, n);
+            queue.push(ret.ans);
+            rsum.add(ret);
+        }
+        ++repeated;
+        if (repeated < repeatLimit) {
+        } else {
+            break;
+        }
+    }
+    flag = 1;
+}
+
+void runConsumer(ResultSummary& rsum, BlockingQueue<int>& queue, int& flag) {
+    while (true) {
+        try {
+            int fibVal = queue.pop();
+            rsum.add(runTask(backoutFib, fibVal));
+        } catch (...) {
+            // timedout
+            if (flag == 1) {
+                break;
+            }
+        }
+    }
+}
+
+RunResult multiThreadRun(int repeatLimit) {
+    auto start = std::chrono::high_resolution_clock::now();
+
+    RunResult rres = RunResult();
+    BlockingQueue<int> queue;
+    int flag = 0;
+
+    std::thread pthread(runProducer, std::ref(rres.prets), std::ref(queue), std::ref(flag), repeatLimit);
+    std::thread cthread(runConsumer, std::ref(rres.crets), std::ref(queue), std::ref(flag));
+
+    auto end = std::chrono::high_resolution_clock::now();
+    rres.cost = getMills(start, end);
+
+    pthread.join();
+    cthread.join();
+
+    return rres;
+}
+
 int main(int argc, char* argv[]) {
     int repeatLimit = 40;
-    RunResult sret = singleThreadRun(repeatLimit);
-    std::cout << "-------------- single producer -----------------" << std::endl;
-    sret.prets.summarize();
-    std::cout << "-------------- single consumer -----------------" << std::endl;
-    sret.crets.summarize();
-    double scost = getMills(*sret.prets.firstStart, *sret.crets.lastEnd);
-    std::cout << "computing cost: " << scost << std::endl;
+    {
+        RunResult sret = singleThreadRun(repeatLimit);
+        std::cout << "-------------- single producer -----------------" << std::endl;
+        sret.prets.summarize();
+        std::cout << "-------------- single consumer -----------------" << std::endl;
+        sret.crets.summarize();
+        double scost = getMills(*sret.prets.firstStart, *sret.crets.lastEnd);
+        std::cout << "computing cost in seconds: " << scost/1000.0 << std::endl;
+    }
+    {
+        RunResult mret = multiThreadRun(repeatLimit);
+        std::cout << "-------------- multi producer -----------------" << std::endl;
+        mret.prets.summarize();
+        std::cout << "-------------- multi consumer -----------------" << std::endl;
+        mret.crets.summarize();
+        double mcost = getMills(*mret.prets.firstStart, *mret.crets.lastEnd);
+        std::cout << "computing cost in seconds: " << mcost/1000 << std::endl;
+    }
+
     return 0;
 }
