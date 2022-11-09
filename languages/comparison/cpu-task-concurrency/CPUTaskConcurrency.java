@@ -10,11 +10,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CountDownLatch;
 
 
-public class CPUTaskThreading {
+public class CPUTaskConcurrency {
 
     // public static final List<Integer> FIB_INPUT = new ArrayList<Integer>(Arrays.asList(10, 11, 12, 13, 14, 15, 16, 17));
     // public static final List<Integer> FIB_INPUT = new ArrayList<Integer>(Arrays.asList(20, 21, 22, 23, 24, 25, 26, 27));
-    public static final List<Integer> FIB_INPUT = new ArrayList<Integer>(Arrays.asList(30, 31, 32, 33, 34, 35));
+    public static final List<Integer> FIB_INPUT = new ArrayList<Integer>(Arrays.asList(30, 31, 32, 33, 34));
     public static final Long BATCH_SLEEP_MILLISECONDS = null;
     // public static final Long BATCH_SLEEP_MILLISECONDS = 100L;
 
@@ -147,11 +147,11 @@ public class CPUTaskThreading {
     }
 
     public static Result runProducerTask(int arg) {
-        return runTask(CPUTaskThreading::fib, arg);
+        return runTask(CPUTaskConcurrency::fib, arg);
     }
 
     public static Result runConsumerTask(int arg) {
-        return runTask(CPUTaskThreading::backoutFib, arg);
+        return runTask(CPUTaskConcurrency::backoutFib, arg);
     }
 
     public static void showFibCosts() {

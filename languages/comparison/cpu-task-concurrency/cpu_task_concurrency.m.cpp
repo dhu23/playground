@@ -11,7 +11,7 @@
 #include <optional>
 #include <functional>
 
-const std::vector<unsigned> FIB_INPUT{30, 31, 32, 33, 34, 35};
+const std::vector<unsigned> FIB_INPUT{30, 31, 32, 33, 34};
 // const std::optional<>
 
 int fib(int n) {

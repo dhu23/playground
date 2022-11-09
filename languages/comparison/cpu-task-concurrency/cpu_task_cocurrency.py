@@ -10,7 +10,7 @@ from collections import namedtuple
 Result = namedtuple('Result', 'arg ans start end')
 #FIB_INPUTS = [10, 11, 12, 13, 14, 15, 16, 17]
 #FIB_INPUTS = [20, 21, 22, 23, 24, 25, 26, 27]
-FIB_INPUTS = [30, 31, 32, 33]
+FIB_INPUTS = [30, 31, 32, 33, 34]
 #BATCH_SLEEP_SECONDS = 0.002
 BATCH_SLEEP_SECONDS = None
 
@@ -233,9 +233,6 @@ def make_df(results):
 if __name__ == '__main__':
     repeat_limit = 5
     spdf, scdf, scost_t = single_threaded_run(repeat_limit) # single threaded p/c dfs
-    mpdf, mcdf, mcost_t = multi_threaded_run(repeat_limit) # multi threaded p/c dfs
-    ppdf, pcdf, pcost_t = multi_process_run(repeat_limit) # multi processing p/c dfs
-
 
     sum_spdf = spdf.groupby("arg").agg({'ans': 'first', 'cost': ['mean', 'std']})
     sum_scdf = scdf.groupby("ans").agg({'arg': 'first', 'cost': ['mean', 'std']})
@@ -247,6 +244,7 @@ if __name__ == '__main__':
     print(f'single thread cost: {single_cost}, len: {single_len}')
     print(f'avg: {single_cost/single_len}')
 
+    mpdf, mcdf, mcost_t = multi_threaded_run(repeat_limit) # multi threaded p/c dfs
     sum_mpdf = mpdf.groupby("arg").agg({'ans': 'first', 'cost': ['mean', 'std']})
     sum_mcdf = mcdf.groupby("ans").agg({'arg': 'first', 'cost': ['mean', 'std']})
     print(f'\nMulti threaded producer cost:\n {sum_mpdf}')
@@ -258,6 +256,7 @@ if __name__ == '__main__':
     print(f'avg: {multi_cost/multi_len}|{mcost_t/multi_len}')
     print(f'threading start/stop overhead: {mcost_t - multi_cost}')
 
+    ppdf, pcdf, pcost_t = multi_process_run(repeat_limit) # multi processing p/c dfs
     sum_ppdf = ppdf.groupby("arg").agg({'ans': 'first', 'cost': ['mean', 'std']})
     sum_pcdf = pcdf.groupby("ans").agg({'arg': 'first', 'cost': ['mean', 'std']})
     print(f'\nMulti processing producer cost:\n {sum_ppdf}')
