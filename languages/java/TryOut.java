@@ -65,6 +65,11 @@ public class TryOut {
         System.out.println(path2.getFileName().toString());
         System.out.println(path2.getParent().toString());
         // System.out.println(path2.getRoot().toString()); returns null from getRoot()
+        
+        Path dir = Paths.get("/this/is/my/path");
+        Path file = dir.resolve("filename.txt");
+        System.out.println(dir.toString());
+        System.out.println(file.toString());
     }
     public static void tryDateTimeFormatter() {
         Instant ins = Instant.now();
