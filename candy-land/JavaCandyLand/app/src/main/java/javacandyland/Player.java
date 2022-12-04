@@ -1,17 +1,19 @@
-import java.lang.Math;
+package javacandyland;
 
-enum PlayerColor {
-    Blue,
-    Red,
-    Green,
-    Yellow
-}
+import java.lang.Math;
 
 public class Player {
     private final PlayerColor _color;
     private int _penalty;
     private int _pos;
     final Board _board;
+
+    enum PlayerColor {
+        Blue,
+        Red,
+        Green,
+        Yellow
+    }
 
     public Player(PlayerColor color, Board board) {
         _color = color;

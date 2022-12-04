@@ -1,13 +1,15 @@
-public class SpecialCard implements Card {
-    final TileType _type;
+package javacandyland;
 
-    public SpecialCard(TileType tileType) {
-        if (tileType == TileType.Cupcake
-            || tileType == TileType.Gingerbreadman
-            || tileType == TileType.Icecream
-            || tileType == TileType.Gummystar
-            || tileType == TileType.Chocolate
-            || tileType == TileType.Popsticle) {
+public class SpecialCard implements Card {
+    final Tile.TileType _type;
+
+    public SpecialCard(Tile.TileType tileType) {
+        if (tileType == Tile.TileType.Cupcake
+            || tileType == Tile.TileType.Gingerbreadman
+            || tileType == Tile.TileType.Icecream
+            || tileType == Tile.TileType.Gummystar
+            || tileType == Tile.TileType.Chocolate
+            || tileType == Tile.TileType.Popsticle) {
 
             _type = tileType;
         } else {

@@ -1,3 +1,5 @@
+package javacandyland;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -19,11 +21,11 @@ public class CandyLandGame {
         System.out.println("Welcome to Candy Land.");
         System.out.println("Let's choose play colors before starting the game...");
 
-        PlayerColor[] playerColorChoices = {PlayerColor.Blue, PlayerColor.Red, PlayerColor.Green, PlayerColor.Yellow};
+        Player.PlayerColor[] playerColorChoices = {Player.PlayerColor.Blue, Player.PlayerColor.Red, Player.PlayerColor.Green, Player.PlayerColor.Yellow};
         Scanner scanner = new Scanner(System.in);
         do {
             System.out.println("Type the command # and hit enter:");
-            for (PlayerColor playerColor : playerColorChoices) {
+            for (Player.PlayerColor playerColor : playerColorChoices) {
                 System.out.println(playerColor.ordinal() + ":" + playerColor.name());
             }
             System.out.println(playerColorChoices.length + ":Start the game");
@@ -40,7 +42,7 @@ public class CandyLandGame {
         _currentPlayerIdx = 0;
     }
 
-    private boolean addPlayer(PlayerColor color) {
+    private boolean addPlayer(Player.PlayerColor color) {
         if (_started) {
             return false;
         }
@@ -92,11 +94,5 @@ public class CandyLandGame {
                 player.pass();
             }
         }
-    }
-
-    // the main function
-    public static void main(String[] args) {
-        var game = new CandyLandGame();
-        game.play();
     }
 }

@@ -1,5 +1,8 @@
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -85,7 +88,26 @@ public class TryOut {
             .toInstant();
         System.out.println(ins2);
     }
+    public static void tryAsyncFile() {
+        Path file = Paths.get("test-file.txt");
+        try {
+            AsynchronousFileChannel asyncFile = AsynchronousFileChannel.open(
+                    file,
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.CREATE);
+            System.out.println("writing to file");
+            asyncFile.write(ByteBuffer.wrap("whatever\nstring\ndata".getBytes()), 0).get();
+            System.out.println("done writing");
+        } catch (Exception e) {
+            System.out.println("failed to write");
+        }
+
+        // System.out.println("reading file....");
+        // AsynchronousFileChannel asyncRead = AsynchronousFileChannel.open(
+        //         file, StandardOpenOption.READ);
+
+    }
     public static void main(String[] args) {
-        tryPathObj();
+        tryAsyncFile();
     }
 }

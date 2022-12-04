@@ -1,3 +1,5 @@
+package javacandyland;
+
 import java.util.List;
 import java.util.ArrayList;
 
@@ -8,7 +10,7 @@ public class Deck {
 
     public static Deck createStandardDeck() {
         var cards = new ArrayList<Card>();
-        for (var tileType : new TileType[]{TileType.Red, TileType.Blue, TileType.Purple, TileType.Yellow, TileType.Green, TileType.Orange}) {
+        for (var tileType : new Tile.TileType[]{Tile.TileType.Red, Tile.TileType.Blue, Tile.TileType.Purple, Tile.TileType.Yellow, Tile.TileType.Green, Tile.TileType.Orange}) {
             for (int i = 0; i < 6; ++i) {
                 cards.add(new ColorCard(1, tileType));
             }

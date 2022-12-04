@@ -1,16 +1,18 @@
+package javacandyland;
+
 import java.lang.IllegalArgumentException;
 
 public class ColorCard implements Card {
     final int _count;
-    final TileType _type;
+    final Tile.TileType _type;
 
-    public ColorCard(int count, TileType tileType) {
-        if (tileType == TileType.Blue
-            || tileType == TileType.Red
-            || tileType == TileType.Green
-            || tileType == TileType.Yellow
-            || tileType == TileType.Orange
-            || tileType == TileType.Purple) {
+    public ColorCard(int count, Tile.TileType tileType) {
+        if (tileType == Tile.TileType.Blue
+            || tileType == Tile.TileType.Red
+            || tileType == Tile.TileType.Green
+            || tileType == Tile.TileType.Yellow
+            || tileType == Tile.TileType.Orange
+            || tileType == Tile.TileType.Purple) {
 
             if (count < 1) {
                 throw new IllegalArgumentException("cannot create color card with value less than 1");
