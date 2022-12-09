@@ -12,14 +12,14 @@ public class Student {
     private final String firstName;
     private final String lastName;
     private final int classYear;
-    private Set<String> involvedEvents;
+    private Map<String, Event> involvedEvents;
 
     public Student(String studentId, String firstName, String lastName, int classYear) {
         this.studentId = studentId;
         this.firstName = firstName;
         this.lastName = lastName;
         this.classYear = classYear;
-        this.involvedEvents = new HashSet<>();
+        this.involvedEvents = new HashMap<>();
     }
 
     public String studentId() {
@@ -31,15 +31,23 @@ public class Student {
     }
 
     public boolean participate(Event event) {
-        if (involvedEvents.contains(event.eventId())) {
+        if (involvedEvents.containsKey(event.eventId())) {
             System.out.println(String.format("Student %s already registered event %s", studentId, event.eventId()));
             return false;
         } else if (event.addParticipant(this)) {
-            this.involvedEvents.add(event.eventId());
+            this.involvedEvents.put(event.eventId(), event);
             return true;
         } else {
             return false;
         }
+    }
+
+    public int score() {
+        int ret = 0;
+        for (Map.Entry<String, Event> entry : involvedEvents.entrySet()) {
+            ret += entry.getValue().score();
+        }
+        return ret;
     }
 
     @Override

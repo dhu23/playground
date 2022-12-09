@@ -10,6 +10,7 @@ public class RegistrationTest {
     private Student johnSmith;
 
     private Event hackathon;
+    private Event football;
 
     @BeforeEach
     public void setup() {
@@ -18,12 +19,13 @@ public class RegistrationTest {
         johnSmith = new Student("0000", "John", "Smith", 2024);
 
         hackathon = new Event("event123", "Hackathon", 10, 2);
+        football = new Event("event456", "Football", 15, 20);
 
         Assertions.assertEquals(2, hackathon.freeSlotCount());
     }
 
     @Test
-    public void registration() {
+    public void testEventRegistration() {
         Assertions.assertTrue(janeDoe.participate(hackathon));
         Assertions.assertFalse(janeDoe.participate(hackathon));
         Assertions.assertEquals(1, hackathon.freeSlotCount());
@@ -34,5 +36,17 @@ public class RegistrationTest {
 
         Assertions.assertFalse(johnSmith.participate(hackathon));
         Assertions.assertEquals(0, hackathon.freeSlotCount());
+    }
+
+    @Test
+    public void testScore() {
+        janeDoe.participate(hackathon);
+        Assertions.assertEquals(10, janeDoe.score());
+
+        janeDoe.participate(hackathon); // does nothing
+        Assertions.assertEquals(10, janeDoe.score());
+
+        janeDoe.participate(football);
+        Assertions.assertEquals(10 + 15, janeDoe.score());
     }
 }
