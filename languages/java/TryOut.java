@@ -10,6 +10,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.ZoneOffset;
 
+import java.awt.FlowLayout;
+import javax.swing.*;
+
 
 public class TryOut {
     public static void tryStringSplit() {
@@ -107,7 +110,28 @@ public class TryOut {
         //         file, StandardOpenOption.READ);
 
     }
+    public static void trySwing() {
+        JFrame frame = new JFrame("TestFrame");
+        frame.setVisible(true);
+        frame.setSize(800, 400);
+
+        frame.setLayout(new FlowLayout()); // instead of CardLayout
+
+        JLabel label1 = new JLabel("Username");
+        frame.add(label1);
+        JTextField text1 = new JTextField(20); // number of characters to type
+        frame.add(text1);
+
+        JLabel label2 = new JLabel("Password");
+        frame.add(label2);
+        JTextField text2 = new JTextField(20);
+        frame.add(text2);
+
+        JButton button = new JButton("Submit");
+        frame.add(button);
+    }
     public static void main(String[] args) {
-        tryAsyncFile();
+        // tryAsyncFile();
+        trySwing();
     }
 }
