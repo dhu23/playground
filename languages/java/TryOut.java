@@ -11,6 +11,10 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.ZoneOffset;
 
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import javax.swing.*;
 
 
@@ -110,6 +114,21 @@ public class TryOut {
         //         file, StandardOpenOption.READ);
 
     }
+    public static class ClickerListener implements ActionListener {
+        private int count = 0;
+        private JLabel countLabel;
+
+        public ClickerListener(JLabel label) {
+            countLabel = label;
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            System.out.println("clicked!!");
+            ++count;
+            countLabel.setText("Number of clicks: " + count);
+        }
+    }
     public static void trySwing() {
         JFrame frame = new JFrame("TestFrame");
         frame.setVisible(true);
@@ -129,6 +148,21 @@ public class TryOut {
 
         JButton button = new JButton("Submit");
         frame.add(button);
+
+        JButton click = new JButton("Click Me");
+        JLabel countLabel = new JLabel("Number of clicks: 0");
+        click.addActionListener(new ClickerListener(countLabel));
+
+        JPanel panel = new JPanel();
+        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 10, 30));
+        panel.setLayout(new GridLayout(0, 1));
+        panel.add(click);
+        panel.add(countLabel);
+
+        frame.add(panel, BorderLayout.CENTER);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setTitle("Try-out GUI");
+        frame.pack();
     }
     public static void main(String[] args) {
         // tryAsyncFile();
