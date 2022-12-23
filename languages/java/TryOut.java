@@ -116,17 +116,32 @@ public class TryOut {
     }
     public static class ClickerListener implements ActionListener {
         private int count = 0;
+        private int idx = 0;
+        private String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         private JLabel countLabel;
+        private JTextField text1;
+        private JTextField text2;
 
-        public ClickerListener(JLabel label) {
+        public ClickerListener(JLabel label, JTextField text1, JTextField text2) {
             countLabel = label;
+            this.text1 = text1; 
+            this.text2 = text2; 
         }
 
         @Override
         public void actionPerformed(ActionEvent e) {
             System.out.println("clicked!!");
             ++count;
-            countLabel.setText("Number of clicks: " + count);
+            ++idx;
+            if (idx == alphabet.length()) { idx = 0; }
+            // countLabel.setText("Number of clicks: " + count);
+            try {
+                int x = Integer.valueOf(text1.getText());
+                int y = Integer.valueOf(text2.getText());
+                countLabel.setText(String.format("%s + %s = %d", x, y, x+y));
+            } catch (Exception ex) {
+                countLabel.setText(String.format("cannot add %s and %s", text1.getText(), text2.getText()));
+            }
         }
     }
     public static void trySwing() {
@@ -149,9 +164,10 @@ public class TryOut {
         JButton button = new JButton("Submit");
         frame.add(button);
 
-        JButton click = new JButton("Click Me");
-        JLabel countLabel = new JLabel("Number of clicks: 0");
-        click.addActionListener(new ClickerListener(countLabel));
+        JButton click = new JButton("Click Me Pleeeeeeeease!");
+        // JLabel countLabel = new JLabel("Number of clicks: 0");
+        JLabel countLabel = new JLabel("letter: A");
+        click.addActionListener(new ClickerListener(countLabel, text1, text2));
 
         JPanel panel = new JPanel();
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 10, 30));
