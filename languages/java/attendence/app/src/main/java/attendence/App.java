@@ -3,9 +3,12 @@
  */
 package attendence;
 
+import attendence.core.Student;
+import attendence.gui.MainFrame;
+
 public class App {
     public String getGreeting() {
-        return "Hello World!";
+        return "Starting Attendance Tracker...";
     }
 
     public static void main(String[] args) {
@@ -13,5 +16,7 @@ public class App {
         Student student1 = new Student("1", "Joe", "Doe", 2023);
         // Event event1 = new Event();
         System.out.println(student1.toString());
+
+        new MainFrame();
     }
 }

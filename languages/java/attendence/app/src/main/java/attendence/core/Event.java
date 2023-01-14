@@ -1,4 +1,4 @@
-package attendence;
+package attendence.core;
 
 import java.util.HashSet;
 import java.util.Set;

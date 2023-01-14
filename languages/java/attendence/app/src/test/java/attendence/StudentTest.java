@@ -1,5 +1,6 @@
 package attendence;
 
+import attendence.core.Student;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
