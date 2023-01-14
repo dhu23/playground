@@ -96,6 +96,9 @@ public class MathGameMain extends JFrame implements ActionListener, ChangeListen
         a = rand.nextInt(10);
         b = rand.nextInt(10);
         question.setText(String.format("%s + %s", a, b));
+        result.setText("");
+        confirm.setEnabled(true);
+        playAgain.setEnabled(false);
     }
 
     @Override
@@ -105,6 +108,8 @@ public class MathGameMain extends JFrame implements ActionListener, ChangeListen
         if (command.equals(CONFIRM_COMMAND)) {
             if (answerSlider.getValue() == a + b) {
                 result.setText("Correct");
+                playAgain.setEnabled(true);
+                confirm.setEnabled(false);
             } else {
                 result.setText("Try again!");
             }
