@@ -130,19 +130,12 @@ public class MainFrame extends JFrame implements ActionListener, ListSelectionLi
         viewSwitchButton.setEnabled(true);
     }
 
-
-//    private static class MyList<E> extends ArrayList<E> {
-//        public MyList() {
-//
-//        }
-//    }
-
     private static class Athlete {
-        public String firstName = "";
-        public String lastName = "";
-        public String sport = "";
-        public int numOfYears = 0;
-        public boolean isVegetarian = false;
+        public String firstName;
+        public String lastName;
+        public String sport;
+        public int numOfYears;
+        public boolean isVegetarian;
 
         public Athlete(String fn, String ln, String s, int noy, boolean v) {
             firstName = fn;
@@ -172,6 +165,13 @@ public class MainFrame extends JFrame implements ActionListener, ListSelectionLi
 //        }
 
         public MyDataModel() {
+
+            // owns an instance of Tracker
+            // the tracker owns the responsibility of updating backend files
+            // tracker.add(...)
+            //     internally, call some registration.add(...)
+            //                           updateBackendFiles(...)
+
             data = new ArrayList<>();
             // read data from file
             data.add(new Athlete("Kathy", "Smith", "Snowboarding", new Integer(5), new Boolean(false)));

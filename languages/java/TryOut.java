@@ -9,7 +9,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.ZoneOffset;
-
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ScheduledExecutorService;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.BorderLayout;
@@ -180,8 +182,29 @@ public class TryOut {
         frame.setTitle("Try-out GUI");
         frame.pack();
     }
+    public static void tryTimeNotify() {
+        System.out.println(Instant.now());
+        ScheduledExecutorService svc = Executors.newScheduledThreadPool(1);
+        svc.scheduleAtFixedRate(
+                () -> {
+                    System.out.println(Instant.now());
+                    // use Instant.now() to update my program current time
+                },
+                2, 5, TimeUnit.SECONDS);
+        try {
+            int c = 0;
+            while (c < 5) {
+                Thread.sleep(5000);
+                ++c;
+                System.out.println("sleep " + c + " times");
+            }
+        } catch (Exception e) {
+        }
+        svc.shutdownNow();
+    }
     public static void main(String[] args) {
         // tryAsyncFile();
-        trySwing();
+        // trySwing();
+        tryTimeNotify();
     }
 }
