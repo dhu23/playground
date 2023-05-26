@@ -2,7 +2,7 @@ module Main where
 
 import Control.Monad (forever)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.State.Strict (evalStateT, modify, StateT)
+import Control.Monad.Trans.State.Strict (evalStateT, modify, StateT, get)
 --import Control.Monad.State.Strict (StateT, evalStateT, get, put)
 --import Data.Sequence (Seq, empty, viewl, (<|))
 
@@ -32,7 +32,9 @@ data Event = EventA | EventB | EventC deriving Show
 processEvent :: Event -> StateT [Event] IO ()
 processEvent event = do
   modify (++ [event])
-  liftIO $ putStrLn $ "adding to queue: " ++ show event 
+  liftIO $ putStrLn $ "adding to queue: " ++ show event
+  evts <- get
+  liftIO $ print evts
 
 processEvents :: [Event] -> IO ()
 processEvents events = do
