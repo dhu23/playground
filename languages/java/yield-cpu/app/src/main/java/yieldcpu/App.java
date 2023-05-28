@@ -22,8 +22,8 @@ public class App {
         ArbitraryLowerCaseLetter lowerCaseLetterGenerator = new ArbitraryLowerCaseLetter(random);
         ArbitraryWord wordGenerator = new ArbitraryWord(
                 3, 5, random, lowerCaseLetterGenerator);
-        ArbitraryInteger batchSizeGenerator = new ArbitraryInteger(100, 200, random);
-        ArbitraryInteger breakGenerator = new ArbitraryInteger(50, 1500, random);
+        ArbitraryInteger batchSizeGenerator = new ArbitraryInteger(50, 100, random);
+        ArbitraryInteger breakGenerator = new ArbitraryInteger(1000, 1500, random);
         LinkedBlockingQueue<Record> queue = new LinkedBlockingQueue();
 
         AtomicBoolean stopFlag = new AtomicBoolean(false);
@@ -79,6 +79,11 @@ public class App {
             case 8: {
                 consumer = new SmartPollingConsumer(eventLimit, queue, 500, stopFlag, stopWatch);
                 logFileBuilder.append("smart-polling-500.txt");
+                break;
+            }
+            case 9: {
+                consumer = new SmartTakingConsumer(eventLimit, queue, stopFlag, stopWatch);
+                logFileBuilder.append("smart-taking.txt");
                 break;
             }
         };

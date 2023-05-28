@@ -20,7 +20,7 @@ if __name__ == '__main__':
     labels = [
         'yielding', 'timeout-polling', 'polling', 'smart-polling',
         'timeout-polling-100', 'smart-polling-100',
-        'timeout-polling-500', 'smart-polling-500',
+        'timeout-polling-500', 'smart-polling-500', 'smart-taking',
     ]
     data = dict((name, load_file(f'{dir_path}/{name}.txt')) for name in labels)
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     plt.yscale('log')
 
-    for label in ['smart-polling', 'smart-polling-100', 'smart-polling-500']:
+    for label in ['smart-polling', 'smart-taking', 'polling']:
         plt.plot(df.index, df[label], label=label)
 
     plt.legend()
