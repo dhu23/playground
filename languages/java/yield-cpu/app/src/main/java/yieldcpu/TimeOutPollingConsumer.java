@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TimeOutPollingConsumer extends Consumer {
-    private final long timeOutInMillis;
+    protected final long timeOutInMillis;
     public TimeOutPollingConsumer(
             int eventLimit,
             LinkedBlockingQueue<Record> queue, long timeOutInMillis, AtomicBoolean stopFlag, StopWatch stopWatch) {

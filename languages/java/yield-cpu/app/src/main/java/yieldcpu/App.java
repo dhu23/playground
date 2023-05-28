@@ -5,7 +5,6 @@ package yieldcpu;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
@@ -55,6 +54,31 @@ public class App {
             case 3: {
                 consumer = new YieldingConsumer(eventLimit, queue, stopFlag, stopWatch);
                 logFileBuilder.append("yielding.txt");
+                break;
+            }
+            case 4: {
+                consumer = new SmartPollingConsumer(eventLimit, queue, 250, stopFlag, stopWatch);
+                logFileBuilder.append("smart-polling.txt");
+                break;
+            }
+            case 5: {
+                consumer = new TimeOutPollingConsumer(eventLimit, queue, 100, stopFlag, stopWatch);
+                logFileBuilder.append("timeout-polling-100.txt");
+                break;
+            }
+            case 6: {
+                consumer = new SmartPollingConsumer(eventLimit, queue, 100, stopFlag, stopWatch);
+                logFileBuilder.append("smart-polling-100.txt");
+                break;
+            }
+            case 7: {
+                consumer = new TimeOutPollingConsumer(eventLimit, queue, 500, stopFlag, stopWatch);
+                logFileBuilder.append("timeout-polling-500.txt");
+                break;
+            }
+            case 8: {
+                consumer = new SmartPollingConsumer(eventLimit, queue, 500, stopFlag, stopWatch);
+                logFileBuilder.append("smart-polling-500.txt");
                 break;
             }
         };
