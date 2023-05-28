@@ -16,13 +16,15 @@ def load_file(file_path):
 
 
 if __name__ == '__main__':
-    dir_path = '/home/daowen/github/playground/languages/java/yield-cpu/test-dense-data'
+    dir_path = '/home/daowen/github/playground/languages/java/yield-cpu/batch-test'
     labels = [
         #'yielding', 
-        'timeout-polling', 'polling', 'smart-polling',
+        #'timeout-polling', 'polling', 'smart-polling',
         #'timeout-polling-100', 'smart-polling-100',
         #'timeout-polling-500', 'smart-polling-500', 
-        'smart-taking',
+        #'smart-taking',
+        'SmartPollingConsumer', 'SmartTakingConsumer',
+        'PollingConsumer', 'YieldingConsumer', 'TimeOutPollingConsumer',
     ]
     data = dict((name, load_file(f'{dir_path}/{name}.txt')) for name in labels)
 
@@ -33,7 +35,13 @@ if __name__ == '__main__':
 
     plt.yscale('log')
 
-    for label in ['smart-polling', 'smart-taking', 'polling']:
+    plot_labels = [
+        #'smart-polling', 'smart-taking', 'polling'
+        'SmartPollingConsumer', 'SmartTakingConsumer',
+        'PollingConsumer', #'YieldingConsumer',
+        'TimeOutPollingConsumer',
+    ]
+    for label in plot_labels:
         plt.plot(df.index, df[label], label=label)
 
     plt.legend()

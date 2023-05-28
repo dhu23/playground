@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SmartTakingConsumer extends Consumer {
-    public SmartTakingConsumer(int eventLimit, LinkedBlockingQueue<Record> queue) {
-        super(eventLimit, queue);
+    public SmartTakingConsumer(int eventLimit) {
+        super(eventLimit);
     }
 
     @Override

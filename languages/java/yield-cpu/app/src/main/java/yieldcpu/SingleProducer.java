@@ -1,12 +1,13 @@
 package yieldcpu;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SingleProducer extends Producer {
-     private final LinkedBlockingQueue<Record> queue;
+     private final BlockingQueue<Record> queue;
     public SingleProducer(
-            int eventLimit, ArbitraryWord wordGenerator, ArbitraryInteger batchSizeGenerator, ArbitraryInteger breakGenerator, LinkedBlockingQueue<Record> queue) {
+            int eventLimit, ArbitraryWord wordGenerator, ArbitraryInteger batchSizeGenerator, ArbitraryInteger breakGenerator, BlockingQueue<Record> queue) {
         super(eventLimit, wordGenerator, batchSizeGenerator, breakGenerator);
         this.queue = queue;
     }

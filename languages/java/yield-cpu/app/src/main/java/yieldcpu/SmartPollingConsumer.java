@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SmartPollingConsumer extends TimeOutPollingConsumer {
-    public SmartPollingConsumer(int eventLimit, LinkedBlockingQueue<Record> queue, long timeOutInMillis) {
-        super(eventLimit, queue, timeOutInMillis);
+    public SmartPollingConsumer(int eventLimit, long timeOutInMillis) {
+        super(eventLimit, timeOutInMillis);
     }
 
     @Override

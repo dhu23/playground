@@ -1,6 +1,8 @@
 package yieldcpu;
 
 import java.util.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -12,10 +14,10 @@ public abstract class Consumer implements Runnable {
     protected final List<Long> performance;
     protected int totalWordCount;
 
-    public Consumer(int eventLimit, LinkedBlockingQueue<Record> queue) {
+    public Consumer(int eventLimit) {
         this.eventLimit = eventLimit;
-        this.queue = queue;
 
+        this.queue = new LinkedBlockingQueue<>();
         counter = new HashMap<>();
         performance = new ArrayList<>();
         totalWordCount = 0;
@@ -23,6 +25,10 @@ public abstract class Consumer implements Runnable {
 
     public List<Long> getPerformance() {
         return performance;
+    }
+
+    public BlockingQueue<Record> getQueue() {
+        return this.queue;
     }
 
     @Override
@@ -47,7 +53,8 @@ public abstract class Consumer implements Runnable {
         ++totalWordCount;
 
         if (totalWordCount % 1000 == 0) {
-            System.out.println(String.format("consumed %s words", totalWordCount));
+            System.out.println(String.format("%s: consumed %s words",
+                    this.getClass().getSimpleName(), totalWordCount));
         }
 
         // calculate performance

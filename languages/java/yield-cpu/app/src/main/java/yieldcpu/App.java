@@ -5,11 +5,13 @@ package yieldcpu;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class App {
@@ -20,15 +22,9 @@ public class App {
     private final ArbitraryInteger batchSizeGenerator = new ArbitraryInteger(400, 500, random);
     private final ArbitraryInteger breakGenerator = new ArbitraryInteger(50, 100, random);
 
-    private final int eventLimit = 20000;
+    private final int eventLimit = 5000;
 
     public void selectAndTest() {
-        LinkedBlockingQueue<Record> queue = new LinkedBlockingQueue();
-        Producer producer = new SingleProducer(
-                eventLimit, wordGenerator, batchSizeGenerator, breakGenerator, queue);
-
-        StopWatch stopWatch = new StopWatch();
-
         Scanner scanner = new Scanner(System.in);
         int choice = scanner.nextInt();
         System.out.println("choice="+choice);
@@ -37,47 +33,47 @@ public class App {
                 .append("/home/daowen/github/playground/languages/java/yield-cpu/");
         switch (choice) {
             case 1: {
-                consumer = new PollingConsumer(eventLimit, queue);
+                consumer = new PollingConsumer(eventLimit);
                 logFileBuilder.append("polling.txt");
                 break;
             }
             case 2: {
-                consumer = new TimeOutPollingConsumer(eventLimit, queue, 250);
+                consumer = new TimeOutPollingConsumer(eventLimit, 250);
                 logFileBuilder.append("timeout-polling.txt");
                 break;
             }
             case 3: {
-                consumer = new YieldingConsumer(eventLimit, queue);
+                consumer = new YieldingConsumer(eventLimit);
                 logFileBuilder.append("yielding.txt");
                 break;
             }
             case 4: {
-                consumer = new SmartPollingConsumer(eventLimit, queue, 250);
+                consumer = new SmartPollingConsumer(eventLimit, 250);
                 logFileBuilder.append("smart-polling.txt");
                 break;
             }
             case 5: {
-                consumer = new TimeOutPollingConsumer(eventLimit, queue, 100);
+                consumer = new TimeOutPollingConsumer(eventLimit, 100);
                 logFileBuilder.append("timeout-polling-100.txt");
                 break;
             }
             case 6: {
-                consumer = new SmartPollingConsumer(eventLimit, queue, 100);
+                consumer = new SmartPollingConsumer(eventLimit, 100);
                 logFileBuilder.append("smart-polling-100.txt");
                 break;
             }
             case 7: {
-                consumer = new TimeOutPollingConsumer(eventLimit, queue, 500);
+                consumer = new TimeOutPollingConsumer(eventLimit, 500);
                 logFileBuilder.append("timeout-polling-500.txt");
                 break;
             }
             case 8: {
-                consumer = new SmartPollingConsumer(eventLimit, queue, 500);
+                consumer = new SmartPollingConsumer(eventLimit, 500);
                 logFileBuilder.append("smart-polling-500.txt");
                 break;
             }
             case 9: {
-                consumer = new SmartTakingConsumer(eventLimit, queue);
+                consumer = new SmartTakingConsumer(eventLimit);
                 logFileBuilder.append("smart-taking.txt");
                 break;
             }
@@ -86,6 +82,8 @@ public class App {
             System.out.println("no choice!");
             return;
         }
+        Producer producer = new SingleProducer(
+                eventLimit, wordGenerator, batchSizeGenerator, breakGenerator, consumer.getQueue());
 
         ExecutorService executorService = Executors.newFixedThreadPool(2);
 
@@ -95,6 +93,11 @@ public class App {
         executorService.submit(producer);
 
         executorService.shutdown(); // acting like join
+        try {
+            executorService.awaitTermination(5, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
         // System.out.println(consumer.getPerformance());
         long endMillis = System.currentTimeMillis();
@@ -113,10 +116,52 @@ public class App {
     }
 
     public void batchTest() {
+        String batchTestName = "batch-test";
+        List<Consumer> consumerList = List.of(
+                new PollingConsumer(this.eventLimit),
+                new YieldingConsumer(this.eventLimit),
+                new TimeOutPollingConsumer(this.eventLimit, 250),
+                new SmartPollingConsumer(this.eventLimit, 250),
+                new SmartTakingConsumer(this.eventLimit));
 
+        MultiProducer multiProducer = new MultiProducer(
+                this.eventLimit, this.wordGenerator, this.batchSizeGenerator, this.breakGenerator);
+        consumerList.forEach(multiProducer::registerConsumer);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(7);
+        consumerList.forEach(executorService::submit);
+        executorService.submit(multiProducer);
+
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(5, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        consumerList.forEach(consumer -> {
+            System.out.println(consumer.getPerformance());
+
+            StringBuilder logFileBuilder = new StringBuilder()
+                    .append("/home/daowen/github/playground/languages/java/yield-cpu/")
+                    .append(batchTestName).append("/");
+
+            String fileName = logFileBuilder.append(consumer.getClass().getSimpleName())
+                    .append(".txt").toString();
+            System.out.println("writing to " + fileName);
+
+            try {
+                FileWriter writer = new FileWriter(fileName, false);
+                writer.write(consumer.getPerformance().toString() + "\n");
+                writer.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public static void main(String[] args) throws IOException {
-        new App().selectAndTest();
+        // new App().selectAndTest();
+        new App().batchTest();
     }
 }
