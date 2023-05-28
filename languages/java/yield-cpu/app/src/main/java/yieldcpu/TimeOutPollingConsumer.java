@@ -6,10 +6,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TimeOutPollingConsumer extends Consumer {
     protected final long timeOutInMillis;
-    public TimeOutPollingConsumer(
-            int eventLimit,
-            LinkedBlockingQueue<Record> queue, long timeOutInMillis, AtomicBoolean stopFlag, StopWatch stopWatch) {
-        super(eventLimit, queue, stopFlag, stopWatch);
+    public TimeOutPollingConsumer(int eventLimit, LinkedBlockingQueue<Record> queue, long timeOutInMillis) {
+        super(eventLimit, queue);
         this.timeOutInMillis = timeOutInMillis;
     }
 

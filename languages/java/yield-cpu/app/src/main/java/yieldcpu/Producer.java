@@ -10,58 +10,48 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * then it takes a break between [x, y) milliseconds
  * it does it until N words were generated to the queue
  */
-public class Producer implements Runnable {
-    private final AtomicBoolean stopFlag;
+public abstract class Producer implements Runnable {
+    private final int eventLimit;
     private final ArbitraryWord wordGenerator;
     private final ArbitraryInteger batchSizeGenerator;
     private final ArbitraryInteger breakGenerator;
-    private final LinkedBlockingQueue<Record> queue;
+
 
     public Producer(
-            AtomicBoolean stopFlag, ArbitraryWord wordGenerator,
-            ArbitraryInteger batchSizeGenerator, ArbitraryInteger breakGenerator,
-            LinkedBlockingQueue<Record> queue) {
-        this.stopFlag = stopFlag;
+            int eventLimit, ArbitraryWord wordGenerator,
+            ArbitraryInteger batchSizeGenerator, ArbitraryInteger breakGenerator) {
+        this.eventLimit = eventLimit;
         this.wordGenerator = wordGenerator;
         this.batchSizeGenerator = batchSizeGenerator;
         this.breakGenerator = breakGenerator;
-        this.queue = queue;
     }
 
     @Override
     public void run() {
-        int totalWordCount = 0;
-        int batchCount = 0;
+        int producedCount = 0;
         try {
             while (true) {
-                int batchSize = batchSizeGenerator.arbitrary();
+                int batchSize = this.batchSizeGenerator.arbitrary();
 
-                {
-                    int wordCount = 0;
-                    while (wordCount < batchSize) {
-                        String word = wordGenerator.arbitrary();
-                        queue.offer(new Record(word));
-                        ++wordCount;
+                int wordCount = 0;
+                while (wordCount < batchSize) {
+                    String word = this.wordGenerator.arbitrary();
+                    distribute(word);
+                    ++wordCount;
 
-                        if (stopFlag.get()) {
-                            return;
-                        }
+                    ++producedCount;
+                    if (producedCount == this.eventLimit) {
+                        return;
                     }
                 }
 
                 int sleepInMillis = breakGenerator.arbitrary();
-//                System.out.println(
-//                        String.format("sleeping %d ms after batch=%d of size=%d",
-//                                sleepInMillis, batchCount, batchSize));
                 Thread.sleep(sleepInMillis);
-
-                totalWordCount += batchSize;
-                ++batchCount;
-
-                // System.out.println(String.format("produced %d words", totalWordCount));
             }
         } catch (InterruptedException e) {
 
         }
     }
+
+    protected abstract void distribute(String word);
 }

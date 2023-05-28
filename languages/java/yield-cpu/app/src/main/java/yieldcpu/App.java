@@ -13,24 +13,19 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class App {
-    public String getGreeting() {
-        return "Hello World!";
-    }
+    private final Random random = new Random();
+    private final ArbitraryLowerCaseLetter lowerCaseLetterGenerator = new ArbitraryLowerCaseLetter(random);
+    private final ArbitraryWord wordGenerator = new ArbitraryWord(
+            3, 5, random, lowerCaseLetterGenerator);
+    private final ArbitraryInteger batchSizeGenerator = new ArbitraryInteger(400, 500, random);
+    private final ArbitraryInteger breakGenerator = new ArbitraryInteger(50, 100, random);
 
-    public static void main(String[] args) throws IOException {
-        Random random = new Random();
-        ArbitraryLowerCaseLetter lowerCaseLetterGenerator = new ArbitraryLowerCaseLetter(random);
-        ArbitraryWord wordGenerator = new ArbitraryWord(
-                3, 5, random, lowerCaseLetterGenerator);
-        ArbitraryInteger batchSizeGenerator = new ArbitraryInteger(50, 100, random);
-        ArbitraryInteger breakGenerator = new ArbitraryInteger(1000, 1500, random);
+    private final int eventLimit = 20000;
+
+    public void selectAndTest() {
         LinkedBlockingQueue<Record> queue = new LinkedBlockingQueue();
-
-        AtomicBoolean stopFlag = new AtomicBoolean(false);
-        int eventLimit = 20000;
-
-        Producer producer = new Producer(
-                stopFlag, wordGenerator, batchSizeGenerator, breakGenerator, queue);
+        Producer producer = new SingleProducer(
+                eventLimit, wordGenerator, batchSizeGenerator, breakGenerator, queue);
 
         StopWatch stopWatch = new StopWatch();
 
@@ -42,47 +37,47 @@ public class App {
                 .append("/home/daowen/github/playground/languages/java/yield-cpu/");
         switch (choice) {
             case 1: {
-                consumer = new PollingConsumer(eventLimit, queue, stopFlag, stopWatch);
+                consumer = new PollingConsumer(eventLimit, queue);
                 logFileBuilder.append("polling.txt");
                 break;
             }
             case 2: {
-                consumer = new TimeOutPollingConsumer(eventLimit, queue, 250, stopFlag, stopWatch);
+                consumer = new TimeOutPollingConsumer(eventLimit, queue, 250);
                 logFileBuilder.append("timeout-polling.txt");
                 break;
             }
             case 3: {
-                consumer = new YieldingConsumer(eventLimit, queue, stopFlag, stopWatch);
+                consumer = new YieldingConsumer(eventLimit, queue);
                 logFileBuilder.append("yielding.txt");
                 break;
             }
             case 4: {
-                consumer = new SmartPollingConsumer(eventLimit, queue, 250, stopFlag, stopWatch);
+                consumer = new SmartPollingConsumer(eventLimit, queue, 250);
                 logFileBuilder.append("smart-polling.txt");
                 break;
             }
             case 5: {
-                consumer = new TimeOutPollingConsumer(eventLimit, queue, 100, stopFlag, stopWatch);
+                consumer = new TimeOutPollingConsumer(eventLimit, queue, 100);
                 logFileBuilder.append("timeout-polling-100.txt");
                 break;
             }
             case 6: {
-                consumer = new SmartPollingConsumer(eventLimit, queue, 100, stopFlag, stopWatch);
+                consumer = new SmartPollingConsumer(eventLimit, queue, 100);
                 logFileBuilder.append("smart-polling-100.txt");
                 break;
             }
             case 7: {
-                consumer = new TimeOutPollingConsumer(eventLimit, queue, 500, stopFlag, stopWatch);
+                consumer = new TimeOutPollingConsumer(eventLimit, queue, 500);
                 logFileBuilder.append("timeout-polling-500.txt");
                 break;
             }
             case 8: {
-                consumer = new SmartPollingConsumer(eventLimit, queue, 500, stopFlag, stopWatch);
+                consumer = new SmartPollingConsumer(eventLimit, queue, 500);
                 logFileBuilder.append("smart-polling-500.txt");
                 break;
             }
             case 9: {
-                consumer = new SmartTakingConsumer(eventLimit, queue, stopFlag, stopWatch);
+                consumer = new SmartTakingConsumer(eventLimit, queue);
                 logFileBuilder.append("smart-taking.txt");
                 break;
             }
@@ -99,15 +94,7 @@ public class App {
         executorService.submit(consumer);
         executorService.submit(producer);
 
-        try {
-            while (!stopFlag.get()) {
-                Thread.sleep(1000);
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
-        executorService.shutdownNow();
+        executorService.shutdown(); // acting like join
 
         // System.out.println(consumer.getPerformance());
         long endMillis = System.currentTimeMillis();
@@ -123,5 +110,13 @@ public class App {
             System.out.println("encountered error!!");
             System.err.println(e);
         }
+    }
+
+    public void batchTest() {
+
+    }
+
+    public static void main(String[] args) throws IOException {
+        new App().selectAndTest();
     }
 }

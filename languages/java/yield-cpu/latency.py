@@ -16,11 +16,13 @@ def load_file(file_path):
 
 
 if __name__ == '__main__':
-    dir_path = '/home/daowen/github/playground/languages/java/yield-cpu/test3'
+    dir_path = '/home/daowen/github/playground/languages/java/yield-cpu/test-dense-data'
     labels = [
-        'yielding', 'timeout-polling', 'polling', 'smart-polling',
-        'timeout-polling-100', 'smart-polling-100',
-        'timeout-polling-500', 'smart-polling-500', 'smart-taking',
+        #'yielding', 
+        'timeout-polling', 'polling', 'smart-polling',
+        #'timeout-polling-100', 'smart-polling-100',
+        #'timeout-polling-500', 'smart-polling-500', 
+        'smart-taking',
     ]
     data = dict((name, load_file(f'{dir_path}/{name}.txt')) for name in labels)
 

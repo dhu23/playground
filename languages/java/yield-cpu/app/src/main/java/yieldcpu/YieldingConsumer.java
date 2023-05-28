@@ -4,10 +4,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class YieldingConsumer extends Consumer {
-    public YieldingConsumer(
-            int eventLimit,
-            LinkedBlockingQueue<Record> queue, AtomicBoolean stopFlag, StopWatch stopWatch) {
-        super(eventLimit, queue, stopFlag, stopWatch);
+    public YieldingConsumer(int eventLimit, LinkedBlockingQueue<Record> queue) {
+        super(eventLimit, queue);
     }
 
     @Override
