@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 public class App {
     private final Random random = new Random();
@@ -115,7 +116,7 @@ public class App {
         }
     }
 
-    public void batchTest() {
+    public void batchTest(boolean useExecutorService) {
         String batchTestName = "batch-test";
         List<Consumer> consumerList = List.of(
                 new PollingConsumer(this.eventLimit),
@@ -128,15 +129,38 @@ public class App {
                 this.eventLimit, this.wordGenerator, this.batchSizeGenerator, this.breakGenerator);
         consumerList.forEach(multiProducer::registerConsumer);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(7);
-        consumerList.forEach(executorService::submit);
-        executorService.submit(multiProducer);
+        if (useExecutorService) {
+            ExecutorService executorService = Executors.newFixedThreadPool(7);
+            consumerList.forEach(executorService::submit);
+            executorService.submit(multiProducer);
 
-        executorService.shutdown();
-        try {
-            executorService.awaitTermination(5, TimeUnit.MINUTES);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            executorService.shutdown();
+            try {
+                executorService.awaitTermination(5, TimeUnit.MINUTES);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            // use manually created Thread objects to run
+            Thread producerThread = new Thread(multiProducer);
+            List<Thread> consumerThreadList = consumerList.stream()
+                    .map(consumer -> new Thread(consumer)).collect(Collectors.toList());
+
+            consumerThreadList.forEach(Thread::start);
+            producerThread.start();
+
+            for (Thread thread : consumerThreadList) {
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            try {
+                producerThread.join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         consumerList.forEach(consumer -> {
@@ -162,6 +186,6 @@ public class App {
 
     public static void main(String[] args) throws IOException {
         // new App().selectAndTest();
-        new App().batchTest();
+        new App().batchTest(false);
     }
 }
