@@ -23,9 +23,11 @@ public class MathGameMain extends JFrame implements ActionListener, ChangeListen
     private JSlider answerSlider;
     private JLabel answer;
 
+    private JTextArea journal;
+
     public MathGameMain() {
 
-        setSize(480, 120);
+        setSize(560, 400);
         setLocation(768, 256);
         setTitle("Math Game!");
         
@@ -39,16 +41,11 @@ public class MathGameMain extends JFrame implements ActionListener, ChangeListen
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
 
-        // left cornor
-        // numbers = new JList<>(new Integer[] {1, 2});
-        // mainPanel.add(numbers, BorderLayout.WEST);
-        JPanel leftPanel = new JPanel();
-        leftPanel.setLayout(new FlowLayout());
+        // left corner
+        // JPanel leftPanel = new JPanel();
+        // leftPanel.setLayout(new FlowLayout());
+        // mainPanel.add(leftPanel, BorderLayout.WEST);
 
-        question = new JLabel();
-        leftPanel.add(question);
-
-        mainPanel.add(leftPanel, BorderLayout.WEST);
 
         // bottom corner
         JPanel bottomPanel = new JPanel();
@@ -70,18 +67,32 @@ public class MathGameMain extends JFrame implements ActionListener, ChangeListen
 
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
-        // center
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        // top corner
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
 
-        answerSlider = new JSlider(0, 20, 10);
+        question = new JLabel();
+
+        answerSlider = new JSlider(0, 40, 20);
         answerSlider.addChangeListener(this);
-        answer = new JLabel("10");
+        answer = new JLabel(String.valueOf(answerSlider.getValue()));
 
-        centerPanel.add(answerSlider);
-        centerPanel.add(answer);
+        topPanel.add(question);
+        topPanel.add(answerSlider);
+        topPanel.add(answer);
+
+        mainPanel.add(topPanel, BorderLayout.NORTH);
+
+        // center corner
+        journal = new JTextArea("Journal:\n", 16, 40);
+        journal.setEditable(false);
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new FlowLayout());
+
+        centerPanel.add(new JScrollPane(journal));
 
         mainPanel.add(centerPanel, BorderLayout.CENTER);
+
 
         add(mainPanel);
 
@@ -93,8 +104,8 @@ public class MathGameMain extends JFrame implements ActionListener, ChangeListen
     }
 
     private void setupQuestion() {
-        a = rand.nextInt(10);
-        b = rand.nextInt(10);
+        a = rand.nextInt(20);
+        b = rand.nextInt(20);
         question.setText(String.format("%s + %s", a, b));
         result.setText("");
         confirm.setEnabled(true);
@@ -106,12 +117,15 @@ public class MathGameMain extends JFrame implements ActionListener, ChangeListen
         String command = e.getActionCommand();
         System.out.println("command=" + command);
         if (command.equals(CONFIRM_COMMAND)) {
-            if (answerSlider.getValue() == a + b) {
+            int ansVal = answerSlider.getValue();
+            if (ansVal == a + b) {
                 result.setText("Correct");
                 playAgain.setEnabled(true);
                 confirm.setEnabled(false);
+                journal.append(String.format("%d + %d = %d (right)\n", a, b, a+b));
             } else {
                 result.setText("Try again!");
+                journal.append(String.format("%d + %d = %d (wrong)\n", a, b, ansVal));
             }
         } else if (command.equals(PLAY_AGAIN_COMMAND)) {
             setupQuestion();
