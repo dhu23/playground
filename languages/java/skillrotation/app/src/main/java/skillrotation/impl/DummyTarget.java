@@ -6,7 +6,7 @@ import skillrotation.intf.Skill;
 
 import java.util.Optional;
 
-public class Dummy implements Character {
+public class DummyTarget implements Character {
     @Override
     public long uniqueId() {
         return 0;
@@ -84,7 +84,7 @@ public class Dummy implements Character {
 
     @Override
     public String name() {
-        return "Dummy";
+        return "DummyTarget";
     }
 
     @Override

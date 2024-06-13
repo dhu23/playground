@@ -3,14 +3,21 @@
  */
 package skillrotation;
 
-import skillrotation.impl.Dummy;
+import skillrotation.impl.DummyTarget;
 import skillrotation.impl.WorldSpaceTime;
 import skillrotation.impl.deathknight.DeathKnight;
 import skillrotation.impl.deathknight.Obliterate;
 import skillrotation.impl.simulation.ObliterateSpam;
-import skillrotation.intf.Character;
 import skillrotation.intf.PlayControl;
 
+
+// TODO
+// 1. make WorldSpaceTime non-Singleton
+// 2. add resource cooldown
+// 3. add new skills for the full rotation
+// 4. add file logging
+// 5. add journal collection for analysis
+// 6. machine time simulation
 public class App {
     public static void main(String[] args) throws InterruptedException {
         WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
@@ -22,7 +29,7 @@ public class App {
         Obliterate obliterate = new Obliterate(4);
         dk1.setSkill(obliterate);
 
-        Dummy dummy = new Dummy();
+        DummyTarget dummy = new DummyTarget();
 
         dk1.selectTarget(dummy);
 

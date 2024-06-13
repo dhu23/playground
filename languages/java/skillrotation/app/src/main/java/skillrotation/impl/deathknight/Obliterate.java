@@ -1,5 +1,6 @@
 package skillrotation.impl.deathknight;
 
+import skillrotation.LogUtils;
 import skillrotation.impl.AbstractSkill;
 import skillrotation.impl.AbstractTargetSkill;
 import skillrotation.intf.Character;
@@ -31,8 +32,16 @@ public class Obliterate extends AbstractTargetSkill {
 
     @Override
     public void cast_(Character caster) {
-        System.out.println(String.format("%s: casting Obliterate by: %s", Instant.now(), caster.name()));
-        double base = caster.dealWeaponDamage() * 0.8 + getBonusDamage_();
+        DeathKnight deathKnight = (DeathKnight) caster;
+        if (deathKnight == null) {
+            LogUtils.log("not a Death Knight");
+            return;
+        }
+        if (deathKnight.consumeResource((DeathKnightResourceCost) this.cost)) {
+            LogUtils.log(String.format("%s casts Obliterate", deathKnight.name()));
+            deathKnight.triggerGlobalCoolDown(this);
+            double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
+        }
     }
 
     protected int getBonusDamage_() {
