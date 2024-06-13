@@ -8,6 +8,7 @@ import skillrotation.impl.WorldSpaceTime;
 import skillrotation.impl.deathknight.DeathKnight;
 import skillrotation.impl.deathknight.Obliterate;
 import skillrotation.impl.simulation.ObliterateSpam;
+import skillrotation.intf.DeathKnightPlayControl;
 import skillrotation.intf.PlayControl;
 
 
@@ -23,7 +24,7 @@ public class App {
         WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
 
         DeathKnight dk1 = new DeathKnight("DK1", 60);
-        PlayControl obSpam = new ObliterateSpam(dk1);
+        DeathKnightPlayControl obSpam = new ObliterateSpam(dk1);
         dk1.setControl(obSpam);
 
         Obliterate obliterate = new Obliterate(4);
@@ -33,7 +34,7 @@ public class App {
 
         dk1.selectTarget(dummy);
 
-        Thread.sleep(15000);
+        Thread.sleep(20000);
         worldSpaceTime.stop();
     }
 }

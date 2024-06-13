@@ -1,28 +1,19 @@
 package skillrotation.impl.deathknight;
 
 import skillrotation.LogUtils;
+import skillrotation.impl.AbstractCharacter;
 import skillrotation.impl.WorldSpaceTime;
 import skillrotation.impl.data.IntegerInterval;
 import skillrotation.impl.event.*;
-import skillrotation.intf.Character;
-import skillrotation.intf.CharacterResource;
-import skillrotation.intf.PlayControl;
-import skillrotation.intf.Skill;
+import skillrotation.intf.*;
 
 import java.time.Instant;
 import java.util.*;
 
-public class DeathKnight implements Character {
-    private String name;
-    private int level;
-    private int hp;
+public class DeathKnight extends AbstractCharacter {
     private DeathKnightResource resource_;
 
-    private Optional<Character> target_;
-    private Optional<PlayControl> control_;
     private HashMap<String, Skill> skills_;
-
-    private boolean onGlobalCoolDown_;
 
     public static class DeathKnightRune {
         public DeathKnightResourceCost.RuneType runeType;
@@ -112,12 +103,7 @@ public class DeathKnight implements Character {
                     if (found >= 0) {
                         availableRuneIndices.remove(found);
                         getRune(found).setCoolDown(nextAvailable);
-
-                        Instant now = Instant.now();
-                        Event<WorldEvent.EventType, Object> event =
-                                ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
-                                        ImmutableRuneCoolDown.of(deathKnight, found, now.plusMillis(10000)));
-                        WorldSpaceTime.getInstance().pushEvent(event);
+                        WorldSpaceTime.getInstance().pushRuneCoolDownEvent(deathKnight, found, 10000);
                     } else {
                         LogUtils.log("really bad");
                         return false;
@@ -138,20 +124,11 @@ public class DeathKnight implements Character {
         }
     }
 
-
     public DeathKnight(String name, int level) {
-        this.name = name;
-        this.level = level;
-        this.hp = 100;
-        this.resource_ = new DeathKnightResource();
-        target_ = Optional.empty();
-        control_ = Optional.empty();
-        skills_ = new HashMap<>();
-        this.onGlobalCoolDown_ = false;
-    }
+        super(name, level, 100);
 
-    public void setControl(PlayControl playControl) {
-        control_ = Optional.of(playControl);
+        this.resource_ = new DeathKnightResource();
+        skills_ = new HashMap<>();
     }
 
     public void setSkill(Skill skill) {
@@ -163,20 +140,8 @@ public class DeathKnight implements Character {
         return 0;
     }
 
-    @Override
-    public int level() {
-        return this.level;
-    }
 
-    @Override
-    public int hp() {
-        return this.hp;
-    }
 
-    @Override
-    public int maxHp() {
-        return 100;
-    }
 
     @Override
     public IntegerInterval weaponDamage() {
@@ -193,23 +158,7 @@ public class DeathKnight implements Character {
         return 0;
     }
 
-    @Override
-    public Optional<Character> getTarget() {
-        return target_;
-    }
 
-    @Override
-    public void selectTarget(Character character) {
-        System.out.println(String.format("%s: Selecting %s", Instant.now(), character.name()));
-        target_ = Optional.ofNullable(character);
-        control_.ifPresent(PlayControl::onSelect);
-    }
-
-    @Override
-    public void unSelectTarget() {
-        target_ = Optional.empty();
-        control_.ifPresent(PlayControl::onUnselect);
-    }
 
     @Override
     public Optional<Skill> getSkill(String name) {
@@ -226,8 +175,6 @@ public class DeathKnight implements Character {
         }
         skillOptional.ifPresent(skill -> {
             skill.cast(this);
-            // triggerGlobalCoolDown(skill);
-            // trigger global cooldown
         });
     }
 
@@ -243,35 +190,9 @@ public class DeathKnight implements Character {
         return resource_.consume(neededRuneList, resourceCost.runicPower(), this);
     }
 
-    @Override
-    public void triggerGlobalCoolDown(Skill skill) {
-        onGlobalCoolDown_ = true;
-        Instant now = Instant.now();
-        Event<WorldEvent.EventType, Object> event =
-                ImmutableEvent.of(WorldEvent.EventType.GlobalCoolDown, ImmutableGlobalCoolDown.of(this, skill, now.plusMillis(1500)));
-        WorldSpaceTime.getInstance().pushEvent(event);
-    }
-
     public void clearRuneCoolDown(int runeId) {
         resource_.getRune(runeId).clearCoolDown();
-        control_.ifPresent(PlayControl::onRuneCoolDownFinish);
-    }
-
-    @Override
-    public void clearGlobalCoolDown() {
-        System.out.println(String.format("cleared global cd"));
-        onGlobalCoolDown_ = false;
-        control_.ifPresent(PlayControl::onGlobalCoolDownFinish);
-    }
-
-    @Override
-    public boolean onGlobalCoolDown() {
-        return this.onGlobalCoolDown_;
-    }
-
-    @Override
-    public String name() {
-        return this.name;
+        control_.ifPresent(control -> ((DeathKnightPlayControl) control).onRuneCoolDownFinish());
     }
 
     @Override

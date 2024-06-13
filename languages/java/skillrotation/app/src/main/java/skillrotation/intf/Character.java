@@ -29,6 +29,8 @@ public interface Character extends Named {
     void selectTarget(Character character);
     void unSelectTarget();
 
+    void setControl(PlayControl playControl);
+
     Optional<Skill> getSkill(String name);
     void cast(String name);
     void triggerGlobalCoolDown(Skill skill);

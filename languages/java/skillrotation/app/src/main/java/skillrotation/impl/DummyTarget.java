@@ -6,24 +6,13 @@ import skillrotation.intf.Skill;
 
 import java.util.Optional;
 
-public class DummyTarget implements Character {
+public class DummyTarget extends AbstractCharacter {
+    public DummyTarget() {
+        super("DummyTarget", -1, 0);
+    }
+
     @Override
     public long uniqueId() {
-        return 0;
-    }
-
-    @Override
-    public int level() {
-        return -1;
-    }
-
-    @Override
-    public int hp() {
-        return 0;
-    }
-
-    @Override
-    public int maxHp() {
         return 0;
     }
 
@@ -43,21 +32,6 @@ public class DummyTarget implements Character {
     }
 
     @Override
-    public Optional<Character> getTarget() {
-        return Optional.empty();
-    }
-
-    @Override
-    public void selectTarget(Character character) {
-
-    }
-
-    @Override
-    public void unSelectTarget() {
-
-    }
-
-    @Override
     public Optional<Skill> getSkill(String name) {
         return Optional.empty();
     }
@@ -68,32 +42,12 @@ public class DummyTarget implements Character {
     }
 
     @Override
-    public void triggerGlobalCoolDown(Skill skill) {
-
-    }
-
-    @Override
-    public void clearGlobalCoolDown() {
-
-    }
-
-    @Override
-    public boolean onGlobalCoolDown() {
-        return false;
-    }
-
-    @Override
-    public String name() {
-        return "DummyTarget";
-    }
-
-    @Override
     public String description() {
-        return name();
+        return "";
     }
 
     @Override
     public String shortDescription() {
-        return name();
+        return "";
     }
 }

@@ -1,9 +1,10 @@
 package skillrotation.impl.simulation;
 
 import skillrotation.impl.deathknight.DeathKnight;
+import skillrotation.intf.DeathKnightPlayControl;
 import skillrotation.intf.PlayControl;
 
-public class ObliterateSpam implements PlayControl {
+public class ObliterateSpam implements DeathKnightPlayControl {
     private final DeathKnight deathKnight_;
 
     public ObliterateSpam(DeathKnight deathKnight) {

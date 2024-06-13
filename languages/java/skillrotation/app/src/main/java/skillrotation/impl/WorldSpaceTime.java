@@ -3,9 +3,9 @@ package skillrotation.impl;
 import com.google.common.annotations.VisibleForTesting;
 import skillrotation.LogUtils;
 import skillrotation.impl.deathknight.DeathKnight;
-import skillrotation.impl.event.Event;
-import skillrotation.impl.event.EventQueue;
-import skillrotation.impl.event.WorldEvent;
+import skillrotation.impl.event.*;
+import skillrotation.intf.Character;
+import skillrotation.intf.Skill;
 
 import java.time.Instant;
 
@@ -27,7 +27,7 @@ public class WorldSpaceTime {
         this.eventQueue_.stop();
     }
 
-    public void pushEvent(Event<WorldEvent.EventType, Object> event) {
+    protected void pushEvent(Event<WorldEvent.EventType, Object> event) {
         this.eventQueue_.pushEvent(event);
     }
 
@@ -73,5 +73,21 @@ public class WorldSpaceTime {
                 }
             }
         }
+    }
+
+    public void pushGlobalCoolDownEvent(Character caster, Skill skill, long coolDownInMillis) {
+        Instant now = Instant.now();
+        Event<WorldEvent.EventType, Object> event =
+                ImmutableEvent.of(WorldEvent.EventType.GlobalCoolDown,
+                        ImmutableGlobalCoolDown.of(caster, skill, now.plusMillis(coolDownInMillis)));
+        pushEvent(event);
+    }
+
+    public void pushRuneCoolDownEvent(DeathKnight dk, int runeId, long coolDownInMillis) {
+        Instant now = Instant.now();
+        Event<WorldEvent.EventType, Object> event =
+                ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
+                        ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(10000)));
+        pushEvent(event);
     }
 }
