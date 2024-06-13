@@ -33,7 +33,7 @@ public class App {
 
         dk1.selectTarget(dummy);
 
-        Thread.sleep(10000);
+        Thread.sleep(15000);
         worldSpaceTime.stop();
     }
 }

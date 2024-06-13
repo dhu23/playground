@@ -1,6 +1,7 @@
 package skillrotation.impl.event;
 
 import org.immutables.value.Value;
+import skillrotation.impl.deathknight.DeathKnightResourceCost;
 import skillrotation.intf.Character;
 import skillrotation.intf.Skill;
 
@@ -11,7 +12,8 @@ public class WorldEvent {
     public enum EventType {
         Select,
         Cast,
-        GlobalCoolDown
+        GlobalCoolDown,
+        RuneCoolDown
     }
 
     @Value.Immutable
@@ -39,6 +41,18 @@ public class WorldEvent {
 
         @Value.Parameter
         public abstract Skill triggeredBy();
+
+        @Value.Parameter
+        public abstract Instant availableTime();
+    }
+
+    @Value.Immutable
+    public static abstract class RuneCoolDown {
+        @Value.Parameter
+        public abstract Character caster();
+
+        @Value.Parameter
+        public abstract int runeId();
 
         @Value.Parameter
         public abstract Instant availableTime();

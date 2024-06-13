@@ -3,10 +3,7 @@ package skillrotation.impl.deathknight;
 import skillrotation.LogUtils;
 import skillrotation.impl.WorldSpaceTime;
 import skillrotation.impl.data.IntegerInterval;
-import skillrotation.impl.event.Event;
-import skillrotation.impl.event.ImmutableEvent;
-import skillrotation.impl.event.ImmutableGlobalCoolDown;
-import skillrotation.impl.event.WorldEvent;
+import skillrotation.impl.event.*;
 import skillrotation.intf.Character;
 import skillrotation.intf.CharacterResource;
 import skillrotation.intf.PlayControl;
@@ -14,7 +11,6 @@ import skillrotation.intf.Skill;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class DeathKnight implements Character {
     private String name;
@@ -41,7 +37,7 @@ public class DeathKnight implements Character {
             return nextAvailableTime.isEmpty();
         }
 
-        public void reset() {
+        public void clearCoolDown() {
             nextAvailableTime = Optional.empty();
         }
 
@@ -73,9 +69,13 @@ public class DeathKnight implements Character {
             return ret;
         }
 
-        private int _selectRune(Collection<Integer> selectedRunes, DeathKnightResourceCost.RuneType needed) {
+        public DeathKnightRune getRune(int runeId) {
+            return runes_.get(runeId);
+        }
+
+        private int selectRune_(Collection<Integer> selectedRunes, DeathKnightResourceCost.RuneType needed) {
             for (int i : selectedRunes) {
-                if (runes_.get(i).runeType == needed) {
+                if (getRune(i).runeType == needed) {
                     return i;
                 }
             }
@@ -86,7 +86,7 @@ public class DeathKnight implements Character {
             Set<Integer> availableRuneIndices = getAvailableRuneIndices();
 
             for (DeathKnightResourceCost.RuneType needed : neededRuneTypes) {
-                int found = _selectRune(availableRuneIndices, needed);
+                int found = selectRune_(availableRuneIndices, needed);
                 if (found >= 0) {
                     availableRuneIndices.remove(found);
                 } else {
@@ -100,17 +100,24 @@ public class DeathKnight implements Character {
             return neededRunicPower <= 0 || runicPowerLevel_ >= neededRunicPower;
         }
 
-        public boolean consume(List<DeathKnightResourceCost.RuneType> runeTypes, int runicPower) {
+        public boolean consume(List<DeathKnightResourceCost.RuneType> runeTypes, int runicPower,
+                               DeathKnight deathKnight) {
             if (hasRunes(runeTypes) && hasRunicPower(runicPower)) {
                 // consume runes
                 Set<Integer> availableRuneIndices = getAvailableRuneIndices();
 
                 Instant nextAvailable = Instant.now().plusSeconds(10);
                 for (DeathKnightResourceCost.RuneType needed : runeTypes) {
-                    int found = _selectRune(availableRuneIndices, needed);
+                    int found = selectRune_(availableRuneIndices, needed);
                     if (found >= 0) {
                         availableRuneIndices.remove(found);
-                        runes_.get(found).setCoolDown(nextAvailable);
+                        getRune(found).setCoolDown(nextAvailable);
+
+                        Instant now = Instant.now();
+                        Event<WorldEvent.EventType, Object> event =
+                                ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
+                                        ImmutableRuneCoolDown.of(deathKnight, found, now.plusMillis(10000)));
+                        WorldSpaceTime.getInstance().pushEvent(event);
                     } else {
                         LogUtils.log("really bad");
                         return false;
@@ -232,7 +239,8 @@ public class DeathKnight implements Character {
             }
         }));
 
-        return resource_.consume(neededRuneList, resourceCost.runicPower());
+        // TODO maybe move the message part to DK level
+        return resource_.consume(neededRuneList, resourceCost.runicPower(), this);
     }
 
     @Override
@@ -242,6 +250,11 @@ public class DeathKnight implements Character {
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.GlobalCoolDown, ImmutableGlobalCoolDown.of(this, skill, now.plusMillis(1500)));
         WorldSpaceTime.getInstance().pushEvent(event);
+    }
+
+    public void clearRuneCoolDown(int runeId) {
+        resource_.getRune(runeId).clearCoolDown();
+        control_.ifPresent(PlayControl::onRuneCoolDownFinish);
     }
 
     @Override

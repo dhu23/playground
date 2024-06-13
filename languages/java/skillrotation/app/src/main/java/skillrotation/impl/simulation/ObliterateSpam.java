@@ -26,6 +26,11 @@ public class ObliterateSpam implements PlayControl {
         playRotation();
     }
 
+    @Override
+    public void onRuneCoolDownFinish() {
+        playRotation();
+    }
+
     private void playRotation() {
         deathKnight_.cast("Obliterate");
     }
