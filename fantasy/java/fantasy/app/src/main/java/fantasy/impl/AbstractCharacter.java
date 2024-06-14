@@ -1,5 +1,7 @@
 package fantasy.impl;
 
+import com.google.common.base.Preconditions;
+import fantasy.impl.item.Weapon;
 import fantasy.intf.Character;
 import fantasy.intf.PlayControl;
 import fantasy.intf.Skill;
@@ -18,6 +20,9 @@ public abstract class AbstractCharacter implements Character {
 
     protected boolean onGlobalCoolDown_;
 
+    protected Optional<Weapon> mainHand;
+    protected Optional<Weapon> offHand;
+
     public AbstractCharacter(String name, int level, int baseHp) {
         this.name = name;
         this.level = level;
@@ -28,6 +33,9 @@ public abstract class AbstractCharacter implements Character {
         this.control_ = Optional.empty();
 
         this.onGlobalCoolDown_ = false;
+
+        this.mainHand = Optional.empty();
+        this.offHand = Optional.empty();
     }
 
     @Override
@@ -43,6 +51,29 @@ public abstract class AbstractCharacter implements Character {
     @Override
     public int maxHp() {
         return this.maxHp;
+    }
+
+    @Override
+    public int modifyHp(int amount) {
+        this.hp += amount;
+        if (hp() > maxHp()) {
+            this.hp = maxHp();
+        } else if (hp() < 0) {
+            this.hp = 0;
+        }
+        return hp();
+    }
+
+    @Override
+    public int sufferDamage(int amount) {
+        Preconditions.checkState(amount > 0);
+        return modifyHp(-amount);
+    }
+
+    @Override
+    public int receiveHealing(int amount) {
+        Preconditions.checkState(amount > 0);
+        return modifyHp(amount);
     }
 
     @Override

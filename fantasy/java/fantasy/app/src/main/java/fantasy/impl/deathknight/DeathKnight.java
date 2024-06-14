@@ -1,9 +1,12 @@
 package fantasy.impl.deathknight;
 
+import com.google.common.base.Preconditions;
 import fantasy.LogUtils;
 import fantasy.impl.AbstractCharacter;
 import fantasy.impl.WorldSpaceTime;
+import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
+import fantasy.impl.item.Weapon;
 import fantasy.intf.*;
 
 import java.time.Instant;
@@ -166,8 +169,13 @@ public class DeathKnight extends AbstractCharacter {
     }
 
     @Override
+    public IntegerInterval emptyHandedDamage() {
+        return ImmutableIntegerInterval.of(3, 5);
+    }
+
+    @Override
     public IntegerInterval weaponDamage() {
-        return null;
+        return this.mainHand.map(Weapon::weaponDamage).orElse(emptyHandedDamage());
     }
 
     @Override
@@ -176,8 +184,13 @@ public class DeathKnight extends AbstractCharacter {
     }
 
     @Override
-    public int dealWeaponDamage() {
+    public double damageMitigation() {
         return 0;
+    }
+
+    @Override
+    public int dealWeaponDamage() {
+        return weaponDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
     }
 
     @Override
@@ -208,6 +221,21 @@ public class DeathKnight extends AbstractCharacter {
     public boolean isCoolDownReady(String name) {
         // TODO need to add skill specific cooldown check
         return !onGlobalCoolDown_;
+    }
+
+    @Override
+    public boolean equipWeapon(Weapon item) {
+        switch (item.style()) {
+            case TwoHandedWeapon -> {
+                switch (item.category()) {
+                    case Axe, Sword -> {
+                        this.mainHand = Optional.of(item);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     protected boolean hasResource(DeathKnightResourceCost resourceCost) {

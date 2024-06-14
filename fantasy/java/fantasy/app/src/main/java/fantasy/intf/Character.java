@@ -1,6 +1,7 @@
 package fantasy.intf;
 
 import fantasy.impl.data.IntegerInterval;
+import fantasy.impl.item.Weapon;
 
 import java.util.Optional;
 
@@ -11,6 +12,10 @@ public interface Character extends Named {
     int hp();
     int maxHp();
 
+    int modifyHp(int amount);
+    int sufferDamage(int amount);
+    int receiveHealing(int amount);
+
     default boolean isAlive() {
         return hp() > 0;
     }
@@ -18,8 +23,10 @@ public interface Character extends Named {
         return !isAlive();
     }
 
+    IntegerInterval emptyHandedDamage();
     IntegerInterval weaponDamage();
     int armor();
+    double damageMitigation();
 
     int dealWeaponDamage();
 
@@ -40,4 +47,6 @@ public interface Character extends Named {
     void triggerGlobalCoolDown(Skill skill);
     void clearGlobalCoolDown();
     boolean onGlobalCoolDown();
+
+    boolean equipWeapon(Weapon item);
 }

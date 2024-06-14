@@ -2,6 +2,7 @@ package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
 import fantasy.impl.AbstractTargetSkill;
+import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
 import java.util.TreeMap;
@@ -43,18 +44,14 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
     }
 
     @Override
-    protected void castOnTarget_(Character caster, Character target) {
-        DeathKnight deathKnight = (DeathKnight) caster;
-        if (deathKnight == null) {
-            LogUtils.log("not a Death Knight");
-            return;
-        }
+    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
+        double base = deathKnight.dealWeaponDamage() * 0.55 + getBonusDamage_();
 
-    }
+        // Frost Strike is not affected by target's damage mitigation
 
-    @Override
-    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character character) {
-        // double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
+        int damage = (int) base;
+        target.sufferDamage(damage);
+        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage);
     }
 
     protected int getBonusDamage_() {

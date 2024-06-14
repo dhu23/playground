@@ -2,9 +2,11 @@ package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
 import fantasy.impl.AbstractTargetSkill;
+import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
 import java.util.TreeMap;
+import java.util.logging.Logger;
 
 /**
  * <pre>
@@ -43,8 +45,16 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
     }
 
     @Override
-    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character character) {
+    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
+        // TODO add effect bonuses
+
+        // damage mitigation
+        base *= (1.0 - target.damageMitigation());
+
+        int damage = (int) base;
+        target.sufferDamage(damage);
+        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage);
     }
 
     protected int getBonusDamage_() {

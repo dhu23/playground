@@ -7,20 +7,47 @@ import fantasy.impl.event.*;
 import fantasy.intf.Character;
 import fantasy.intf.Skill;
 
+import java.io.IOException;
 import java.time.Instant;
+import java.util.Random;
+import java.util.random.RandomGenerator;
 
 
 public class WorldSpaceTime {
     private static final WorldSpaceTime INSTANCE = new WorldSpaceTime();
+
+    private final LogUtils logUtils_;
+    private final RandomGenerator randomGenerator_;
     private final EventQueue<Event<WorldEvent.EventType, Object>> eventQueue_;
 
     public static WorldSpaceTime getInstance() {
         return INSTANCE;
     }
 
+    // TODO move log utils out
     public WorldSpaceTime() {
-        this.eventQueue_ = new EventQueue<>(this::onEvent_);
+        try {
+            this.logUtils_ = new LogUtils("./logs");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        this.randomGenerator_ = new Random();
+        this.eventQueue_ = new EventQueue<>(event -> {
+            try {
+                onEvent_(event);
+            } catch (Exception e) {
+                LogUtils.log(String.format("got error %s", e));
+            }
+        });
         this.eventQueue_.start();
+    }
+
+    public RandomGenerator getRandomGenerator() {
+        return randomGenerator_;
+    }
+
+    public LogUtils getLog() {
+        return logUtils_;
     }
 
     public void stop() {

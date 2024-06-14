@@ -1,6 +1,7 @@
 package fantasy.impl;
 
 import fantasy.impl.data.IntegerInterval;
+import fantasy.impl.item.Weapon;
 import fantasy.intf.Skill;
 
 import java.util.Optional;
@@ -16,6 +17,11 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
+    public IntegerInterval emptyHandedDamage() {
+        return null;
+    }
+
+    @Override
     public IntegerInterval weaponDamage() {
         return null;
     }
@@ -23,6 +29,11 @@ public class DummyTarget extends AbstractCharacter {
     @Override
     public int armor() {
         return 0;
+    }
+
+    @Override
+    public double damageMitigation() {
+        return 0.3;
     }
 
     @Override
@@ -47,6 +58,11 @@ public class DummyTarget extends AbstractCharacter {
 
     @Override
     public boolean isCoolDownReady(String name) {
+        return false;
+    }
+
+    @Override
+    public boolean equipWeapon(Weapon item) {
         return false;
     }
 

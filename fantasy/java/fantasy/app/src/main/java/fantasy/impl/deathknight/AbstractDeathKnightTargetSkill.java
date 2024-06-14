@@ -32,5 +32,5 @@ public abstract class AbstractDeathKnightTargetSkill extends AbstractTargetSkill
         castOnTargetByDeathKnight(deathKnight, target);
     }
 
-    protected abstract void castOnTargetByDeathKnight(DeathKnight deathKnight, Character character);
+    protected abstract void castOnTargetByDeathKnight(DeathKnight deathKnight, Character target);
 }

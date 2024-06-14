@@ -5,10 +5,13 @@ package fantasy;
 
 import fantasy.impl.DummyTarget;
 import fantasy.impl.WorldSpaceTime;
+import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.deathknight.BloodStrike;
 import fantasy.impl.deathknight.DeathKnight;
 import fantasy.impl.deathknight.FrostStrike;
 import fantasy.impl.deathknight.Obliterate;
+import fantasy.impl.item.ImmutableWeapon;
+import fantasy.impl.item.Weapon;
 import fantasy.impl.simulation.ObliterateFrostStrikeBloodStrikeSpam;
 import fantasy.impl.simulation.ObliterateSpam;
 import fantasy.intf.DeathKnightPlayControl;
@@ -22,6 +25,10 @@ import fantasy.intf.DeathKnightPlayControl;
 // 5. add journal collection for analysis
 // 6. machine time simulation
 public class App {
+    public static final Weapon REFORGED_TRUESILVER_CHAMPION = ImmutableWeapon.of(
+            ImmutableIntegerInterval.of(449, 674), 3600,
+            "Reforged Truesilver Champion", Weapon.Style.TwoHandedWeapon, Weapon.Category.Sword);
+
     public static void main(String[] args) throws InterruptedException {
         // runObliterateSpam();
         runObliterateFrostStrikeBloodStrikeSpam();
@@ -32,6 +39,7 @@ public class App {
 
         DeathKnight dk1 = new DeathKnight("DK1", 60);
         dk1.setSkill(Obliterate.getInstance(4));
+        dk1.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
 
         DeathKnightPlayControl obSpam = new ObliterateSpam(dk1);
         dk1.setControl(obSpam);
@@ -50,6 +58,7 @@ public class App {
         dk1.setSkill(Obliterate.getInstance(4));
         dk1.setSkill(FrostStrike.getInstance(6));
         dk1.setSkill(BloodStrike.getInstance(6));
+        dk1.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
 
         DeathKnightPlayControl obSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk1);
         dk1.setControl(obSpam);
