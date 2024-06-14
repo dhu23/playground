@@ -42,6 +42,16 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
+    public boolean hasResourceToCast(String name) {
+        return false;
+    }
+
+    @Override
+    public boolean isCoolDownReady(String name) {
+        return false;
+    }
+
+    @Override
     public String description() {
         return "";
     }

@@ -1,8 +1,8 @@
 package skillrotation.impl.deathknight;
 
+import skillrotation.LogUtils;
 import skillrotation.impl.AbstractTargetSkill;
 import skillrotation.intf.Character;
-import skillrotation.intf.ResourceCost;
 
 import java.util.TreeMap;
 
@@ -13,8 +13,14 @@ import java.util.TreeMap;
  * </pre>
  */
 public class BloodStrike extends AbstractTargetSkill {
-    public static final String NAME = "Blood Strike";
-    public static final ResourceCost RESOURCE_COST = getCost_();
+    public static final String BLOOD_STRIKE = "Blood Strike";
+
+    private static final BloodStrike LEVEL_1 = new BloodStrike(1);
+    private static final BloodStrike LEVEL_2 = new BloodStrike(2);
+    private static final BloodStrike LEVEL_3 = new BloodStrike(3);
+    private static final BloodStrike LEVEL_4 = new BloodStrike(4);
+    private static final BloodStrike LEVEL_5 = new BloodStrike(5);
+    private static final BloodStrike LEVEL_6 = new BloodStrike(6);
 
     protected static DeathKnightResourceCost getCost_() {
         TreeMap<DeathKnightResourceCost.RuneType, Integer> runes = new TreeMap<>();
@@ -23,11 +29,33 @@ public class BloodStrike extends AbstractTargetSkill {
     }
 
     public BloodStrike(int level) {
-        super(NAME, level, RESOURCE_COST);
+        super(BLOOD_STRIKE, level, getCost_());
+    }
+
+    public static BloodStrike getInstance(int level) {
+        return switch (level) {
+            case 1 -> LEVEL_1;
+            case 2 -> LEVEL_2;
+            case 3 -> LEVEL_3;
+            case 4 -> LEVEL_4;
+            case 5 -> LEVEL_5;
+            case 6 -> LEVEL_6;
+            default -> throw new IllegalStateException("Unexpected value: " + level);
+        };
     }
 
     @Override
     public void cast_(Character caster) {
+        DeathKnight deathKnight = (DeathKnight) caster;
+        if (deathKnight == null) {
+            LogUtils.log("not a Death Knight");
+            return;
+        }
+        if (deathKnight.consumeResource((DeathKnightResourceCost) this.cost)) {
+            LogUtils.log(String.format("%s casts %s", deathKnight.name(), BLOOD_STRIKE));
+            deathKnight.triggerGlobalCoolDown(this);
+            double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
+        }
     }
 
     protected int getBonusDamage_() {

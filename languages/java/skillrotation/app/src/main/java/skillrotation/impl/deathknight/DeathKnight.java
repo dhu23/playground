@@ -4,7 +4,6 @@ import skillrotation.LogUtils;
 import skillrotation.impl.AbstractCharacter;
 import skillrotation.impl.WorldSpaceTime;
 import skillrotation.impl.data.IntegerInterval;
-import skillrotation.impl.event.*;
 import skillrotation.intf.*;
 
 import java.time.Instant;
@@ -34,11 +33,11 @@ public class DeathKnight extends AbstractCharacter {
 
         public void setCoolDown(Instant availableTime) {
             nextAvailableTime = Optional.of(availableTime);
-            LogUtils.log(String.format("rune %s is on cool down now", runeType));
+            // LogUtils.log(String.format("rune %s is on cool down now", runeType));
         }
     }
 
-    public static class DeathKnightResource implements CharacterResource {
+    public class DeathKnightResource implements CharacterResource {
         private DeathKnightRune rune1_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Blood);
         private DeathKnightRune rune2_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Blood);
         private DeathKnightRune rune3_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Frost);
@@ -49,6 +48,7 @@ public class DeathKnight extends AbstractCharacter {
         private List<DeathKnightRune> runes_ = List.of(rune1_, rune2_, rune3_, rune4_, rune5_, rune6_);
 
         private int runicPowerLevel_ = 0;
+        private int maxRunicPower = 100;
 
         public Set<Integer> getAvailableRuneIndices() {
             Set<Integer> ret = new HashSet<>();
@@ -73,7 +73,7 @@ public class DeathKnight extends AbstractCharacter {
             return -1;
         }
 
-        public boolean hasRunes(List<DeathKnightResourceCost.RuneType> neededRuneTypes) {
+        protected boolean hasRunes(List<DeathKnightResourceCost.RuneType> neededRuneTypes) {
             Set<Integer> availableRuneIndices = getAvailableRuneIndices();
 
             for (DeathKnightResourceCost.RuneType needed : neededRuneTypes) {
@@ -87,18 +87,22 @@ public class DeathKnight extends AbstractCharacter {
             return true;
         }
 
-        public boolean hasRunicPower(int neededRunicPower) {
+        protected boolean hasRunicPower(int neededRunicPower) {
             return neededRunicPower <= 0 || runicPowerLevel_ >= neededRunicPower;
         }
 
-        public boolean consume(List<DeathKnightResourceCost.RuneType> runeTypes, int runicPower,
+        public boolean hasResource(DeathKnightResourceCost resourceCost) {
+            return hasRunes(resourceCost.getRuneList()) && hasRunicPower(resourceCost.runicPower());
+        }
+
+        public boolean consume(DeathKnightResourceCost resourceCost,
                                DeathKnight deathKnight) {
-            if (hasRunes(runeTypes) && hasRunicPower(runicPower)) {
+            if (hasRunes(resourceCost.getRuneList()) && hasRunicPower(resourceCost.runicPower())) {
                 // consume runes
                 Set<Integer> availableRuneIndices = getAvailableRuneIndices();
 
                 Instant nextAvailable = Instant.now().plusSeconds(10);
-                for (DeathKnightResourceCost.RuneType needed : runeTypes) {
+                for (DeathKnightResourceCost.RuneType needed : resourceCost.getRuneList()) {
                     int found = selectRune_(availableRuneIndices, needed);
                     if (found >= 0) {
                         availableRuneIndices.remove(found);
@@ -111,16 +115,38 @@ public class DeathKnight extends AbstractCharacter {
                 }
                 // consume runic power
                 // TODO add runic power max, right now it goes up forever
-                runicPowerLevel_ -= runicPower;
+                runicPowerLevel_ -= resourceCost.runicPower();
+                if (runicPowerLevel_ < 0) {
+                    LogUtils.log("really really bad");
+                } else if (runicPowerLevel_ > maxRunicPower){
+                    runicPowerLevel_ = maxRunicPower;
+                }
                 return true;
             } else {
                 return false;
             }
         }
 
+        private String getRuneSummary() {
+            List<String> runeSummarySegments = new ArrayList<>();
+
+            for (int i = 0; i < runes_.size(); ++i) {
+                DeathKnightRune rune = getRune(i);
+                if (rune.isAvailable()) {
+                    runeSummarySegments.add(String.format("%s(%d)", rune.runeType, i));
+                }
+            }
+
+            if (runeSummarySegments.isEmpty()) {
+                return "No Runes Available";
+            } else {
+                return String.join(", ", runeSummarySegments);
+            }
+        }
+
         @Override
         public String summary() {
-            return "to be implemented";
+            return String.format("%s, %d runic power", getRuneSummary(), runicPowerLevel_);
         }
     }
 
@@ -140,9 +166,6 @@ public class DeathKnight extends AbstractCharacter {
         return 0;
     }
 
-
-
-
     @Override
     public IntegerInterval weaponDamage() {
         return null;
@@ -158,36 +181,46 @@ public class DeathKnight extends AbstractCharacter {
         return 0;
     }
 
-
-
     @Override
     public Optional<Skill> getSkill(String name) {
-        return Optional.ofNullable(skills_.get(name));
+        Optional<Skill> skill = Optional.ofNullable(skills_.get(name));
+        if (skill.isEmpty()) {
+            LogUtils.log(String.format("%s has no skill: %s", name(), name));
+        }
+        return skill;
     }
 
     @Override
     public void cast(String name) {
+        getSkill(name).ifPresent(skill -> skill.cast(this));
+    }
+
+    @Override
+    public boolean hasResourceToCast(String name) {
         Optional<Skill> skillOptional = getSkill(name);
         if (skillOptional.isEmpty()) {
-            System.out.println(String.format("%s: found no skill %s", Instant.now(), name));
-        } else {
-            System.out.println(String.format("%s: found skill %s", Instant.now(), skillOptional.get().name()));
+            return false;
         }
-        skillOptional.ifPresent(skill -> {
-            skill.cast(this);
-        });
+        DeathKnightResourceCost cost = (DeathKnightResourceCost) skillOptional.get().cost();
+        return hasResource(cost);
+    }
+
+    @Override
+    public boolean isCoolDownReady(String name) {
+        // TODO need to add skill specific cooldown check
+        return !onGlobalCoolDown_;
+    }
+
+    protected boolean hasResource(DeathKnightResourceCost resourceCost) {
+        return resource_.hasResource(resourceCost);
     }
 
     public boolean consumeResource(DeathKnightResourceCost resourceCost) {
-        List<DeathKnightResourceCost.RuneType> neededRuneList = new ArrayList<>();
-        resourceCost.runes().forEach(((runeType, count) -> {
-            for (int i = 0; i < count; ++i) {
-                neededRuneList.add(runeType);
-            }
-        }));
-
-        // TODO maybe move the message part to DK level
-        return resource_.consume(neededRuneList, resourceCost.runicPower(), this);
+        boolean ok = resource_.consume(resourceCost, this);
+        if (ok) {
+            LogUtils.log(String.format("%s has %s", name(), resource_.summary()));
+        }
+        return ok;
     }
 
     public void clearRuneCoolDown(int runeId) {

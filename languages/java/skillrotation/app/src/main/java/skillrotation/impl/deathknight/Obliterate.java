@@ -1,13 +1,10 @@
 package skillrotation.impl.deathknight;
 
 import skillrotation.LogUtils;
-import skillrotation.impl.AbstractSkill;
 import skillrotation.impl.AbstractTargetSkill;
 import skillrotation.intf.Character;
 
-import java.time.Instant;
 import java.util.TreeMap;
-import java.util.random.RandomGenerator;
 
 /**
  * <pre>
@@ -19,8 +16,23 @@ import java.util.random.RandomGenerator;
 public class Obliterate extends AbstractTargetSkill {
     public static final String OBLITERATE = "Obliterate";
 
+    private static final Obliterate LEVEL_1 = new Obliterate(1);
+    private static final Obliterate LEVEL_2 = new Obliterate(2);
+    private static final Obliterate LEVEL_3 = new Obliterate(3);
+    private static final Obliterate LEVEL_4 = new Obliterate(4);
+
     public Obliterate(int level) {
         super(OBLITERATE, level, getCost_());
+    }
+
+    public static Obliterate getInstance(int level) {
+        return switch (level) {
+            case 1 -> LEVEL_1;
+            case 2 -> LEVEL_2;
+            case 3 -> LEVEL_3;
+            case 4 -> LEVEL_4;
+            default -> throw new IllegalStateException("Unexpected value: " + level);
+        };
     }
 
     protected static DeathKnightResourceCost getCost_() {
@@ -38,7 +50,7 @@ public class Obliterate extends AbstractTargetSkill {
             return;
         }
         if (deathKnight.consumeResource((DeathKnightResourceCost) this.cost)) {
-            LogUtils.log(String.format("%s casts Obliterate", deathKnight.name()));
+            LogUtils.log(String.format("%s casts %s", deathKnight.name(), OBLITERATE));
             deathKnight.triggerGlobalCoolDown(this);
             double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
         }

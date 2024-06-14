@@ -33,6 +33,12 @@ public interface Character extends Named {
 
     Optional<Skill> getSkill(String name);
     void cast(String name);
+    boolean hasResourceToCast(String name);
+    boolean isCoolDownReady(String name);
+    default boolean canCast(String name) {
+        return hasResourceToCast(name) && isCoolDownReady(name);
+    }
+
     void triggerGlobalCoolDown(Skill skill);
     void clearGlobalCoolDown();
     boolean onGlobalCoolDown();

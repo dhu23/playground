@@ -76,7 +76,6 @@ public abstract class AbstractCharacter implements Character {
 
     @Override
     public void clearGlobalCoolDown() {
-        System.out.println(String.format("cleared global cd"));
         onGlobalCoolDown_ = false;
         control_.ifPresent(PlayControl::onGlobalCoolDownFinish);
     }

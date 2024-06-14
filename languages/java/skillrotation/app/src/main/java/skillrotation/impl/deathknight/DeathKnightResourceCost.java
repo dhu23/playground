@@ -3,6 +3,8 @@ package skillrotation.impl.deathknight;
 import org.immutables.value.Value;
 import skillrotation.intf.ResourceCost;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -34,5 +36,16 @@ public abstract class DeathKnightResourceCost implements ResourceCost {
             builder.append(String.format("%d Runic Power", runicPower()));
         }
         return builder.toString();
+    }
+
+    @Value.Derived
+    public List<RuneType> getRuneList() {
+        List<RuneType> runeList = new ArrayList<>();
+        runes().forEach(((runeType, count) -> {
+            for (int i = 0; i < count; ++i) {
+                runeList.add(runeType);
+            }
+        }));
+        return runeList;
     }
 }

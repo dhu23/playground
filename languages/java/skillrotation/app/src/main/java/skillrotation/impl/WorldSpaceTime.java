@@ -59,6 +59,7 @@ public class WorldSpaceTime {
                 if (now.isBefore(gcd.availableTime())) {
                     pushEvent(event);
                 } else {
+                    LogUtils.log(String.format("%s global cool down is clear", gcd.caster().name()));
                     gcd.caster().clearGlobalCoolDown();
                 }
             }
@@ -68,7 +69,7 @@ public class WorldSpaceTime {
                     pushEvent(event);
                 } else {
                     DeathKnight dk = (DeathKnight) rcd.caster();
-                    LogUtils.log(String.format("got RuneCoolDown %s/%s", rcd.caster().name(), rcd.runeId()));
+                    LogUtils.log(String.format("%s rune is ready: %s", rcd.caster().name(), rcd.runeId()));
                     dk.clearRuneCoolDown(rcd.runeId());
                 }
             }
@@ -81,6 +82,7 @@ public class WorldSpaceTime {
                 ImmutableEvent.of(WorldEvent.EventType.GlobalCoolDown,
                         ImmutableGlobalCoolDown.of(caster, skill, now.plusMillis(coolDownInMillis)));
         pushEvent(event);
+        LogUtils.log(String.format("%s triggers global cool down by casting %s", caster.name(), skill.name()));
     }
 
     public void pushRuneCoolDownEvent(DeathKnight dk, int runeId, long coolDownInMillis) {
@@ -89,5 +91,6 @@ public class WorldSpaceTime {
                 ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
                         ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(10000)));
         pushEvent(event);
+        LogUtils.log(String.format("%s triggers cool down for rune %d", dk.name(), runeId));
     }
 }

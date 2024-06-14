@@ -1,13 +1,15 @@
 package skillrotation.impl.simulation;
 
+import skillrotation.impl.deathknight.BloodStrike;
 import skillrotation.impl.deathknight.DeathKnight;
+import skillrotation.impl.deathknight.FrostStrike;
 import skillrotation.impl.deathknight.Obliterate;
 import skillrotation.intf.DeathKnightPlayControl;
 
-public class ObliterateSpam implements DeathKnightPlayControl {
+public class ObliterateFrostStrikeBloodStrikeSpam implements DeathKnightPlayControl {
     private final DeathKnight deathKnight_;
 
-    public ObliterateSpam(DeathKnight deathKnight) {
+    public ObliterateFrostStrikeBloodStrikeSpam(DeathKnight deathKnight) {
         deathKnight_ = deathKnight;
     }
 
@@ -18,7 +20,6 @@ public class ObliterateSpam implements DeathKnightPlayControl {
 
     @Override
     public void onSelect() {
-//        System.out.println("calling onSelect");
         playRotation();
     }
 
@@ -35,6 +36,12 @@ public class ObliterateSpam implements DeathKnightPlayControl {
     private void playRotation() {
         if (deathKnight_.canCast(Obliterate.OBLITERATE)) {
             deathKnight_.cast(Obliterate.OBLITERATE);
+        }
+        if (deathKnight_.canCast(FrostStrike.FROST_STRIKE)) {
+            deathKnight_.cast(FrostStrike.FROST_STRIKE);
+        }
+        if (deathKnight_.canCast(BloodStrike.BLOOD_STRIKE)) {
+            deathKnight_.cast(BloodStrike.BLOOD_STRIKE);
         }
     }
 }

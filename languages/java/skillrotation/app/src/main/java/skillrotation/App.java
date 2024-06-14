@@ -5,11 +5,13 @@ package skillrotation;
 
 import skillrotation.impl.DummyTarget;
 import skillrotation.impl.WorldSpaceTime;
+import skillrotation.impl.deathknight.BloodStrike;
 import skillrotation.impl.deathknight.DeathKnight;
+import skillrotation.impl.deathknight.FrostStrike;
 import skillrotation.impl.deathknight.Obliterate;
+import skillrotation.impl.simulation.ObliterateFrostStrikeBloodStrikeSpam;
 import skillrotation.impl.simulation.ObliterateSpam;
 import skillrotation.intf.DeathKnightPlayControl;
-import skillrotation.intf.PlayControl;
 
 
 // TODO
@@ -21,20 +23,43 @@ import skillrotation.intf.PlayControl;
 // 6. machine time simulation
 public class App {
     public static void main(String[] args) throws InterruptedException {
+        // runObliterateSpam();
+        runObliterateFrostStrikeBloodStrikeSpam();
+    }
+
+    private static void runObliterateSpam() throws InterruptedException {
         WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
 
         DeathKnight dk1 = new DeathKnight("DK1", 60);
         DeathKnightPlayControl obSpam = new ObliterateSpam(dk1);
         dk1.setControl(obSpam);
 
-        Obliterate obliterate = new Obliterate(4);
-        dk1.setSkill(obliterate);
+        dk1.setSkill(Obliterate.getInstance(4));
 
         DummyTarget dummy = new DummyTarget();
 
         dk1.selectTarget(dummy);
 
-        Thread.sleep(20000);
+        Thread.sleep(18000);
+        worldSpaceTime.stop();
+    }
+
+    private static void runObliterateFrostStrikeBloodStrikeSpam() throws InterruptedException {
+        WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
+
+        DeathKnight dk1 = new DeathKnight("DK1", 60);
+        DeathKnightPlayControl obSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk1);
+        dk1.setControl(obSpam);
+
+        dk1.setSkill(Obliterate.getInstance(4));
+        dk1.setSkill(FrostStrike.getInstance(6));
+        dk1.setSkill(BloodStrike.getInstance(6));
+
+        DummyTarget dummy = new DummyTarget();
+
+        dk1.selectTarget(dummy);
+
+        Thread.sleep(25000);
         worldSpaceTime.stop();
     }
 }
