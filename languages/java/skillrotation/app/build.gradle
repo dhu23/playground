@@ -28,7 +28,7 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass = 'skillrotation.App'
+    mainClass = 'fantasy.App'
 }
 
 tasks.named('test') {
