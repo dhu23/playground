@@ -12,7 +12,7 @@ import java.util.TreeMap;
  * total damage increased by 12.5% for each of your diseases on the target.
  * </pre>
  */
-public class BloodStrike extends AbstractTargetSkill {
+public class BloodStrike extends AbstractDeathKnightTargetSkill {
     public static final String BLOOD_STRIKE = "Blood Strike";
 
     private static final BloodStrike LEVEL_1 = new BloodStrike(1);
@@ -45,17 +45,8 @@ public class BloodStrike extends AbstractTargetSkill {
     }
 
     @Override
-    public void cast_(Character caster) {
-        DeathKnight deathKnight = (DeathKnight) caster;
-        if (deathKnight == null) {
-            LogUtils.log("not a Death Knight");
-            return;
-        }
-        if (deathKnight.consumeResource((DeathKnightResourceCost) this.cost)) {
-            LogUtils.log(String.format("%s casts %s", deathKnight.name(), BLOOD_STRIKE));
-            deathKnight.triggerGlobalCoolDown(this);
-            double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
-        }
+    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
+        double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
     }
 
     protected int getBonusDamage_() {

@@ -16,7 +16,7 @@ import fantasy.intf.DeathKnightPlayControl;
 
 // TODO
 // 1. make WorldSpaceTime non-Singleton
-// 2. add resource cooldown
+// 2. add resource cooldown (done)
 // 3. add new skills for the full rotation
 // 4. add file logging
 // 5. add journal collection for analysis
@@ -31,13 +31,12 @@ public class App {
         WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
 
         DeathKnight dk1 = new DeathKnight("DK1", 60);
+        dk1.setSkill(Obliterate.getInstance(4));
+
         DeathKnightPlayControl obSpam = new ObliterateSpam(dk1);
         dk1.setControl(obSpam);
 
-        dk1.setSkill(Obliterate.getInstance(4));
-
         DummyTarget dummy = new DummyTarget();
-
         dk1.selectTarget(dummy);
 
         Thread.sleep(18000);
@@ -48,15 +47,14 @@ public class App {
         WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
 
         DeathKnight dk1 = new DeathKnight("DK1", 60);
-        DeathKnightPlayControl obSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk1);
-        dk1.setControl(obSpam);
-
         dk1.setSkill(Obliterate.getInstance(4));
         dk1.setSkill(FrostStrike.getInstance(6));
         dk1.setSkill(BloodStrike.getInstance(6));
 
-        DummyTarget dummy = new DummyTarget();
+        DeathKnightPlayControl obSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk1);
+        dk1.setControl(obSpam);
 
+        DummyTarget dummy = new DummyTarget();
         dk1.selectTarget(dummy);
 
         Thread.sleep(25000);

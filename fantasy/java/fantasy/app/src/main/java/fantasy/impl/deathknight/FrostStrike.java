@@ -12,7 +12,7 @@ import java.util.TreeMap;
  * causing 55% weapon damage plus 48 as Frost damage.
  * </pre>
  */
-public class FrostStrike extends AbstractTargetSkill {
+public class FrostStrike extends AbstractDeathKnightTargetSkill {
     public static final String FROST_STRIKE = "Frost Strike";
 
     private static final FrostStrike LEVEL_1 = new FrostStrike(1);
@@ -43,17 +43,18 @@ public class FrostStrike extends AbstractTargetSkill {
     }
 
     @Override
-    protected void cast_(Character caster) {
+    protected void castOnTarget_(Character caster, Character target) {
         DeathKnight deathKnight = (DeathKnight) caster;
         if (deathKnight == null) {
             LogUtils.log("not a Death Knight");
             return;
         }
-        if (deathKnight.consumeResource((DeathKnightResourceCost) this.cost)) {
-            LogUtils.log(String.format("%s casts %s", deathKnight.name(), FROST_STRIKE));
-            deathKnight.triggerGlobalCoolDown(this);
-            // double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
-        }
+
+    }
+
+    @Override
+    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character character) {
+        // double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
     }
 
     protected int getBonusDamage_() {

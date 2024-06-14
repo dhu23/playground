@@ -114,7 +114,6 @@ public class DeathKnight extends AbstractCharacter {
                     }
                 }
                 // consume runic power
-                // TODO add runic power max, right now it goes up forever
                 runicPowerLevel_ -= resourceCost.runicPower();
                 if (runicPowerLevel_ < 0) {
                     LogUtils.log("really really bad");

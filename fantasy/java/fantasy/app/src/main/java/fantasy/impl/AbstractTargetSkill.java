@@ -13,14 +13,14 @@ public abstract class AbstractTargetSkill extends AbstractSkill {
     @Override
     public void cast(Character caster) {
         Optional<Character> targetOptional = caster.getTarget();
-        if (targetOptional.isPresent()) {
-            Character target = targetOptional.get();
-            cast_(caster);
-        } else {
+        if (targetOptional.isEmpty()) {
             // I need a target
             System.out.println("I need a target!");
+            return;
         }
+
+        castOnTarget_(caster, targetOptional.get());
     }
 
-    protected abstract void cast_(Character caster);
+    protected abstract void castOnTarget_(Character caster, Character target);
 }

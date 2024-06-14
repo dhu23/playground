@@ -13,7 +13,7 @@ import java.util.TreeMap;
  * but consumes the diseases.
  * </pre>
  */
-public class Obliterate extends AbstractTargetSkill {
+public class Obliterate extends AbstractDeathKnightTargetSkill {
     public static final String OBLITERATE = "Obliterate";
 
     private static final Obliterate LEVEL_1 = new Obliterate(1);
@@ -43,17 +43,8 @@ public class Obliterate extends AbstractTargetSkill {
     }
 
     @Override
-    public void cast_(Character caster) {
-        DeathKnight deathKnight = (DeathKnight) caster;
-        if (deathKnight == null) {
-            LogUtils.log("not a Death Knight");
-            return;
-        }
-        if (deathKnight.consumeResource((DeathKnightResourceCost) this.cost)) {
-            LogUtils.log(String.format("%s casts %s", deathKnight.name(), OBLITERATE));
-            deathKnight.triggerGlobalCoolDown(this);
-            double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
-        }
+    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character character) {
+        double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
     }
 
     protected int getBonusDamage_() {
