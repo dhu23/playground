@@ -16,7 +16,7 @@ public class LogUtils {
     }
 
     public static String reportDamage(Character caster, Character target, Skill skill, int amount) {
-        String line = String.format("%s's %s causes %d damage to %s", caster.name(), skill.name(), amount, target.name());
+        String line = String.format("%s's %s inflicts %d damage to %s", caster.name(), skill.name(), amount, target.name());
         log(line);
         return line;
     }

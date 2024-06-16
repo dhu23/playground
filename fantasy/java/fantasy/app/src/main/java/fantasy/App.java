@@ -6,12 +6,11 @@ package fantasy;
 import fantasy.impl.DummyTarget;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.impl.data.ImmutableIntegerInterval;
-import fantasy.impl.deathknight.BloodStrike;
-import fantasy.impl.deathknight.DeathKnight;
-import fantasy.impl.deathknight.FrostStrike;
-import fantasy.impl.deathknight.Obliterate;
+import fantasy.impl.deathknight.*;
 import fantasy.impl.item.ImmutableWeapon;
 import fantasy.impl.item.Weapon;
+import fantasy.impl.simulation.ClassicFrostRotation;
+import fantasy.impl.simulation.JustKeepFrostFeverUp;
 import fantasy.impl.simulation.ObliterateFrostStrikeBloodStrikeSpam;
 import fantasy.impl.simulation.ObliterateSpam;
 import fantasy.intf.DeathKnightPlayControl;
@@ -31,21 +30,28 @@ public class App {
 
     public static void main(String[] args) throws InterruptedException {
         // runObliterateSpam();
-        runObliterateFrostStrikeBloodStrikeSpam();
+        // runObliterateFrostStrikeBloodStrikeSpam();
+        runJustKeepFrostFeverUp();
+    }
+
+    private static DeathKnight createDeathKnight() {
+        DeathKnight dk = new DeathKnight("Irevlys", 60);
+        dk.setSkill(Obliterate.LEVEL_4);
+        dk.setSkill(FrostStrike.LEVEL_6);
+        dk.setSkill(BloodStrike.LEVEL_6);
+        dk.setSkill(IcyTouch.LEVEL_5);
+        dk.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
+        return dk;
     }
 
     private static void runObliterateSpam() throws InterruptedException {
         WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
 
-        DeathKnight dk1 = new DeathKnight("DK1", 60);
-        dk1.setSkill(Obliterate.getInstance(4));
-        dk1.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
-
-        DeathKnightPlayControl obSpam = new ObliterateSpam(dk1);
-        dk1.setControl(obSpam);
+        DeathKnight dk = createDeathKnight();
+        DeathKnightPlayControl obSpam = new ObliterateSpam(dk);
 
         DummyTarget dummy = new DummyTarget();
-        dk1.selectTarget(dummy);
+        dk.selectTarget(dummy);
 
         Thread.sleep(18000);
         worldSpaceTime.stop();
@@ -54,19 +60,35 @@ public class App {
     private static void runObliterateFrostStrikeBloodStrikeSpam() throws InterruptedException {
         WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
 
-        DeathKnight dk1 = new DeathKnight("DK1", 60);
-        dk1.setSkill(Obliterate.getInstance(4));
-        dk1.setSkill(FrostStrike.getInstance(6));
-        dk1.setSkill(BloodStrike.getInstance(6));
-        dk1.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
-
-        DeathKnightPlayControl obSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk1);
-        dk1.setControl(obSpam);
+        DeathKnight dk = createDeathKnight();
+        DeathKnightPlayControl obSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
 
         DummyTarget dummy = new DummyTarget();
-        dk1.selectTarget(dummy);
+        dk.selectTarget(dummy);
 
         Thread.sleep(25000);
         worldSpaceTime.stop();
+    }
+
+    private static void runJustKeepFrostFeverUp() throws InterruptedException {
+        DeathKnight dk = createDeathKnight();
+        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
+
+        DummyTarget dummyTarget = new DummyTarget();
+        dk.selectTarget(dummyTarget);
+
+        Thread.sleep(30000);
+        WorldSpaceTime.getInstance().stop();
+    }
+
+    private static void runClassicFrostRotation() throws InterruptedException {
+        DeathKnight dk = createDeathKnight();
+        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
+
+        DummyTarget dummy = new DummyTarget();
+        dk.selectTarget(dummy);
+
+        Thread.sleep(45000);
+        WorldSpaceTime.getInstance().stop();
     }
 }

@@ -1,9 +1,11 @@
 package fantasy.impl.event;
 
+import fantasy.impl.Effect;
 import org.immutables.value.Value;
 import fantasy.intf.Character;
 import fantasy.intf.Skill;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -12,7 +14,8 @@ public class WorldEvent {
         Select,
         Cast,
         GlobalCoolDown,
-        RuneCoolDown
+        RuneCoolDown,
+        AmountOverTime
     }
 
     @Value.Immutable
@@ -58,14 +61,33 @@ public class WorldEvent {
     }
 
     @Value.Immutable
-    public static abstract class DirectDamage {
+    public static abstract class AmountOverTime {
+        public enum Type {
+            HoT,
+            DoT
+        }
         @Value.Parameter
-        public abstract int amount();
+        public abstract Type type();
+
+        @Value.Parameter
+        public abstract Effect name();
 
         @Value.Parameter
         public abstract Character caster();
 
         @Value.Parameter
         public abstract Character target();
+
+        @Value.Parameter
+        public abstract int tickAmount();
+
+        @Value.Parameter
+        public abstract Duration frequency();
+
+        @Value.Parameter
+        public abstract Instant nextTickTime();
+
+        @Value.Parameter
+        public abstract int remainingTickCount();
     }
 }

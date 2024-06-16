@@ -6,34 +6,12 @@ import fantasy.impl.deathknight.FrostStrike;
 import fantasy.impl.deathknight.Obliterate;
 import fantasy.intf.DeathKnightPlayControl;
 
-public class ObliterateFrostStrikeBloodStrikeSpam implements DeathKnightPlayControl {
-    private final DeathKnight deathKnight_;
-
+public class ObliterateFrostStrikeBloodStrikeSpam extends DeathKnightPlayControl {
     public ObliterateFrostStrikeBloodStrikeSpam(DeathKnight deathKnight) {
-        deathKnight_ = deathKnight;
+        super(deathKnight);
     }
 
-    @Override
-    public void onRuneCoolDownFinish() {
-        playRotation();
-    }
-
-    @Override
-    public void onSelect() {
-        playRotation();
-    }
-
-    @Override
-    public void onUnselect() {
-
-    }
-
-    @Override
-    public void onGlobalCoolDownFinish() {
-        playRotation();
-    }
-
-    private void playRotation() {
+    protected void playRotation() {
         if (deathKnight_.canCast(Obliterate.OBLITERATE)) {
             deathKnight_.cast(Obliterate.OBLITERATE);
         }

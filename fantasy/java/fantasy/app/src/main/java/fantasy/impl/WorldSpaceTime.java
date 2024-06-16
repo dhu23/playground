@@ -8,6 +8,7 @@ import fantasy.intf.Character;
 import fantasy.intf.Skill;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Random;
 import java.util.random.RandomGenerator;
@@ -100,6 +101,35 @@ public class WorldSpaceTime {
                     dk.clearRuneCoolDown(rcd.runeId());
                 }
             }
+            case AmountOverTime -> {
+                WorldEvent.AmountOverTime aot = (WorldEvent.AmountOverTime) obj;
+                if (now.isBefore(aot.nextTickTime())) {
+                    pushEvent(event);
+                } else {
+                    Character caster = aot.caster();
+                    Character target = aot.target();
+                    switch (aot.type()) {
+                        case DoT -> {
+                            target.sufferDamage(aot.tickAmount());
+                            LogUtils.log(String.format("%s suffers %d damage from %s's %s damage",
+                                    aot.target().name(), aot.tickAmount(), aot.caster().name(), aot.name()));
+                        }
+                        case HoT -> {
+                            target.receiveHealing(aot.tickAmount());
+                            LogUtils.log(String.format("%s receives %d healing from %s's %s healing",
+                                    aot.target().name(), aot.tickAmount(), aot.caster().name(), aot.name()));
+                        }
+                    }
+                    if (aot.remainingTickCount() == 1) {
+                        LogUtils.log(String.format("%s's %s fades from %s",
+                                aot.caster().name(), aot.name(), aot.target().name()));
+                        aot.target().removeEffect(aot.name());
+                    } else {
+                        pushEffectOverTime(aot.type(), aot.name(), aot.caster(), aot.target(), aot.tickAmount(),
+                                aot.frequency(), aot.remainingTickCount() - 1);
+                    }
+                }
+            }
         }
     }
 
@@ -109,15 +139,37 @@ public class WorldSpaceTime {
                 ImmutableEvent.of(WorldEvent.EventType.GlobalCoolDown,
                         ImmutableGlobalCoolDown.of(caster, skill, now.plusMillis(coolDownInMillis)));
         pushEvent(event);
-        LogUtils.log(String.format("%s triggers global cool down by casting %s", caster.name(), skill.name()));
+        LogUtils.log(String.format("%s's global cool down is triggered by casting %s", caster.name(), skill.name()));
     }
 
     public void pushRuneCoolDownEvent(DeathKnight dk, int runeId, long coolDownInMillis) {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
-                        ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(10000)));
+                        ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(coolDownInMillis)));
         pushEvent(event);
-        LogUtils.log(String.format("%s triggers cool down for rune %d", dk.name(), runeId));
+        LogUtils.log(String.format("%s's rune is on cool down: %d", dk.name(), runeId));
+    }
+
+    private void pushEffectOverTime(WorldEvent.AmountOverTime.Type type, Effect effect, Character caster, Character target,
+                                   int tickAmount, Duration frequency, int tickCount) {
+        Instant now = Instant.now();
+        Event<WorldEvent.EventType, Object> event =
+                ImmutableEvent.of(WorldEvent.EventType.AmountOverTime,
+                        ImmutableAmountOverTime.of(type, effect, caster, target, tickAmount, frequency, now.plus(frequency), tickCount));
+        pushEvent(event);
+        LogUtils.log(String.format("%s casts %s (effect-over-time) on %s", caster.name(), effect, target.name()));
+    }
+
+    public void pushDamageOverTime(Effect effect, Character caster, Character target,
+                                   int tickDamage, Duration frequency, int tickCount) {
+        pushEffectOverTime(WorldEvent.AmountOverTime.Type.DoT, effect, caster, target,
+                tickDamage, frequency, tickCount);
+    }
+
+    public void pushHealingOverTime(Effect effect, Character caster, Character target,
+                                   int tickHealing, Duration frequency, int tickCount) {
+        pushEffectOverTime(WorldEvent.AmountOverTime.Type.HoT, effect, caster, target,
+                tickHealing, frequency, tickCount);
     }
 }

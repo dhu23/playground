@@ -1,8 +1,11 @@
 package fantasy.intf;
 
+import fantasy.impl.Effect;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.item.Weapon;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 public interface Character extends Named {
@@ -15,6 +18,11 @@ public interface Character extends Named {
     int modifyHp(int amount);
     int sufferDamage(int amount);
     int receiveHealing(int amount);
+
+    Instant receiveEffect(Effect effect, Duration duration);
+    void removeEffect(Effect effect);
+    boolean isUnderEffect(Effect effect);
+    Optional<Duration> remainingDuration(Effect effect);
 
     default boolean isAlive() {
         return hp() > 0;

@@ -6,14 +6,20 @@ import fantasy.intf.Character;
 import fantasy.intf.PlayControl;
 import fantasy.intf.Skill;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 public abstract class AbstractCharacter implements Character {
     protected String name;
     protected int level;
     protected int hp;
     protected int maxHp;
+
+    protected HashMap<Effect, Instant> effects_;
 
     protected Optional<Character> target_;
     protected Optional<PlayControl> control_;
@@ -28,6 +34,8 @@ public abstract class AbstractCharacter implements Character {
         this.level = level;
         this.hp = baseHp;
         this.maxHp = baseHp;
+
+        this.effects_ = new HashMap<>();
 
         this.target_ = Optional.empty();
         this.control_ = Optional.empty();
@@ -74,6 +82,35 @@ public abstract class AbstractCharacter implements Character {
     public int receiveHealing(int amount) {
         Preconditions.checkState(amount > 0);
         return modifyHp(amount);
+    }
+
+    @Override
+    public Instant receiveEffect(Effect effect, Duration duration) {
+        Instant now = Instant.now();
+        Instant expirationTime = now.plus(duration);
+        effects_.put(effect, expirationTime);
+        return expirationTime;
+    }
+
+    @Override
+    public void removeEffect(Effect effect) {
+        effects_.remove(effect);
+    }
+
+    @Override
+    public boolean isUnderEffect(Effect effect) {
+        return effects_.containsKey(effect);
+    }
+
+    @Override
+    public Optional<Duration> remainingDuration(Effect effect) {
+        Instant expiration = effects_.get(effect);
+        if (expiration == null) {
+            return Optional.empty();
+        } else {
+            Instant now = Instant.now();
+            return Optional.of(Duration.between(now, expiration));
+        }
     }
 
     @Override
