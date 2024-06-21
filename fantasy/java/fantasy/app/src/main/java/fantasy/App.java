@@ -41,6 +41,7 @@ public class App {
         dk.setSkill(FrostStrike.LEVEL_6);
         dk.setSkill(BloodStrike.LEVEL_6);
         dk.setSkill(IcyTouch.LEVEL_5);
+        dk.setSkill(PlagueStrike.LEVEL_6);
         dk.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
         return dk;
     }

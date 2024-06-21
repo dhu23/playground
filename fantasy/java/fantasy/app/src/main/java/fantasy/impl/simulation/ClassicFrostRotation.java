@@ -2,7 +2,6 @@ package fantasy.impl.simulation;
 
 import fantasy.impl.deathknight.DeathKnight;
 import fantasy.intf.DeathKnightPlayControl;
-import fantasy.intf.Skill;
 
 public class ClassicFrostRotation extends DeathKnightPlayControl {
     public ClassicFrostRotation(DeathKnight deathKnight) {
@@ -10,7 +9,8 @@ public class ClassicFrostRotation extends DeathKnightPlayControl {
     }
 
     protected void playRotation() {
-        castIcyTouchIfNoDot();
+        castIcyTouchIfNoFrostFever();
+        castPlagueStrikeIfNoBloodPlague();
         spamStrikes();
     }
 }

@@ -1,8 +1,6 @@
 package fantasy.impl.simulation;
 
-import fantasy.impl.Effect;
 import fantasy.impl.deathknight.DeathKnight;
-import fantasy.impl.deathknight.IcyTouch;
 import fantasy.intf.DeathKnightPlayControl;
 
 public class JustKeepFrostFeverUp extends DeathKnightPlayControl {
@@ -12,6 +10,6 @@ public class JustKeepFrostFeverUp extends DeathKnightPlayControl {
 
     @Override
     protected void playRotation() {
-        castIcyTouchIfNoDot();
+        castIcyTouchIfNoFrostFever();
     }
 }

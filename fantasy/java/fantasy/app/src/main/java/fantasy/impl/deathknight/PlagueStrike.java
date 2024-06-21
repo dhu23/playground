@@ -1,9 +1,11 @@
 package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
+import fantasy.impl.Effect;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
+import java.time.Duration;
 import java.util.TreeMap;
 
 /**
@@ -38,6 +40,14 @@ public class PlagueStrike extends AbstractDeathKnightTargetSkill {
 
         // damage mitigation
         base *= (1.0 - target.damageMitigation());
+
+        // inflict the de-buff on the target
+        target.receiveEffect(Effect.BloodPlague, Duration.ofSeconds(15));
+
+        // set up damage over time
+        WorldSpaceTime.getInstance().pushDamageOverTime(Effect.BloodPlague, deathKnight, target,
+                getBloodPlagueTickDamage(), Duration.ofSeconds(3), 5);
+
 
         int damage = (int) base;
         target.sufferDamage(damage);

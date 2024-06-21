@@ -40,7 +40,7 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         int base = getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
 
-        // inflict the de-buff ont the target
+        // inflict the de-buff on the target
         target.receiveEffect(Effect.FrostFever, Duration.ofSeconds(15));
 
         // set up damage over time
