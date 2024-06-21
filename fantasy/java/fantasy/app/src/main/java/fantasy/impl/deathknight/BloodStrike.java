@@ -1,7 +1,7 @@
 package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
-import fantasy.impl.AbstractTargetSkill;
+
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -30,11 +30,11 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
     }
 
     public BloodStrike(int level) {
-        super(BLOOD_STRIKE, level, getCost_());
+        super(BLOOD_STRIKE, level, getCost_(), 0);
     }
 
     @Override
-    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
+    protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         double base = deathKnight.dealWeaponDamage() * 0.4 + getBonusDamage_();
 
         // damage mitigation
@@ -43,6 +43,7 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
         int damage = (int) base;
         target.sufferDamage(damage);
         WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage);
+        return true;
     }
 
     protected int getBonusDamage_() {

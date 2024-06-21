@@ -45,8 +45,6 @@ public class App {
     }
 
     private static void runObliterateSpam() throws InterruptedException {
-        WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
-
         DeathKnight dk = createDeathKnight();
         DeathKnightPlayControl obSpam = new ObliterateSpam(dk);
 
@@ -54,12 +52,10 @@ public class App {
         dk.selectTarget(dummy);
 
         Thread.sleep(18000);
-        worldSpaceTime.stop();
+        WorldSpaceTime.getInstance().stop();
     }
 
     private static void runObliterateFrostStrikeBloodStrikeSpam() throws InterruptedException {
-        WorldSpaceTime worldSpaceTime = WorldSpaceTime.getInstance();
-
         DeathKnight dk = createDeathKnight();
         DeathKnightPlayControl obSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
 
@@ -67,7 +63,7 @@ public class App {
         dk.selectTarget(dummy);
 
         Thread.sleep(25000);
-        worldSpaceTime.stop();
+        WorldSpaceTime.getInstance().stop();
     }
 
     private static void runJustKeepFrostFeverUp() throws InterruptedException {

@@ -8,7 +8,6 @@ import fantasy.impl.data.IntegerInterval;
 import fantasy.intf.Character;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.TreeMap;
 
 /**
@@ -28,7 +27,7 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
     public static final IcyTouch LEVEL_5 = new IcyTouch(5);
 
     public IcyTouch(int level) {
-        super(ICY_TOUCH, level, getCost_());
+        super(ICY_TOUCH, level, getCost_(), 6000);
     }
 
     protected static DeathKnightResourceCost getCost_() {
@@ -38,7 +37,7 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
     }
 
     @Override
-    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
+    protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         int base = getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
 
         // inflict the de-buff ont the target
@@ -50,6 +49,7 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
 
         target.sufferDamage(base);
         WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage, this, base);
+        return true;
     }
 
     protected IntegerInterval getBaseDamage() {

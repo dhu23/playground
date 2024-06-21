@@ -77,9 +77,7 @@ public class WorldSpaceTime {
             case Cast -> {
                 WorldEvent.Cast cast = (WorldEvent.Cast) obj;
                 // System.out.println(cast);
-                cast.caster().getSkill(cast.spellName()).ifPresent(skill -> {
-                    skill.cast(cast.caster());
-                });
+                cast.caster().cast(cast.spellName());
             }
             case GlobalCoolDown -> {
                 WorldEvent.GlobalCoolDown gcd = (WorldEvent.GlobalCoolDown) obj;
@@ -89,6 +87,15 @@ public class WorldSpaceTime {
                 } else {
                     LogUtils.log(String.format("%s global cool down is clear", gcd.caster().name()));
                     gcd.caster().clearGlobalCoolDown();
+                }
+            }
+            case SkillCoolDown -> {
+                WorldEvent.SkillCoolDown scd = (WorldEvent.SkillCoolDown) obj;
+                if (now.isBefore(scd.availableTime())) {
+                    pushEvent(event);
+                } else {
+                    LogUtils.log(String.format("%s's %s cool down is clear", scd.caster().name(), scd.skill().name()));
+                    scd.caster().clearSkillCoolDown(scd.skill().name());
                 }
             }
             case RuneCoolDown -> {
@@ -140,6 +147,15 @@ public class WorldSpaceTime {
                         ImmutableGlobalCoolDown.of(caster, skill, now.plusMillis(coolDownInMillis)));
         pushEvent(event);
         LogUtils.log(String.format("%s's global cool down is triggered by casting %s", caster.name(), skill.name()));
+    }
+
+    public void pushSkillCoolDownEvent(Character caster, Skill skill) {
+        Instant now = Instant.now();
+        Event<WorldEvent.EventType, Object> event =
+                ImmutableEvent.of(WorldEvent.EventType.SkillCoolDown,
+                        ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis())));
+        pushEvent(event);
+        LogUtils.log(String.format("%s's skill cool down is triggered by casting %s", caster.name(), skill.name()));
     }
 
     public void pushRuneCoolDownEvent(DeathKnight dk, int runeId, long coolDownInMillis) {

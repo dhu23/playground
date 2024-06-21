@@ -1,7 +1,6 @@
 package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
-import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -24,7 +23,7 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
     public static final FrostStrike LEVEL_6 = new FrostStrike(6);
 
     public FrostStrike(int level) {
-        super(FROST_STRIKE, level, getCost_());
+        super(FROST_STRIKE, level, getCost_(), 0);
     }
 
     protected static DeathKnightResourceCost getCost_() {
@@ -32,7 +31,7 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
     }
 
     @Override
-    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
+    protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         double base = deathKnight.dealWeaponDamage() * 0.55 + getBonusDamage_();
 
         // Frost Strike is not affected by target's damage mitigation
@@ -40,6 +39,7 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
         int damage = (int) base;
         target.sufferDamage(damage);
         WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage);
+        return true;
     }
 
     protected int getBonusDamage_() {

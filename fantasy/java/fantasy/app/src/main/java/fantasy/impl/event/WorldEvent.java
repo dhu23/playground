@@ -14,6 +14,7 @@ public class WorldEvent {
         Select,
         Cast,
         GlobalCoolDown,
+        SkillCoolDown,
         RuneCoolDown,
         AmountOverTime
     }
@@ -43,6 +44,18 @@ public class WorldEvent {
 
         @Value.Parameter
         public abstract Skill triggeredBy();
+
+        @Value.Parameter
+        public abstract Instant availableTime();
+    }
+
+    @Value.Immutable
+    public static abstract class SkillCoolDown {
+        @Value.Parameter
+        public abstract Character caster();
+
+        @Value.Parameter
+        public abstract Skill skill();
 
         @Value.Parameter
         public abstract Instant availableTime();

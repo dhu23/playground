@@ -42,16 +42,6 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
-    public Optional<Skill> getSkill(String name) {
-        return Optional.empty();
-    }
-
-    @Override
-    public void cast(String name) {
-
-    }
-
-    @Override
     public boolean hasResourceToCast(String name) {
         return false;
     }

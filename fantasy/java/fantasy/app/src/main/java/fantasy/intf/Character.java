@@ -19,6 +19,8 @@ public interface Character extends Named {
     int sufferDamage(int amount);
     int receiveHealing(int amount);
 
+    void setSkill(Skill skill);
+
     Instant receiveEffect(Effect effect, Duration duration);
     void removeEffect(Effect effect);
     boolean isUnderEffect(Effect effect);
@@ -44,8 +46,7 @@ public interface Character extends Named {
 
     void setControl(PlayControl playControl);
 
-    Optional<Skill> getSkill(String name);
-    void cast(String name);
+    boolean cast(String name);
     boolean hasResourceToCast(String name);
     boolean isCoolDownReady(String name);
     default boolean canCast(String name) {
@@ -54,7 +55,11 @@ public interface Character extends Named {
 
     void triggerGlobalCoolDown(Skill skill);
     void clearGlobalCoolDown();
-    boolean onGlobalCoolDown();
+    boolean isUnderGlobalCoolDown();
+
+    void triggerSkillCoolDown(String name);
+    void clearSkillCoolDown(String name);
+    boolean isSkillUnderCoolDown(String name);
 
     boolean equipWeapon(Weapon item);
 }

@@ -1,6 +1,5 @@
 package fantasy.impl.deathknight;
 
-import com.google.common.base.Preconditions;
 import fantasy.LogUtils;
 import fantasy.impl.AbstractCharacter;
 import fantasy.impl.WorldSpaceTime;
@@ -14,8 +13,6 @@ import java.util.*;
 
 public class DeathKnight extends AbstractCharacter {
     private DeathKnightResource resource_;
-
-    private HashMap<String, Skill> skills_;
 
     public static class DeathKnightRune {
         public DeathKnightResourceCost.RuneType runeType;
@@ -156,11 +153,6 @@ public class DeathKnight extends AbstractCharacter {
         super(name, level, 100);
 
         this.resource_ = new DeathKnightResource();
-        skills_ = new HashMap<>();
-    }
-
-    public void setSkill(Skill skill) {
-        skills_.put(skill.name(), skill);
     }
 
     @Override
@@ -194,26 +186,12 @@ public class DeathKnight extends AbstractCharacter {
     }
 
     @Override
-    public Optional<Skill> getSkill(String name) {
-        Optional<Skill> skill = Optional.ofNullable(skills_.get(name));
-        if (skill.isEmpty()) {
-            LogUtils.log(String.format("%s has no skill: %s", name(), name));
-        }
-        return skill;
-    }
-
-    @Override
-    public void cast(String name) {
-        getSkill(name).ifPresent(skill -> skill.cast(this));
-    }
-
-    @Override
     public boolean hasResourceToCast(String name) {
-        Optional<Skill> skillOptional = getSkill(name);
+        Optional<CharacterSkill> skillOptional = getSkill(name);
         if (skillOptional.isEmpty()) {
             return false;
         }
-        DeathKnightResourceCost cost = (DeathKnightResourceCost) skillOptional.get().cost();
+        DeathKnightResourceCost cost = (DeathKnightResourceCost) skillOptional.get().get().cost();
         return hasResource(cost);
     }
 

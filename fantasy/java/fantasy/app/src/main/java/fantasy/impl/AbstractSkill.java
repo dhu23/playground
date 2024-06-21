@@ -1,5 +1,6 @@
 package fantasy.impl;
 
+import fantasy.intf.Character;
 import fantasy.intf.ResourceCost;
 import fantasy.intf.Skill;
 
@@ -7,11 +8,13 @@ public abstract class AbstractSkill implements Skill {
     protected final String name;
     protected final int level;
     protected final ResourceCost cost;
+    protected final int coolDownInMillis;
 
-    public AbstractSkill(String name, int level, ResourceCost cost) {
+    public AbstractSkill(String name, int level, ResourceCost cost, int coolDownInMillis) {
         this.name = name;
         this.level = level;
         this.cost = cost;
+        this.coolDownInMillis = coolDownInMillis;
     }
 
     @Override
@@ -22,6 +25,11 @@ public abstract class AbstractSkill implements Skill {
     @Override
     public ResourceCost cost() {
         return this.cost;
+    }
+
+    @Override
+    public int coolDownInMillis() {
+        return this.coolDownInMillis;
     }
 
     @Override

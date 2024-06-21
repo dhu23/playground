@@ -24,7 +24,7 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
     public static final Obliterate LEVEL_4 = new Obliterate(4);
 
     public Obliterate(int level) {
-        super(OBLITERATE, level, getCost_());
+        super(OBLITERATE, level, getCost_(), 0);
     }
 
     protected static DeathKnightResourceCost getCost_() {
@@ -35,7 +35,7 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
     }
 
     @Override
-    protected void castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
+    protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
         // TODO add effect bonuses
 
@@ -45,6 +45,7 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
         int damage = (int) base;
         target.sufferDamage(damage);
         WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage);
+        return true;
     }
 
     protected int getBonusDamage_() {
