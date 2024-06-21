@@ -150,6 +150,9 @@ public class WorldSpaceTime {
     }
 
     public void pushSkillCoolDownEvent(Character caster, Skill skill) {
+        if (skill.coolDownInMillis() < 0) {
+            return;
+        }
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.SkillCoolDown,
@@ -174,7 +177,10 @@ public class WorldSpaceTime {
                 ImmutableEvent.of(WorldEvent.EventType.AmountOverTime,
                         ImmutableAmountOverTime.of(type, effect, caster, target, tickAmount, frequency, now.plus(frequency), tickCount));
         pushEvent(event);
-        LogUtils.log(String.format("%s casts %s (effect-over-time) on %s", caster.name(), effect, target.name()));
+//        LogUtils.log(String.format("%s casts %s (effect-over-time) on %s", caster.name(), effect, target.name()));
+//        for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+//            System.out.println(ste + "\n");
+//        }
     }
 
     public void pushDamageOverTime(Effect effect, Character caster, Character target,

@@ -31,7 +31,8 @@ public class App {
     public static void main(String[] args) throws InterruptedException {
         // runObliterateSpam();
         // runObliterateFrostStrikeBloodStrikeSpam();
-        runJustKeepFrostFeverUp();
+        // runJustKeepFrostFeverUp();
+        runClassicFrostRotation();
     }
 
     private static DeathKnight createDeathKnight() {

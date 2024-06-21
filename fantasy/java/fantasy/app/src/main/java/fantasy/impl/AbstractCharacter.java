@@ -183,14 +183,18 @@ public abstract class AbstractCharacter implements Character {
 
     @Override
     public void triggerGlobalCoolDown(Skill skill) {
-        onGlobalCoolDown_ = true;
-        WorldSpaceTime.getInstance().pushGlobalCoolDownEvent(this, skill, 1500);
+        if (!onGlobalCoolDown_) {
+            onGlobalCoolDown_ = true;
+            WorldSpaceTime.getInstance().pushGlobalCoolDownEvent(this, skill, 1500);
+        }
     }
 
     @Override
     public void clearGlobalCoolDown() {
-        onGlobalCoolDown_ = false;
-        control_.ifPresent(PlayControl::onGlobalCoolDownFinish);
+        if (onGlobalCoolDown_) {
+            onGlobalCoolDown_ = false;
+            control_.ifPresent(PlayControl::onGlobalCoolDownFinish);
+        }
     }
 
     @Override
@@ -201,7 +205,9 @@ public abstract class AbstractCharacter implements Character {
     @Override
     public void triggerSkillCoolDown(String name) {
         getSkill(name).ifPresent(characterSkill -> {
-            WorldSpaceTime.getInstance().pushSkillCoolDownEvent(this, characterSkill.get());
+            if (characterSkill.get().coolDownInMillis() > 0) {
+                WorldSpaceTime.getInstance().pushSkillCoolDownEvent(this, characterSkill.get());
+            }
         });
     }
 
@@ -236,8 +242,10 @@ public abstract class AbstractCharacter implements Character {
         if (skillOptional.isPresent()) {
             CharacterSkill characterSkill = skillOptional.get();
             boolean casted = characterSkill.get().cast(this);
-            triggerSkillCoolDown(name);
-            triggerGlobalCoolDown(characterSkill.get());
+            if (casted) {
+                triggerSkillCoolDown(name);
+                triggerGlobalCoolDown(characterSkill.get());
+            }
             return casted;
         } else {
             return false;

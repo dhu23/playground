@@ -12,14 +12,6 @@ public class ObliterateFrostStrikeBloodStrikeSpam extends DeathKnightPlayControl
     }
 
     protected void playRotation() {
-        if (deathKnight_.canCast(Obliterate.OBLITERATE)) {
-            deathKnight_.cast(Obliterate.OBLITERATE);
-        }
-        if (deathKnight_.canCast(FrostStrike.FROST_STRIKE)) {
-            deathKnight_.cast(FrostStrike.FROST_STRIKE);
-        }
-        if (deathKnight_.canCast(BloodStrike.BLOOD_STRIKE)) {
-            deathKnight_.cast(BloodStrike.BLOOD_STRIKE);
-        }
+        spamStrikes();
     }
 }

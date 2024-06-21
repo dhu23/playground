@@ -12,10 +12,6 @@ public class JustKeepFrostFeverUp extends DeathKnightPlayControl {
 
     @Override
     protected void playRotation() {
-        deathKnight_.getTarget().ifPresent(target -> {
-            if (!target.isUnderEffect(Effect.FrostFever)) {
-                deathKnight_.cast(IcyTouch.ICY_TOUCH);
-            }
-        });
+        castIcyTouchIfNoDot();
     }
 }

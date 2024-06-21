@@ -1,7 +1,10 @@
 package fantasy.intf;
 
 import fantasy.LogUtils;
-import fantasy.impl.deathknight.DeathKnight;
+import fantasy.impl.Effect;
+import fantasy.impl.deathknight.*;
+
+import java.util.Optional;
 
 public abstract class DeathKnightPlayControl implements PlayControl{
     protected final DeathKnight deathKnight_;
@@ -35,6 +38,32 @@ public abstract class DeathKnightPlayControl implements PlayControl{
     public void onSkillCoolDownFinish(Skill skill) {
         LogUtils.log(String.format("PlayControl: %s's Cool Down is clear", deathKnight_.name()));
         playRotation();
+    }
+
+    protected boolean castIcyTouchIfNoDot() {
+        Optional<Character> targetOptional = deathKnight_.getTarget();
+        if (targetOptional.isEmpty()) {
+            return false;
+        }
+        Character target = targetOptional.get();
+        if (!target.isUnderEffect(Effect.FrostFever)) {
+            deathKnight_.cast(IcyTouch.ICY_TOUCH);
+            return true;
+        }
+        return false;
+    }
+
+    protected boolean spamStrikes() {
+        if (deathKnight_.canCast(Obliterate.OBLITERATE)) {
+            deathKnight_.cast(Obliterate.OBLITERATE);
+        }
+        if (deathKnight_.canCast(FrostStrike.FROST_STRIKE)) {
+            deathKnight_.cast(FrostStrike.FROST_STRIKE);
+        }
+        if (deathKnight_.canCast(BloodStrike.BLOOD_STRIKE)) {
+            deathKnight_.cast(BloodStrike.BLOOD_STRIKE);
+        }
+        return true;
     }
 
     protected abstract void playRotation();
