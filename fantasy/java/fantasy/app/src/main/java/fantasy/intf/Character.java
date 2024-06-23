@@ -19,6 +19,9 @@ public interface Character extends Named {
     int sufferDamage(int amount);
     int receiveHealing(int amount);
 
+    Duration mainHandAttackSpeed();
+    Optional<Duration> offHandAttackSpeed();
+
     void setSkill(Skill skill);
 
     Instant receiveEffect(Effect effect, Duration duration);
@@ -45,6 +48,10 @@ public interface Character extends Named {
     void unSelectTarget();
 
     void setControl(PlayControl playControl);
+
+    void turnOnAutoAttack();
+    void turnOffAutoAttack();
+    boolean isAutoAttacking();
 
     boolean cast(String name);
     boolean hasResourceToCast(String name);

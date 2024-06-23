@@ -19,10 +19,13 @@ import fantasy.intf.DeathKnightPlayControl;
 // TODO
 // 1. make WorldSpaceTime non-Singleton
 // 2. add resource cooldown (done)
-// 3. add new skills for the full rotation
-// 4. add file logging
-// 5. add journal collection for analysis
+// 3. add new skills for the full rotation (in progress)
+// 4. add file logging (done)
+// 5. add journal collection for analysis (done)
 // 6. machine time simulation
+// 7. add analytics tools, both in process and out process
+// 8. add auto attack
+// 9. add critical attack and miss/parry/dodge
 public class App {
     public static final Weapon REFORGED_TRUESILVER_CHAMPION = ImmutableWeapon.of(
             ImmutableIntegerInterval.of(449, 674), 3600,

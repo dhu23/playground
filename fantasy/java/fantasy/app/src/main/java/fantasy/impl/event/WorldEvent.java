@@ -12,6 +12,7 @@ import java.util.Optional;
 public class WorldEvent {
     public enum EventType {
         Select,
+        AutoAttack,
         Cast,
         GlobalCoolDown,
         SkillCoolDown,
@@ -26,6 +27,18 @@ public class WorldEvent {
 
         @Value.Parameter
         public abstract Optional<Character> target();
+    }
+
+    @Value.Immutable
+    public static abstract class AutoAttack {
+        @Value.Parameter
+        public abstract Character caster();
+
+        @Value.Parameter
+        public abstract Instant nextTime();
+
+        @Value.Parameter
+        public abstract boolean isMainHand();
     }
 
     @Value.Immutable

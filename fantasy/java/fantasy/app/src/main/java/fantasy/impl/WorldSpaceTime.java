@@ -67,16 +67,24 @@ public class WorldSpaceTime {
         switch (type) {
             case Select -> {
                 WorldEvent.Select select = (WorldEvent.Select) obj;
-                // System.out.println(select);
                 if (select.target().isPresent()) {
                     select.caster().selectTarget(select.target().get());
                 } else {
                     select.caster().unSelectTarget();
                 }
             }
+            case AutoAttack -> {
+                WorldEvent.AutoAttack aa = (WorldEvent.AutoAttack) obj;
+                if (now.isBefore(aa.nextTime())) {
+                    pushEvent(event);
+                } else {
+                    if (aa.caster().isAutoAttacking()) {
+
+                    }
+                }
+            }
             case Cast -> {
                 WorldEvent.Cast cast = (WorldEvent.Cast) obj;
-                // System.out.println(cast);
                 cast.caster().cast(cast.spellName());
             }
             case GlobalCoolDown -> {
@@ -193,5 +201,23 @@ public class WorldSpaceTime {
                                    int tickHealing, Duration frequency, int tickCount) {
         pushEffectOverTime(WorldEvent.AmountOverTime.Type.HoT, effect, caster, target,
                 tickHealing, frequency, tickCount);
+    }
+
+    private void pushAutoAttack(Character caster, long nextInMillis, boolean mainHand) {
+        Instant now = Instant.now();
+        Event<WorldEvent.EventType, Object> event =
+                ImmutableEvent.of(WorldEvent.EventType.AutoAttack,
+                        ImmutableAutoAttack.of(caster, now.plusMillis(nextInMillis), mainHand));
+        pushEvent(event);
+    }
+
+    public void pushMainHandAutoAttack(Character caster) {
+        pushAutoAttack(caster, caster.mainHandAttackSpeed().toMillis(), true);
+    }
+
+    public void pushOffHandAutoAttack(Character caster) {
+        caster.offHandAttackSpeed().ifPresent(offHandSpeed -> {
+            pushAutoAttack(caster, offHandSpeed.toMillis(), false);
+        });
     }
 }

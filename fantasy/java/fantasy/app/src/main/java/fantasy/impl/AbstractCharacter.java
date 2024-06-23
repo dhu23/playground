@@ -18,6 +18,8 @@ public abstract class AbstractCharacter implements Character {
     protected int hp;
     protected int maxHp;
 
+    protected boolean autoAttackFlag_;
+
     private HashMap<String, CharacterSkill> skills_;
 
     protected HashMap<Effect, Instant> effects_;
@@ -75,6 +77,8 @@ public abstract class AbstractCharacter implements Character {
         this.hp = baseHp;
         this.maxHp = baseHp;
 
+        this.autoAttackFlag_ = false;
+
         skills_ = new HashMap<>();
         this.effects_ = new HashMap<>();
 
@@ -125,6 +129,20 @@ public abstract class AbstractCharacter implements Character {
         return modifyHp(amount);
     }
 
+    @Override
+    public Duration mainHandAttackSpeed() {
+        if (mainHand.isEmpty()) {
+            return Duration.ofSeconds(2);
+        } else {
+            return Duration.ofMillis(mainHand.get().attackSpeedInMillis());
+        }
+    }
+
+    @Override
+    public Optional<Duration> offHandAttackSpeed() {
+        return offHand.map(weapon -> Duration.ofMillis(weapon.attackSpeedInMillis()));
+    }
+
     public void setSkill(Skill skill) {
         skills_.put(skill.name(), new CharacterSkill(skill));
     }
@@ -173,6 +191,9 @@ public abstract class AbstractCharacter implements Character {
     @Override
     public void unSelectTarget() {
         target_ = Optional.empty();
+        if (autoAttackFlag_) {
+            autoAttackFlag_ = false;
+        }
         control_.ifPresent(PlayControl::onUnselect);
     }
 
@@ -234,6 +255,30 @@ public abstract class AbstractCharacter implements Character {
             LogUtils.log(String.format("%s has no skill: %s", name(), name));
         }
         return skill;
+    }
+
+    @Override
+    public void turnOnAutoAttack() {
+        if (!autoAttackFlag_ && target_.isPresent()) {
+            autoAttackFlag_ = true;
+
+            Character target = target_.get();
+            int damage = (int) (dealWeaponDamage() * (1 - target.damageMitigation()));
+            target.sufferDamage(damage);
+
+            WorldSpaceTime.getInstance().pushMainHandAutoAttack(this);
+            WorldSpaceTime.getInstance().pushOffHandAutoAttack(this);
+        }
+    }
+
+    @Override
+    public void turnOffAutoAttack() {
+        autoAttackFlag_ = false;
+    }
+
+    @Override
+    public boolean isAutoAttacking() {
+        return autoAttackFlag_;
     }
 
     @Override
