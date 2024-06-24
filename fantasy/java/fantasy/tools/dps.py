@@ -19,6 +19,7 @@ class ColorAssignment(object):
 
 def assign_dk_skill_color(skill):
     m = {
+        'Auto Attack': 'black',
         'Icy Touch': 'aqua',
         'Plague Strike': 'green',
         'Blood Strike': 'red',
@@ -82,7 +83,5 @@ def plot_data(df):
 
 
 if __name__ == '__main__':
-    df1 = pd.read_csv('../logs/log.1719243148019')
-    df2 = pd.read_csv('../logs/log.1719246705698')
-    df3 = pd.read_csv('../logs/log.1719247403849')
+    df1 = pd.read_csv('../logs/log.1719261884972')
     plot_data(df1)

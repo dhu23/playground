@@ -81,8 +81,16 @@ public class WorldSpaceTime {
                 if (now.isBefore(aa.nextTime())) {
                     pushEvent(event);
                 } else {
+                    Character caster = aa.caster();
                     if (aa.caster().isAutoAttacking()) {
-
+                        LogUtils.log(String.format("%s's auto-attack inflicts dmg", caster.name()));
+                        if (aa.isMainHand()) {
+                            caster.attackWithMainHand();
+                            pushMainHandAutoAttack(aa.caster());
+                        } else {
+                            caster.attackWithOffHand();
+                            pushOffHandAutoAttack(aa.caster());
+                        }
                     }
                 }
             }

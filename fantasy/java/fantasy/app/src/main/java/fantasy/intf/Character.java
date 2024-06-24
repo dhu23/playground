@@ -54,6 +54,8 @@ public interface Character extends Named {
     void turnOnAutoAttack();
     void turnOffAutoAttack();
     boolean isAutoAttacking();
+    void attackWithMainHand();
+    void attackWithOffHand();
 
     boolean cast(String name);
     boolean hasResourceToCast(String name);

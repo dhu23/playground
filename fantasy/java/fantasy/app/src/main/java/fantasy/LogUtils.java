@@ -16,10 +16,14 @@ public class LogUtils {
         System.out.println(String.format("%s: " + pattern, Instant.now(), objects));
     }
 
-    public static String reportDamage(Character caster, Character target, Skill skill, int amount) {
-        String line = String.format("%s's %s inflicts %d damage to %s", caster.name(), skill.name(), amount, target.name());
+    public static String reportDamage(Character caster, Character target, String skill, int amount) {
+        String line = String.format("%s's %s inflicts %d damage to %s", caster.name(), skill, amount, target.name());
         log(line);
         return line;
+    }
+
+    public static String reportDamage(Character caster, Character target, Skill skill, int amount) {
+        return reportDamage(caster, target, skill.name(), amount);
     }
 
     // TODO move to somewhere else
@@ -46,7 +50,7 @@ public class LogUtils {
         Files.write(this.logPath, List.of(String.join(",", HEADER)));
     }
 
-    public void report(Character caster, Character target, EffectType effectType, Skill skill, int amount) {
+    public void report(Character caster, Character target, EffectType effectType, String skill, int amount) {
         switch (effectType) {
             case Damage -> {
                 reportDamage(caster, target, skill, amount);
@@ -56,11 +60,15 @@ public class LogUtils {
             }
         }
         List<String> tokens = List.of(Instant.now().toString(), caster.name(), target.name(),
-                effectType.name(), skill.name(), String.valueOf(amount));
+                effectType.name(), skill, String.valueOf(amount));
         try {
             Files.write(this.logPath, List.of(String.join(",", tokens)), StandardOpenOption.APPEND);
         } catch (IOException e) {
             log("failed to log");
         }
+    }
+
+    public void report(Character caster, Character target, EffectType effectType, Skill skill, int amount) {
+        report(caster, target, effectType, skill.name(), amount);
     }
 }

@@ -22,9 +22,12 @@ import java.time.Duration;
 // 4. add file logging (done)
 // 5. add journal collection for analysis (done)
 // 6. machine time simulation
-// 7. add analytics tools, both in process and out process
-// 8. add auto attack
+// 7. add analytics tools, both in process and out process (out process done)
+// 8. add auto attack (done)
 // 9. add critical attack and miss/parry/dodge
+// 10. move amount over time stack into the receiver instead of the message itself
+// 11. support stackable effects
+// 12. add talents - killing machine, chill of the grave, annihilation, runic power mastery, glacier rot
 public class App {
     public static final Weapon REFORGED_TRUESILVER_CHAMPION = ImmutableWeapon.of(
             ImmutableIntegerInterval.of(449, 674), 3600,
@@ -35,10 +38,10 @@ public class App {
 //        DeathKnightPlayControl obliterateSpam = new ObliterateSpam(dk);
 //        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
 //        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
-        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
-//        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
+//        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
+        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(45));
+        runRotation(dk, Duration.ofMinutes(5));
     }
 
     private static DeathKnight createBasicDeathKnight() {
@@ -63,8 +66,10 @@ public class App {
     private static void runRotation(DeathKnight dk, Duration duration) throws InterruptedException {
         DummyTarget dummy = new DummyTarget();
         dk.selectTarget(dummy);
+        dk.turnOnAutoAttack();
 
         Thread.sleep(duration.toMillis());
+//        dk.turnOffAutoAttack();
         WorldSpaceTime.getInstance().stop();
     }
 }

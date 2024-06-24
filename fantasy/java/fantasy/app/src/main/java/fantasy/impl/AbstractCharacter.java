@@ -277,6 +277,8 @@ public abstract class AbstractCharacter implements Character {
             int damage = (int) (dealWeaponDamage() * (1 - target.damageMitigation()));
             target.sufferDamage(damage);
 
+            attackWithMainHand();
+            // TODO add full off hand support
             WorldSpaceTime.getInstance().pushMainHandAutoAttack(this);
             WorldSpaceTime.getInstance().pushOffHandAutoAttack(this);
         }
@@ -287,8 +289,24 @@ public abstract class AbstractCharacter implements Character {
         autoAttackFlag_ = false;
     }
 
+    @Override
     public boolean isAutoAttacking() {
         return autoAttackFlag_;
+    }
+
+    @Override
+    public void attackWithMainHand() {
+        if (target_.isPresent()) {
+            Character target = target_.get();
+            int base = (int) (dealWeaponDamage() * (1.0 - target.damageMitigation()));
+            target.sufferDamage(base);
+            WorldSpaceTime.getInstance().getLog().report(this, target, LogUtils.EffectType.Damage, Skill.AUTO_ATTACK, base);
+        }
+    }
+
+    @Override
+    public void attackWithOffHand() {
+        LogUtils.log("off hand attack is not implemented");
     }
 
     @Override
