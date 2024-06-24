@@ -31,6 +31,8 @@ public class LogUtils {
 
     private Path logPath;
 
+    private static final List<String> HEADER = List.of("time", "caster", "target", "effect_type", "skill", "value");
+
     /**
      * file format
      * time | caster name | target | damage/heal | skill | amount
@@ -39,6 +41,7 @@ public class LogUtils {
     public LogUtils(String path) throws IOException {
         this.logPath = Path.of(path, String.format("log.%s", System.currentTimeMillis()));
         Files.createFile(this.logPath);
+        Files.write(this.logPath, List.of(String.join(",", HEADER)));
     }
 
     public void report(Character caster, Character target, EffectType effectType, Skill skill, int amount) {

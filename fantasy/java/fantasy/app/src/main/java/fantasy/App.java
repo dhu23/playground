@@ -15,6 +15,8 @@ import fantasy.impl.simulation.ObliterateFrostStrikeBloodStrikeSpam;
 import fantasy.impl.simulation.ObliterateSpam;
 import fantasy.intf.DeathKnightPlayControl;
 
+import java.time.Duration;
+
 
 // TODO
 // 1. make WorldSpaceTime non-Singleton
@@ -35,7 +37,7 @@ public class App {
         // runObliterateSpam();
         // runObliterateFrostStrikeBloodStrikeSpam();
         // runJustKeepFrostFeverUp();
-        runClassicFrostRotation();
+        runClassicFrostRotation(Duration.ofMinutes(5));
     }
 
     private static DeathKnight createDeathKnight() {
@@ -82,14 +84,14 @@ public class App {
         WorldSpaceTime.getInstance().stop();
     }
 
-    private static void runClassicFrostRotation() throws InterruptedException {
+    private static void runClassicFrostRotation(Duration duration) throws InterruptedException {
         DeathKnight dk = createDeathKnight();
         DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
         DummyTarget dummy = new DummyTarget();
         dk.selectTarget(dummy);
 
-        Thread.sleep(45000);
+        Thread.sleep(duration.toMillis());
         WorldSpaceTime.getInstance().stop();
     }
 }
