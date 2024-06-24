@@ -6,6 +6,7 @@ import fantasy.intf.Skill;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.List;
@@ -38,6 +39,7 @@ public class LogUtils {
      */
     public LogUtils(String path) throws IOException {
         this.logPath = Path.of(path, String.format("log.%s", System.currentTimeMillis()));
+        Files.createDirectories(Path.of(path));
         Files.createFile(this.logPath);
     }
 
