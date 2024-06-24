@@ -196,12 +196,6 @@ public class DeathKnight extends AbstractCharacter {
     }
 
     @Override
-    public boolean isCoolDownReady(String name) {
-        // TODO need to add skill specific cooldown check
-        return !onGlobalCoolDown_;
-    }
-
-    @Override
     public boolean equipWeapon(Weapon item) {
         switch (item.style()) {
             case TwoHandedWeapon -> {

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.random.RandomGenerator;
 
 
@@ -18,6 +19,7 @@ public class WorldSpaceTime {
     private static final WorldSpaceTime INSTANCE = new WorldSpaceTime();
 
     private final LogUtils logUtils_;
+    private final AtomicLong counter_;
     private final RandomGenerator randomGenerator_;
     private final EventQueue<Event<WorldEvent.EventType, Object>> eventQueue_;
 
@@ -32,6 +34,7 @@ public class WorldSpaceTime {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        counter_ = new AtomicLong(0);
         this.randomGenerator_ = new Random();
         this.eventQueue_ = new EventQueue<>(event -> {
             try {
@@ -139,6 +142,7 @@ public class WorldSpaceTime {
                         LogUtils.log(String.format("%s's %s fades from %s",
                                 aot.caster().name(), aot.name(), aot.target().name()));
                         aot.target().removeEffect(aot.name());
+                        caster.onEffectExpiration(target, aot.name());
                     } else {
                         pushEffectOverTime(aot.type(), aot.name(), aot.caster(), aot.target(), aot.tickAmount(),
                                 aot.frequency(), aot.remainingTickCount() - 1);
@@ -164,7 +168,7 @@ public class WorldSpaceTime {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.SkillCoolDown,
-                        ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis())));
+                        ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis()), counter_.getAndIncrement()));
         pushEvent(event);
         LogUtils.log(String.format("%s's skill cool down is triggered by casting %s", caster.name(), skill.name()));
     }
@@ -173,7 +177,7 @@ public class WorldSpaceTime {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
-                        ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(coolDownInMillis)));
+                        ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(coolDownInMillis), counter_.getAndIncrement()));
         pushEvent(event);
         LogUtils.log(String.format("%s's rune is on cool down: %d", dk.name(), runeId));
     }
@@ -183,7 +187,7 @@ public class WorldSpaceTime {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.AmountOverTime,
-                        ImmutableAmountOverTime.of(type, effect, caster, target, tickAmount, frequency, now.plus(frequency), tickCount));
+                        ImmutableAmountOverTime.of(type, effect, caster, target, counter_.getAndIncrement(), tickAmount, frequency, now.plus(frequency), tickCount));
         pushEvent(event);
 //        LogUtils.log(String.format("%s casts %s (effect-over-time) on %s", caster.name(), effect, target.name()));
 //        for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {

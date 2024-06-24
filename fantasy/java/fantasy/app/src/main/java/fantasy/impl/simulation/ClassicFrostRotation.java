@@ -9,8 +9,8 @@ public class ClassicFrostRotation extends DeathKnightPlayControl {
     }
 
     protected void playRotation() {
-        castIcyTouchIfNoFrostFever();
-        castPlagueStrikeIfNoBloodPlague();
+        castIcyTouch(false);
+        castPlagueStrike(false);
         spamStrikes();
     }
 }

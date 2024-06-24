@@ -29,6 +29,8 @@ public interface Character extends Named {
     boolean isUnderEffect(Effect effect);
     Optional<Duration> remainingDuration(Effect effect);
 
+    void onEffectExpiration(Character target, Effect effect);
+
     default boolean isAlive() {
         return hp() > 0;
     }

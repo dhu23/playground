@@ -2,6 +2,7 @@ package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
 import fantasy.impl.AbstractTargetSkill;
+import fantasy.impl.Effect;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -38,6 +39,14 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
         // TODO add effect bonuses
+        double diseaseEnhancement = 0.0;
+        if (target.isUnderEffect(Effect.FrostFever)) {
+            diseaseEnhancement += 0.125;
+        }
+        if (target.isUnderEffect(Effect.BloodPlague)) {
+            diseaseEnhancement += 0.125;
+        }
+        base *= (1.0 + diseaseEnhancement);
 
         // damage mitigation
         base *= (1.0 - target.damageMitigation());

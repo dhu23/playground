@@ -62,7 +62,7 @@ public abstract class AbstractCharacter implements Character {
         }
 
         public boolean isUnderCoolDown() {
-            if (lastCastTime.isEmpty()) {
+            if (this.skill.coolDownInMillis() == 0 || lastCastTime.isEmpty()) {
                 return false;
             } else {
                 Instant next = lastCastTime.get().plusMillis(this.skill.coolDownInMillis());
@@ -177,6 +177,11 @@ public abstract class AbstractCharacter implements Character {
     }
 
     @Override
+    public void onEffectExpiration(Character target, Effect effect) {
+        control_.ifPresent(playControl -> playControl.onEffectExpiration(target, effect));
+    }
+
+    @Override
     public Optional<Character> getTarget() {
         return target_;
     }
@@ -227,6 +232,7 @@ public abstract class AbstractCharacter implements Character {
     public void triggerSkillCoolDown(String name) {
         getSkill(name).ifPresent(characterSkill -> {
             if (characterSkill.get().coolDownInMillis() > 0) {
+                characterSkill.setCoolDown();
                 WorldSpaceTime.getInstance().pushSkillCoolDownEvent(this, characterSkill.get());
             }
         });
@@ -247,6 +253,11 @@ public abstract class AbstractCharacter implements Character {
             return false;
         }
         return characterSkillOptional.get().isUnderCoolDown();
+    }
+
+    @Override
+    public boolean isCoolDownReady(String name) {
+        return !isUnderGlobalCoolDown() && !isSkillUnderCoolDown(name);
     }
 
     protected Optional<CharacterSkill> getSkill(String name) {
@@ -276,13 +287,16 @@ public abstract class AbstractCharacter implements Character {
         autoAttackFlag_ = false;
     }
 
-    @Override
     public boolean isAutoAttacking() {
         return autoAttackFlag_;
     }
 
     @Override
     public boolean cast(String name) {
+        // TODO clean duplicated underlying calls
+        if (!canCast(name)) {
+            return false;
+        }
         Optional<CharacterSkill> skillOptional = getSkill(name);
         if (skillOptional.isPresent()) {
             CharacterSkill characterSkill = skillOptional.get();

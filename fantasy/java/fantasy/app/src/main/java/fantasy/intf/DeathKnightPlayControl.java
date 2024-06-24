@@ -1,5 +1,6 @@
 package fantasy.intf;
 
+import fantasy.LogUtils;
 import fantasy.impl.Effect;
 import fantasy.impl.deathknight.*;
 
@@ -35,30 +36,34 @@ public abstract class DeathKnightPlayControl implements PlayControl{
 
     @Override
     public void onSkillCoolDownFinish(Skill skill) {
-//        LogUtils.log(String.format("PlayControl: %s's %s Cool Down is clear", deathKnight_.name(), skill.name()));
+        LogUtils.log(String.format("PlayControl: %s's %s Cool Down is clear", deathKnight_.name(), skill.name()));
         playRotation();
     }
 
-    protected boolean castIcyTouchIfNoFrostFever() {
+    @Override
+    public void onEffectExpiration(Character target, Effect effect) {
+        playRotation();
+    }
+
+    protected boolean castIcyTouch(boolean ignoreFrostFever) {
         Optional<Character> targetOptional = deathKnight_.getTarget();
         if (targetOptional.isEmpty()) {
             return false;
         }
         Character target = targetOptional.get();
-        if (!target.isUnderEffect(Effect.FrostFever)) {
-            deathKnight_.cast(IcyTouch.ICY_TOUCH);
-            return true;
+        if (ignoreFrostFever || !target.isUnderEffect(Effect.FrostFever)) {
+            return deathKnight_.cast(IcyTouch.ICY_TOUCH);
         }
         return false;
     }
 
-    protected boolean castPlagueStrikeIfNoBloodPlague() {
+    protected boolean castPlagueStrike(boolean ignoreBloodPlague) {
         Optional<Character> targetOptional = deathKnight_.getTarget();
         if (targetOptional.isEmpty()) {
             return false;
         }
         Character target = targetOptional.get();
-        if (!target.isUnderEffect(Effect.BloodPlague)) {
+        if (ignoreBloodPlague || !target.isUnderEffect(Effect.BloodPlague)) {
             deathKnight_.cast(PlagueStrike.PLAGUE_STRIKE);
             return true;
         }

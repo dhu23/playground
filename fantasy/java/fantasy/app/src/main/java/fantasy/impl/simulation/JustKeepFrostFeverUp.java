@@ -10,6 +10,6 @@ public class JustKeepFrostFeverUp extends DeathKnightPlayControl {
 
     @Override
     protected void playRotation() {
-        castIcyTouchIfNoFrostFever();
+        castIcyTouch(false);
     }
 }

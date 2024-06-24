@@ -29,6 +29,8 @@ def assign_dk_skill_color(skill):
 
 
 def plot_data(df):
+    df['dt'] = pd.to_datetime(df['time'])
+
     ca = ColorAssignment(set(df['skill']))
 
     df['color'] = df['skill'].map(assign_dk_skill_color)
@@ -80,7 +82,7 @@ def plot_data(df):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('../logs/log.1719243148019')
-    df['dt'] = pd.to_datetime(df['time'])
-
-    plot_data(df)
+    df1 = pd.read_csv('../logs/log.1719243148019')
+    df2 = pd.read_csv('../logs/log.1719246705698')
+    df3 = pd.read_csv('../logs/log.1719247403849')
+    plot_data(df1)

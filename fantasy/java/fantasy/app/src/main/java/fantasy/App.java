@@ -9,10 +9,7 @@ import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.deathknight.*;
 import fantasy.impl.item.ImmutableWeapon;
 import fantasy.impl.item.Weapon;
-import fantasy.impl.simulation.ClassicFrostRotation;
-import fantasy.impl.simulation.JustKeepFrostFeverUp;
-import fantasy.impl.simulation.ObliterateFrostStrikeBloodStrikeSpam;
-import fantasy.impl.simulation.ObliterateSpam;
+import fantasy.impl.simulation.*;
 import fantasy.intf.DeathKnightPlayControl;
 
 import java.time.Duration;
@@ -34,13 +31,17 @@ public class App {
             "Reforged Truesilver Champion", Weapon.Style.TwoHandedWeapon, Weapon.Category.Sword);
 
     public static void main(String[] args) throws InterruptedException {
-        // runObliterateSpam();
-        // runObliterateFrostStrikeBloodStrikeSpam();
-        // runJustKeepFrostFeverUp();
-        runClassicFrostRotation(Duration.ofMinutes(5));
+        DeathKnight dk = createBasicDeathKnight();
+//        DeathKnightPlayControl obliterateSpam = new ObliterateSpam(dk);
+//        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
+//        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
+        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
+//        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
+
+        runRotation(dk, Duration.ofSeconds(45));
     }
 
-    private static DeathKnight createDeathKnight() {
+    private static DeathKnight createBasicDeathKnight() {
         DeathKnight dk = new DeathKnight("Irevlys", 60);
         dk.setSkill(Obliterate.LEVEL_4);
         dk.setSkill(FrostStrike.LEVEL_6);
@@ -51,43 +52,15 @@ public class App {
         return dk;
     }
 
-    private static void runObliterateSpam() throws InterruptedException {
-        DeathKnight dk = createDeathKnight();
-        DeathKnightPlayControl obSpam = new ObliterateSpam(dk);
-
-        DummyTarget dummy = new DummyTarget();
-        dk.selectTarget(dummy);
-
-        Thread.sleep(18000);
-        WorldSpaceTime.getInstance().stop();
+    private static DeathKnight enhanceWithTalents(DeathKnight dk) {
+        return dk;
     }
 
-    private static void runObliterateFrostStrikeBloodStrikeSpam() throws InterruptedException {
-        DeathKnight dk = createDeathKnight();
-        DeathKnightPlayControl obSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
-
-        DummyTarget dummy = new DummyTarget();
-        dk.selectTarget(dummy);
-
-        Thread.sleep(25000);
-        WorldSpaceTime.getInstance().stop();
+    private static DeathKnight enhanceWithStats(DeathKnight dk) {
+        return dk;
     }
 
-    private static void runJustKeepFrostFeverUp() throws InterruptedException {
-        DeathKnight dk = createDeathKnight();
-        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
-
-        DummyTarget dummyTarget = new DummyTarget();
-        dk.selectTarget(dummyTarget);
-
-        Thread.sleep(30000);
-        WorldSpaceTime.getInstance().stop();
-    }
-
-    private static void runClassicFrostRotation(Duration duration) throws InterruptedException {
-        DeathKnight dk = createDeathKnight();
-        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
-
+    private static void runRotation(DeathKnight dk, Duration duration) throws InterruptedException {
         DummyTarget dummy = new DummyTarget();
         dk.selectTarget(dummy);
 

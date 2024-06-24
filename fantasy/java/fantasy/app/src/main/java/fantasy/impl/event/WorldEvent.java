@@ -72,6 +72,9 @@ public class WorldEvent {
 
         @Value.Parameter
         public abstract Instant availableTime();
+
+        @Value.Parameter
+        public abstract long id();
     }
 
     @Value.Immutable
@@ -84,6 +87,9 @@ public class WorldEvent {
 
         @Value.Parameter
         public abstract Instant availableTime();
+
+        @Value.Parameter
+        public abstract long id();
     }
 
     @Value.Immutable
@@ -103,6 +109,9 @@ public class WorldEvent {
 
         @Value.Parameter
         public abstract Character target();
+
+        @Value.Parameter
+        public abstract long id();
 
         @Value.Parameter
         public abstract int tickAmount();
