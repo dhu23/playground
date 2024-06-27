@@ -37,11 +37,11 @@ public class App {
         DeathKnight dk = createBasicDeathKnight();
 //        DeathKnightPlayControl obliterateSpam = new ObliterateSpam(dk);
 //        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
-//        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
+        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
-        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
+//        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofMinutes(5));
+        runRotation(dk, Duration.ofSeconds(25), false);
     }
 
     private static DeathKnight createBasicDeathKnight() {
@@ -63,10 +63,12 @@ public class App {
         return dk;
     }
 
-    private static void runRotation(DeathKnight dk, Duration duration) throws InterruptedException {
+    private static void runRotation(DeathKnight dk, Duration duration, boolean useAutoAttack) throws InterruptedException {
         DummyTarget dummy = new DummyTarget();
         dk.selectTarget(dummy);
-        dk.turnOnAutoAttack();
+        if (useAutoAttack) {
+            dk.turnOnAutoAttack();
+        }
 
         Thread.sleep(duration.toMillis());
 //        dk.turnOffAutoAttack();

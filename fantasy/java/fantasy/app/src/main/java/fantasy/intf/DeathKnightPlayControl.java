@@ -1,7 +1,6 @@
 package fantasy.intf;
 
 import fantasy.LogUtils;
-import fantasy.impl.Effect;
 import fantasy.impl.deathknight.*;
 
 import java.util.Optional;
@@ -51,7 +50,8 @@ public abstract class DeathKnightPlayControl implements PlayControl{
             return false;
         }
         Character target = targetOptional.get();
-        if (ignoreFrostFever || !target.isUnderEffect(Effect.FrostFever)) {
+        LogUtils.log(String.format("%s is under frost fever: %s", target.name(), target.isUnderEffect(FrostFever.FROST_FEVER)));
+        if (ignoreFrostFever || !target.isUnderEffect(FrostFever.FROST_FEVER)) {
             return deathKnight_.cast(IcyTouch.ICY_TOUCH);
         }
         return false;
@@ -63,7 +63,7 @@ public abstract class DeathKnightPlayControl implements PlayControl{
             return false;
         }
         Character target = targetOptional.get();
-        if (ignoreBloodPlague || !target.isUnderEffect(Effect.BloodPlague)) {
+        if (ignoreBloodPlague || !target.isUnderEffect(BloodPlague.BLOOD_PLAGUE)) {
             deathKnight_.cast(PlagueStrike.PLAGUE_STRIKE);
             return true;
         }

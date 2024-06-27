@@ -1,7 +1,5 @@
 package fantasy.intf;
 
-import fantasy.impl.Effect;
-
 public interface PlayControl {
     void onSelect();
     void onUnselect();

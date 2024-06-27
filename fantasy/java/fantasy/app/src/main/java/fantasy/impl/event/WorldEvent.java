@@ -1,6 +1,5 @@
 package fantasy.impl.event;
 
-import fantasy.impl.Effect;
 import org.immutables.value.Value;
 import fantasy.intf.Character;
 import fantasy.intf.Skill;
@@ -17,7 +16,7 @@ public class WorldEvent {
         GlobalCoolDown,
         SkillCoolDown,
         RuneCoolDown,
-        AmountOverTime
+        TickNotice
     }
 
     @Value.Immutable
@@ -93,36 +92,17 @@ public class WorldEvent {
     }
 
     @Value.Immutable
-    public static abstract class AmountOverTime {
-        public enum Type {
-            HoT,
-            DoT
-        }
-        @Value.Parameter
-        public abstract Type type();
-
-        @Value.Parameter
-        public abstract Effect name();
-
-        @Value.Parameter
-        public abstract Character caster();
-
+    public static abstract class TickNotice {
         @Value.Parameter
         public abstract Character target();
+
+        @Value.Parameter
+        public abstract String name();
 
         @Value.Parameter
         public abstract long id();
 
         @Value.Parameter
-        public abstract int tickAmount();
-
-        @Value.Parameter
-        public abstract Duration frequency();
-
-        @Value.Parameter
         public abstract Instant nextTickTime();
-
-        @Value.Parameter
-        public abstract int remainingTickCount();
     }
 }

@@ -1,6 +1,5 @@
 package fantasy.intf;
 
-import fantasy.impl.Effect;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.item.Weapon;
 
@@ -24,10 +23,15 @@ public interface Character extends Named {
 
     void setSkill(Skill skill);
 
-    Instant receiveEffect(Effect effect, Duration duration);
+    void receiveEffect(Effect effect);
     void removeEffect(Effect effect);
-    boolean isUnderEffect(Effect effect);
-    Optional<Duration> remainingDuration(Effect effect);
+    default boolean isUnderEffect(Effect effect) {
+        return isUnderEffect(effect.name());
+    }
+    boolean isUnderEffect(Character caster, Effect effect);
+    boolean isUnderEffect(String name);
+    boolean isUnderEffect(Character caster, String name);
+    Optional<Effect> getEffect(String effectName);
 
     void onEffectExpiration(Character target, Effect effect);
 

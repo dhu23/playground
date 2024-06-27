@@ -5,11 +5,12 @@ import fantasy.LogUtils;
 import fantasy.impl.deathknight.DeathKnight;
 import fantasy.impl.event.*;
 import fantasy.intf.Character;
+import fantasy.intf.Effect;
 import fantasy.intf.Skill;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.random.RandomGenerator;
@@ -44,6 +45,10 @@ public class WorldSpaceTime {
             }
         });
         this.eventQueue_.start();
+    }
+
+    public long getId() {
+        return counter_.getAndIncrement();
     }
 
     public RandomGenerator getRandomGenerator() {
@@ -127,33 +132,25 @@ public class WorldSpaceTime {
                     dk.clearRuneCoolDown(rcd.runeId());
                 }
             }
-            case AmountOverTime -> {
-                WorldEvent.AmountOverTime aot = (WorldEvent.AmountOverTime) obj;
-                if (now.isBefore(aot.nextTickTime())) {
+            case TickNotice -> {
+                WorldEvent.TickNotice tn = (WorldEvent.TickNotice) obj;
+                if (now.isBefore(tn.nextTickTime())) {
                     pushEvent(event);
                 } else {
-                    Character caster = aot.caster();
-                    Character target = aot.target();
-                    switch (aot.type()) {
-                        case DoT -> {
-                            target.sufferDamage(aot.tickAmount());
-                            LogUtils.log(String.format("%s suffers %d damage from %s's %s damage",
-                                    aot.target().name(), aot.tickAmount(), aot.caster().name(), aot.name()));
+                    Character target = tn.target();
+                    Optional<Effect> effectOptional = target.getEffect(tn.name());
+                    if (effectOptional.isPresent()) {
+                        Effect effect = effectOptional.get();
+                        if (effect.id() == tn.id()) {
+                            if (effect.isActive()) {
+                                effect.tick();
+                            }
+                            if (effect.isExpired()) {
+                                target.removeEffect(effect);
+                            } else {
+                                pushTickNotice(effect);
+                            }
                         }
-                        case HoT -> {
-                            target.receiveHealing(aot.tickAmount());
-                            LogUtils.log(String.format("%s receives %d healing from %s's %s healing",
-                                    aot.target().name(), aot.tickAmount(), aot.caster().name(), aot.name()));
-                        }
-                    }
-                    if (aot.remainingTickCount() == 1) {
-                        LogUtils.log(String.format("%s's %s fades from %s",
-                                aot.caster().name(), aot.name(), aot.target().name()));
-                        aot.target().removeEffect(aot.name());
-                        caster.onEffectExpiration(target, aot.name());
-                    } else {
-                        pushEffectOverTime(aot.type(), aot.name(), aot.caster(), aot.target(), aot.tickAmount(),
-                                aot.frequency(), aot.remainingTickCount() - 1);
                     }
                 }
             }
@@ -176,7 +173,7 @@ public class WorldSpaceTime {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.SkillCoolDown,
-                        ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis()), counter_.getAndIncrement()));
+                        ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis()), getId()));
         pushEvent(event);
         LogUtils.log(String.format("%s's skill cool down is triggered by casting %s", caster.name(), skill.name()));
     }
@@ -185,34 +182,18 @@ public class WorldSpaceTime {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
-                        ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(coolDownInMillis), counter_.getAndIncrement()));
+                        ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(coolDownInMillis), getId()));
         pushEvent(event);
         LogUtils.log(String.format("%s's rune is on cool down: %d", dk.name(), runeId));
     }
 
-    private void pushEffectOverTime(WorldEvent.AmountOverTime.Type type, Effect effect, Character caster, Character target,
-                                   int tickAmount, Duration frequency, int tickCount) {
-        Instant now = Instant.now();
-        Event<WorldEvent.EventType, Object> event =
-                ImmutableEvent.of(WorldEvent.EventType.AmountOverTime,
-                        ImmutableAmountOverTime.of(type, effect, caster, target, counter_.getAndIncrement(), tickAmount, frequency, now.plus(frequency), tickCount));
-        pushEvent(event);
-//        LogUtils.log(String.format("%s casts %s (effect-over-time) on %s", caster.name(), effect, target.name()));
-//        for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
-//            System.out.println(ste + "\n");
-//        }
-    }
-
-    public void pushDamageOverTime(Effect effect, Character caster, Character target,
-                                   int tickDamage, Duration frequency, int tickCount) {
-        pushEffectOverTime(WorldEvent.AmountOverTime.Type.DoT, effect, caster, target,
-                tickDamage, frequency, tickCount);
-    }
-
-    public void pushHealingOverTime(Effect effect, Character caster, Character target,
-                                   int tickHealing, Duration frequency, int tickCount) {
-        pushEffectOverTime(WorldEvent.AmountOverTime.Type.HoT, effect, caster, target,
-                tickHealing, frequency, tickCount);
+    public void pushTickNotice(Effect effect) {
+        effect.nextTick().ifPresent(nextTick -> {
+            Event<WorldEvent.EventType, Object> event =
+                    ImmutableEvent.of(WorldEvent.EventType.TickNotice,
+                            ImmutableTickNotice.of(effect.target(), effect.name(), effect.id(), nextTick));
+            pushEvent(event);
+        });
     }
 
     private void pushAutoAttack(Character caster, long nextInMillis, boolean mainHand) {

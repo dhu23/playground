@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import fantasy.LogUtils;
 import fantasy.impl.item.Weapon;
 import fantasy.intf.Character;
+import fantasy.intf.Effect;
 import fantasy.intf.PlayControl;
 import fantasy.intf.Skill;
 
@@ -22,7 +23,7 @@ public abstract class AbstractCharacter implements Character {
 
     private HashMap<String, CharacterSkill> skills_;
 
-    protected HashMap<Effect, Instant> effects_;
+    protected HashMap<String, Effect> effects_;
 
     protected Optional<Character> target_;
     protected Optional<PlayControl> control_;
@@ -148,32 +149,43 @@ public abstract class AbstractCharacter implements Character {
     }
 
     @Override
-    public Instant receiveEffect(Effect effect, Duration duration) {
-        Instant now = Instant.now();
-        Instant expirationTime = now.plus(duration);
-        effects_.put(effect, expirationTime);
-        return expirationTime;
+    public void receiveEffect(Effect effect) {
+        effects_.put(effect.name(), effect);
     }
 
     @Override
     public void removeEffect(Effect effect) {
-        effects_.remove(effect);
+        effects_.remove(effect.name());
     }
 
     @Override
-    public boolean isUnderEffect(Effect effect) {
-        return effects_.containsKey(effect);
+    public boolean isUnderEffect(String name) {
+        return effects_.containsKey(name);
     }
 
     @Override
-    public Optional<Duration> remainingDuration(Effect effect) {
-        Instant expiration = effects_.get(effect);
-        if (expiration == null) {
-            return Optional.empty();
-        } else {
-            Instant now = Instant.now();
-            return Optional.of(Duration.between(now, expiration));
+    public boolean isUnderEffect(Character caster, Effect effect) {
+        Optional<Effect> effectOptional = getEffect(name);
+        if (effectOptional.isEmpty()) {
+            return false;
         }
+        Effect effected = effectOptional.get();
+        return effected == effect && effected.caster() == caster;
+    }
+
+    @Override
+    public boolean isUnderEffect(Character caster, String name) {
+        Optional<Effect> effectOptional = getEffect(name);
+        if (effectOptional.isEmpty()) {
+            return false;
+        }
+        Effect effect = effectOptional.get();
+        return effect.caster() == caster;
+    }
+
+    @Override
+    public Optional<Effect> getEffect(String name) {
+        return Optional.ofNullable(effects_.get(name));
     }
 
     @Override

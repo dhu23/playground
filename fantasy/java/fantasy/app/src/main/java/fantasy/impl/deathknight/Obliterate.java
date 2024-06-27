@@ -1,13 +1,10 @@
 package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
-import fantasy.impl.AbstractTargetSkill;
-import fantasy.impl.Effect;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
 import java.util.TreeMap;
-import java.util.logging.Logger;
 
 /**
  * <pre>
@@ -40,10 +37,10 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
         double base = deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_();
         // TODO add effect bonuses
         double diseaseEnhancement = 0.0;
-        if (target.isUnderEffect(Effect.FrostFever)) {
+        if (target.isUnderEffect(deathKnight, FrostFever.FROST_FEVER)) {
             diseaseEnhancement += 0.125;
         }
-        if (target.isUnderEffect(Effect.BloodPlague)) {
+        if (target.isUnderEffect(deathKnight, BloodPlague.BLOOD_PLAGUE)) {
             diseaseEnhancement += 0.125;
         }
         base *= (1.0 + diseaseEnhancement);

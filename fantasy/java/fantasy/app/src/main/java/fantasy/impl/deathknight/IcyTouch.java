@@ -1,7 +1,6 @@
 package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
-import fantasy.impl.Effect;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
@@ -41,11 +40,7 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
         int base = getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
 
         // inflict the de-buff on the target
-        target.receiveEffect(Effect.FrostFever, Duration.ofSeconds(15));
-
-        // set up damage over time
-        WorldSpaceTime.getInstance().pushDamageOverTime(Effect.FrostFever, deathKnight, target,
-                getFrostFeverTickDamage(), Duration.ofSeconds(3), 5);
+        target.receiveEffect(new FrostFever(deathKnight, target, getFrostFeverTickDamage()));
 
         target.sufferDamage(base);
         WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage, this, base);
