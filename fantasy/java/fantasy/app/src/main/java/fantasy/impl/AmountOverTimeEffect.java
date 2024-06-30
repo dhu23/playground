@@ -4,6 +4,7 @@ import fantasy.LogUtils;
 import fantasy.intf.Character;
 
 import java.time.Duration;
+import java.time.Instant;
 
 public abstract class AmountOverTimeEffect extends AbstractEffect {
     protected int baseTicketAmount_;
@@ -36,7 +37,10 @@ public abstract class AmountOverTimeEffect extends AbstractEffect {
             case Healing -> this.target_.receiveHealing(tick);
         }
         WorldSpaceTime.getInstance().getLog().report(this.caster_, this.target_, this.effectType_, name(), tick);
+        LogUtils.log(String.format("%s remaining tick: %s", name(), this.remainingTickCount_));
         --this.remainingTickCount_;
+
+        this.nextTickTime_ = Instant.now().plus(this.tickFrequency_);
     }
 
     protected abstract int getTicketAmount();

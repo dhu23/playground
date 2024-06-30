@@ -145,8 +145,13 @@ public class WorldSpaceTime {
                             if (effect.isActive()) {
                                 effect.tick();
                             }
+
+                            Character caster = effect.caster();
                             if (effect.isExpired()) {
+                                LogUtils.log(String.format("%s's %s effect expired on target %s",
+                                        caster.name(), effect.name(), target.name()));
                                 target.removeEffect(effect);
+                                effect.caster().onEffectExpiration(target, effect);
                             } else {
                                 pushTickNotice(effect);
                             }

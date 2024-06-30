@@ -160,6 +160,7 @@ public abstract class AbstractCharacter implements Character {
 
     @Override
     public boolean isUnderEffect(String name) {
+//        LogUtils.log(String.format("%s under effects: %s", name(), effects_.keySet()));
         return effects_.containsKey(name);
     }
 

@@ -10,7 +10,7 @@ public class FrostFever extends AmountOverTimeEffect {
     public static final String FROST_FEVER = "Frost Fever";
 
     public FrostFever(Character caster, Character target, int baseTickAmount) {
-        super(FROST_FEVER, 1, 1, Duration.ofSeconds(3),
+        super(FROST_FEVER, 1, 5, Duration.ofSeconds(3),
                 caster, target, baseTickAmount, LogUtils.EffectType.Damage);
     }
 

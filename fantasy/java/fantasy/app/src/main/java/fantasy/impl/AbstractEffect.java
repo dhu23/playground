@@ -36,8 +36,6 @@ public abstract class AbstractEffect implements Effect {
         this.stackCount_ = initialStackCount;
         this.remainingTickCount_ = totalTickCount;
         this.nextTickTime_ = Instant.now().plus(tickFrequency);
-
-
     }
 
     @Override

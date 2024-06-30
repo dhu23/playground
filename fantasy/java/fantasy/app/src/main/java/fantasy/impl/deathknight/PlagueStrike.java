@@ -62,6 +62,6 @@ public class PlagueStrike extends AbstractDeathKnightTargetSkill {
     }
 
     protected int getBloodPlagueTickDamage() {
-        return 1;
+        return 25;
     }
 }

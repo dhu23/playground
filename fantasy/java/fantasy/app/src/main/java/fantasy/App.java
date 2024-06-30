@@ -37,11 +37,11 @@ public class App {
         DeathKnight dk = createBasicDeathKnight();
 //        DeathKnightPlayControl obliterateSpam = new ObliterateSpam(dk);
 //        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
-        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
+//        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
-//        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
+        DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(25), false);
+        runRotation(dk, Duration.ofSeconds(300), false);
     }
 
     private static DeathKnight createBasicDeathKnight() {
