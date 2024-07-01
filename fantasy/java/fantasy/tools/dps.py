@@ -20,10 +20,12 @@ class ColorAssignment(object):
 def assign_dk_skill_color(skill):
     m = {
         'Auto Attack': 'black',
-        'Icy Touch': 'aqua',
-        'Plague Strike': 'green',
+        'Icy Touch': 'blue',
+        'Frost Fever': 'aqua',
+        'Plague Strike': 'olive',
+        'Blood Plague': 'yellowgreen',
         'Blood Strike': 'red',
-        'Frost Strike': 'blue',
+        'Frost Strike': 'deepskyblue',
         'Obliterate': 'gray',
     }
     return m[skill]
@@ -42,14 +44,16 @@ def plot_data(df):
         for skill in event_types
     ]
 
+    major_df = df[~df['skill'].isin(['Frost Fever', 'Blood Plague'])]
+
     plt.figure(figsize=(10, 6))  # Adjust the figure size if needed
 
-    plt.scatter(x=df['dt'], y=df['value'], c=df['color'])
-    plt.plot(df['dt'], df['value'])
+    plt.scatter(x=major_df['dt'], y=major_df['value'], c=major_df['color'])
+    plt.plot(major_df['dt'], major_df['value'])
 
     plt.legend(
-        handles=legend_patches, 
-        loc='upper right', 
+        handles=legend_patches,
+        loc='upper right',
         bbox_to_anchor=(1.15, 1)
     )  # Adjust location and position
 
@@ -83,5 +87,6 @@ def plot_data(df):
 
 
 if __name__ == '__main__':
-    df1 = pd.read_csv('../logs/log.1719261884972')
+    df1 = pd.read_csv('../logs/log.1719798265343')
+    df2 = pd.read_csv('../logs/log.1719801701983')
     plot_data(df1)
