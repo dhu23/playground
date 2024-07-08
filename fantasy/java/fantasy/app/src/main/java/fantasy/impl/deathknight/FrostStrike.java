@@ -37,6 +37,13 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
         // Frost Strike is not affected by target's damage mitigation
 
         int damage = (int) base;
+
+        if (deathKnight.isUnderEffect(KillingMachineEffect.KILLING_MACHINE)) {
+            // TODO make it a coefficient from DeathKnight class
+            damage *= 2.0;
+            deathKnight.removeEffect(KillingMachineEffect.KILLING_MACHINE);
+        }
+
         target.sufferDamage(damage);
         WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage);
         return true;

@@ -1,5 +1,6 @@
 package fantasy.impl;
 
+import fantasy.LogUtils;
 import fantasy.intf.Character;
 import fantasy.intf.Effect;
 
@@ -85,4 +86,20 @@ public abstract class AbstractEffect implements Effect {
             return Optional.of(this.nextTickTime_);
         }
     }
+
+    @Override
+    public void tick() {
+        if (this.remainingTickCount_ <= 0) {
+            return;
+        }
+
+        onTick_();
+
+        --this.remainingTickCount_;
+//        LogUtils.log(String.format("%s remaining tick: %s", name(), this.remainingTickCount_));
+
+        this.nextTickTime_ = Instant.now().plus(this.tickFrequency_);
+    }
+
+    protected abstract void onTick_();
 }

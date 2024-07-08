@@ -50,7 +50,7 @@ public abstract class DeathKnightPlayControl implements PlayControl{
             return false;
         }
         Character target = targetOptional.get();
-        LogUtils.log(String.format("%s is under frost fever: %s", target.name(), target.isUnderEffect(FrostFever.FROST_FEVER)));
+//        LogUtils.log(String.format("%s is under frost fever: %s", target.name(), target.isUnderEffect(FrostFever.FROST_FEVER)));
         if (ignoreFrostFever || !target.isUnderEffect(FrostFever.FROST_FEVER)) {
             return deathKnight_.cast(IcyTouch.ICY_TOUCH);
         }
@@ -70,16 +70,31 @@ public abstract class DeathKnightPlayControl implements PlayControl{
         return false;
     }
 
-    protected boolean spamStrikes() {
+    protected void castObliterate() {
         if (deathKnight_.canCast(Obliterate.OBLITERATE)) {
             deathKnight_.cast(Obliterate.OBLITERATE);
         }
+    }
+
+    protected void castFrostStrike() {
         if (deathKnight_.canCast(FrostStrike.FROST_STRIKE)) {
             deathKnight_.cast(FrostStrike.FROST_STRIKE);
         }
+    }
+
+    protected void castBloodStrike() {
         if (deathKnight_.canCast(BloodStrike.BLOOD_STRIKE)) {
             deathKnight_.cast(BloodStrike.BLOOD_STRIKE);
         }
+    }
+
+    protected boolean spamStrikes() {
+        if (deathKnight_.isUnderEffect(KillingMachineEffect.KILLING_MACHINE)) {
+            castFrostStrike();
+        }
+        castObliterate();
+        castFrostStrike();
+        castBloodStrike();
         return true;
     }
 

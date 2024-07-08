@@ -34,7 +34,7 @@ public class App {
             "Reforged Truesilver Champion", Weapon.Style.TwoHandedWeapon, Weapon.Category.Sword);
 
     public static void main(String[] args) throws InterruptedException {
-        DeathKnight dk = createBasicDeathKnight();
+        DeathKnight dk = enhanceWithTalents(createBasicDeathKnight());
 //        DeathKnightPlayControl obliterateSpam = new ObliterateSpam(dk);
 //        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
 //        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
@@ -56,6 +56,7 @@ public class App {
     }
 
     private static DeathKnight enhanceWithTalents(DeathKnight dk) {
+        dk.setTalent(DeathKnightTalentPool.KillingMachine.LEVEL_5);
         return dk;
     }
 

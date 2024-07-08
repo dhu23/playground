@@ -3,10 +3,8 @@ package fantasy.impl;
 import com.google.common.base.Preconditions;
 import fantasy.LogUtils;
 import fantasy.impl.item.Weapon;
+import fantasy.intf.*;
 import fantasy.intf.Character;
-import fantasy.intf.Effect;
-import fantasy.intf.PlayControl;
-import fantasy.intf.Skill;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -22,6 +20,7 @@ public abstract class AbstractCharacter implements Character {
     protected boolean autoAttackFlag_;
 
     private HashMap<String, CharacterSkill> skills_;
+    private HashMap<String, Talent> talents_;
 
     protected HashMap<String, Effect> effects_;
 
@@ -80,7 +79,8 @@ public abstract class AbstractCharacter implements Character {
 
         this.autoAttackFlag_ = false;
 
-        skills_ = new HashMap<>();
+        this.skills_ = new HashMap<>();
+        this.talents_ = new HashMap<>();
         this.effects_ = new HashMap<>();
 
         this.target_ = Optional.empty();
@@ -90,6 +90,11 @@ public abstract class AbstractCharacter implements Character {
 
         this.mainHand = Optional.empty();
         this.offHand = Optional.empty();
+    }
+
+    @Override
+    public long uniqueId() {
+        return 0;
     }
 
     @Override
@@ -148,14 +153,22 @@ public abstract class AbstractCharacter implements Character {
         skills_.put(skill.name(), new CharacterSkill(skill));
     }
 
+    public void setTalent(Talent talent) {
+        talents_.put(talent.name(), talent);
+    }
+
     @Override
     public void receiveEffect(Effect effect) {
+        LogUtils.log(String.format("%s is affected by %s's %s", name(), effect.caster().name(), effect.name()));
         effects_.put(effect.name(), effect);
     }
 
     @Override
-    public void removeEffect(Effect effect) {
-        effects_.remove(effect.name());
+    public void removeEffect(String name) {
+        Effect effect = effects_.remove(name);
+        if (effect != null) {
+            LogUtils.log(String.format("%s's %s fades from %s", effect.caster().name(), effect.name(), name()));
+        }
     }
 
     @Override
@@ -273,6 +286,10 @@ public abstract class AbstractCharacter implements Character {
         return !isUnderGlobalCoolDown() && !isSkillUnderCoolDown(name);
     }
 
+    protected Optional<Talent> getTalent(String name) {
+        return Optional.ofNullable(talents_.get(name));
+    }
+
     protected Optional<CharacterSkill> getSkill(String name) {
         Optional<CharacterSkill> skill = Optional.ofNullable(skills_.get(name));
         if (skill.isEmpty()) {
@@ -310,6 +327,8 @@ public abstract class AbstractCharacter implements Character {
     @Override
     public void attackWithMainHand() {
         if (target_.isPresent()) {
+            onAttackWithMainHand_();
+
             Character target = target_.get();
             int base = (int) (dealWeaponDamage() * (1.0 - target.damageMitigation()));
             target.sufferDamage(base);
@@ -317,10 +336,15 @@ public abstract class AbstractCharacter implements Character {
         }
     }
 
+    protected abstract void onAttackWithMainHand_();
+
     @Override
     public void attackWithOffHand() {
+        onAttackWithOffHand_();
         LogUtils.log("off hand attack is not implemented");
     }
+
+    protected abstract void onAttackWithOffHand_();
 
     @Override
     public boolean cast(String name) {

@@ -87,6 +87,7 @@ def plot_data(df):
 
 
 if __name__ == '__main__':
-    df1 = pd.read_csv('../logs/log.1719798265343')
-    df2 = pd.read_csv('../logs/log.1719801701983')
+    #df1 = pd.read_csv('../logs/log.1719798265343')
+    #df2 = pd.read_csv('../logs/log.1719801701983')
+    df1 = pd.read_csv('../logs/log.1720495748666')
     plot_data(df1)

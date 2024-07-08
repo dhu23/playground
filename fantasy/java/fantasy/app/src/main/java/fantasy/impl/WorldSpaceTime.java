@@ -88,7 +88,7 @@ public class WorldSpaceTime {
                 } else {
                     Character caster = aa.caster();
                     if (aa.caster().isAutoAttacking()) {
-                        LogUtils.log(String.format("%s's auto-attack inflicts dmg", caster.name()));
+//                        LogUtils.log(String.format("%s's auto-attack inflicts dmg", caster.name()));
                         if (aa.isMainHand()) {
                             caster.attackWithMainHand();
                             pushMainHandAutoAttack(aa.caster());

@@ -4,7 +4,6 @@ import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.item.Weapon;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Optional;
 
 public interface Character extends Named {
@@ -22,9 +21,13 @@ public interface Character extends Named {
     Optional<Duration> offHandAttackSpeed();
 
     void setSkill(Skill skill);
+    void setTalent(Talent talent);
 
     void receiveEffect(Effect effect);
-    void removeEffect(Effect effect);
+    default void removeEffect(Effect effect) {
+        removeEffect(effect.name());
+    }
+    void removeEffect(String name);
     default boolean isUnderEffect(Effect effect) {
         return isUnderEffect(effect.name());
     }

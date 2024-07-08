@@ -2,6 +2,7 @@ package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
 import fantasy.impl.AbstractCharacter;
+import fantasy.impl.RandomUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
@@ -10,6 +11,15 @@ import fantasy.intf.*;
 
 import java.time.Instant;
 import java.util.*;
+
+// Talent notes:
+
+// Killing Machine: Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike
+// a critical strike. Effect occurs more often than Killing Machine (Rank 4).
+
+// Annihilation: Increases the critical strike chance of your melee special abilities by 3%.
+// In addition, there is a 100% chance that your Obliterate will do its damage without consuming diseases.
+
 
 public class DeathKnight extends AbstractCharacter {
     private DeathKnightResource resource_;
@@ -156,11 +166,6 @@ public class DeathKnight extends AbstractCharacter {
     }
 
     @Override
-    public long uniqueId() {
-        return 0;
-    }
-
-    @Override
     public IntegerInterval emptyHandedDamage() {
         return ImmutableIntegerInterval.of(3, 5);
     }
@@ -225,6 +230,31 @@ public class DeathKnight extends AbstractCharacter {
     public void clearRuneCoolDown(int runeId) {
         resource_.getRune(runeId).clearCoolDown();
         control_.ifPresent(control -> ((DeathKnightPlayControl) control).onRuneCoolDownFinish());
+    }
+
+    @Override
+    protected void onAttackWithMainHand_() {
+        Optional<Talent> talent = getTalent(DeathKnightTalentPool.KILLING_MACHINE);
+        if (talent.isEmpty()) {
+            return;
+        }
+        double attacksIn1Min = 60000.0 / mainHandAttackSpeed().toMillis();
+        if (offHandAttackSpeed().isPresent()) {
+            attacksIn1Min += 60000.0 / offHandAttackSpeed().get().toMillis();
+        }
+        DeathKnightTalentPool.KillingMachine killingMachine = (DeathKnightTalentPool.KillingMachine) talent.get();
+        double chance = killingMachine.procRatePerMinute() / attacksIn1Min;
+        LogUtils.log(String.format("%s's KM proc chance is %s", name(), chance));
+
+        if (RandomUtils.roll(chance, WorldSpaceTime.getInstance().getRandomGenerator())) {
+            LogUtils.log("KM procs");
+            receiveEffect(new KillingMachineEffect(this));
+        }
+    }
+
+    @Override
+    protected void onAttackWithOffHand_() {
+
     }
 
     @Override

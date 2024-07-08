@@ -12,11 +12,6 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
-    public long uniqueId() {
-        return 0;
-    }
-
-    @Override
     public IntegerInterval emptyHandedDamage() {
         return null;
     }
@@ -59,5 +54,15 @@ public class DummyTarget extends AbstractCharacter {
     @Override
     public String shortDescription() {
         return "";
+    }
+
+    @Override
+    protected void onAttackWithMainHand_() {
+
+    }
+
+    @Override
+    protected void onAttackWithOffHand_() {
+
     }
 }
