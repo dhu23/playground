@@ -12,53 +12,88 @@ import fantasy.intf.*;
 import java.time.Instant;
 import java.util.*;
 
-// Talent notes:
-
-// Killing Machine: Your melee attacks have a chance to make your next Icy Touch, Howling Blast or Frost Strike
-// a critical strike. Effect occurs more often than Killing Machine (Rank 4).
-
-// Annihilation: Increases the critical strike chance of your melee special abilities by 3%.
-// In addition, there is a 100% chance that your Obliterate will do its damage without consuming diseases.
-
-
 public class DeathKnight extends AbstractCharacter {
     private DeathKnightResource resource_;
 
     public static class DeathKnightRune {
-        public DeathKnightResourceCost.RuneType runeType;
-        public Optional<Instant> nextAvailableTime;
+        private DeathKnightResourceCost.RuneType runeType_;
+        private Optional<Instant> nextAvailableTime_;
+        public boolean isDeath;
 
         public DeathKnightRune(DeathKnightResourceCost.RuneType initialRuneType) {
-            runeType = initialRuneType;
-            nextAvailableTime = Optional.empty();
+            runeType_ = initialRuneType;
+            nextAvailableTime_ = Optional.empty();
+            isDeath = false;
         }
 
         public boolean isAvailable() {
-            return nextAvailableTime.isEmpty();
+            return nextAvailableTime_.isEmpty();
         }
 
         public void clearCoolDown() {
-            nextAvailableTime = Optional.empty();
+            nextAvailableTime_ = Optional.empty();
         }
 
         public void setCoolDown(Instant availableTime) {
-            nextAvailableTime = Optional.of(availableTime);
+            nextAvailableTime_ = Optional.of(availableTime);
             // LogUtils.log(String.format("rune %s is on cool down now", runeType));
+        }
+
+        public void flipToDeath() {
+            this.isDeath = true;
+        }
+
+        public void flipBack() {
+            this.isDeath = false;
+        }
+
+        public DeathKnightResourceCost.RuneType getRuneType() {
+            return this.isDeath
+                    ? DeathKnightResourceCost.RuneType.Death
+                    : this.runeType_;
         }
     }
 
-    public class DeathKnightResource implements CharacterResource {
-        private DeathKnightRune rune1_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Blood);
-        private DeathKnightRune rune2_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Blood);
-        private DeathKnightRune rune3_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Frost);
-        private DeathKnightRune rune4_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Frost);
-        private DeathKnightRune rune5_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Unholy);
-        private DeathKnightRune rune6_ = new DeathKnightRune(DeathKnightResourceCost.RuneType.Unholy);
+    public static class DeathKnightResource implements CharacterResource {
+        private DeathKnight.DeathKnightRune rune1_ = new DeathKnight.DeathKnightRune(DeathKnightResourceCost.RuneType.Blood);
+        private DeathKnight.DeathKnightRune rune2_ = new DeathKnight.DeathKnightRune(DeathKnightResourceCost.RuneType.Blood);
+        private DeathKnight.DeathKnightRune rune3_ = new DeathKnight.DeathKnightRune(DeathKnightResourceCost.RuneType.Frost);
+        private DeathKnight.DeathKnightRune rune4_ = new DeathKnight.DeathKnightRune(DeathKnightResourceCost.RuneType.Frost);
+        private DeathKnight.DeathKnightRune rune5_ = new DeathKnight.DeathKnightRune(DeathKnightResourceCost.RuneType.Unholy);
+        private DeathKnight.DeathKnightRune rune6_ = new DeathKnight.DeathKnightRune(DeathKnightResourceCost.RuneType.Unholy);
 
-        private List<DeathKnightRune> runes_ = List.of(rune1_, rune2_, rune3_, rune4_, rune5_, rune6_);
+        private List<DeathKnight.DeathKnightRune> runes_ = List.of(rune1_, rune2_, rune3_, rune4_, rune5_, rune6_);
 
-        private int runicPowerLevel_ = 0;
-        private int maxRunicPower = 100;
+        private int runicPowerLevel_;
+        private int maxRunicPowerBonus;
+        private final int originalMaxRunicPower;
+
+        public DeathKnightResource() {
+            runicPowerLevel_ = 0;
+            maxRunicPowerBonus = 0;
+            originalMaxRunicPower = 100;
+        }
+
+        public void setMaxRunicPowerBonus(int bonus) {
+            this.maxRunicPowerBonus = bonus;
+        }
+
+        public int getMaxRunicPower() {
+            return originalMaxRunicPower + maxRunicPowerBonus;
+        }
+
+        public int getRunicPower() {
+            return this.runicPowerLevel_;
+        }
+
+        public boolean hasRune(DeathKnightResourceCost.RuneType runeType) {
+            for (DeathKnightRune rune : runes_) {
+                if (rune.getRuneType() == runeType) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public Set<Integer> getAvailableRuneIndices() {
             Set<Integer> ret = new HashSet<>();
@@ -70,79 +105,101 @@ public class DeathKnight extends AbstractCharacter {
             return ret;
         }
 
-        public DeathKnightRune getRune(int runeId) {
+        public DeathKnight.DeathKnightRune getRune(int runeId) {
             return runes_.get(runeId);
         }
 
         private int selectRune_(Collection<Integer> selectedRunes, DeathKnightResourceCost.RuneType needed) {
             for (int i : selectedRunes) {
-                if (getRune(i).runeType == needed) {
+                if (getRune(i).getRuneType() == needed) {
+                    return i;
+                }
+            }
+            // prefer matching rune type over consuming a death rune
+            for (int i : selectedRunes) {
+                if (getRune(i).getRuneType() == DeathKnightResourceCost.RuneType.Death) {
                     return i;
                 }
             }
             return -1;
         }
 
-        protected boolean hasRunes(List<DeathKnightResourceCost.RuneType> neededRuneTypes) {
+        protected Set<Integer> supplyRunes(List<DeathKnightResourceCost.RuneType> neededRuneTypes) {
             Set<Integer> availableRuneIndices = getAvailableRuneIndices();
 
+            Set<Integer> toBeUsed = new HashSet<>();
             for (DeathKnightResourceCost.RuneType needed : neededRuneTypes) {
                 int found = selectRune_(availableRuneIndices, needed);
                 if (found >= 0) {
                     availableRuneIndices.remove(found);
+                    toBeUsed.add(found);
                 } else {
-                    return false;
+                    return new HashSet<>();
                 }
             }
-            return true;
+            return toBeUsed;
         }
 
         protected boolean hasRunicPower(int neededRunicPower) {
             return neededRunicPower <= 0 || runicPowerLevel_ >= neededRunicPower;
         }
 
-        public boolean hasResource(DeathKnightResourceCost resourceCost) {
-            return hasRunes(resourceCost.getRuneList()) && hasRunicPower(resourceCost.runicPower());
-        }
-
-        public boolean consume(DeathKnightResourceCost resourceCost,
-                               DeathKnight deathKnight) {
-            if (hasRunes(resourceCost.getRuneList()) && hasRunicPower(resourceCost.runicPower())) {
-                // consume runes
-                Set<Integer> availableRuneIndices = getAvailableRuneIndices();
-
-                Instant nextAvailable = Instant.now().plusSeconds(10);
-                for (DeathKnightResourceCost.RuneType needed : resourceCost.getRuneList()) {
-                    int found = selectRune_(availableRuneIndices, needed);
-                    if (found >= 0) {
-                        availableRuneIndices.remove(found);
-                        getRune(found).setCoolDown(nextAvailable);
-                        WorldSpaceTime.getInstance().pushRuneCoolDownEvent(deathKnight, found, 10000);
-                    } else {
-                        LogUtils.log("really bad");
-                        return false;
-                    }
-                }
-                // consume runic power
-                runicPowerLevel_ -= resourceCost.runicPower();
-                if (runicPowerLevel_ < 0) {
-                    LogUtils.log("really really bad");
-                } else if (runicPowerLevel_ > maxRunicPower){
-                    runicPowerLevel_ = maxRunicPower;
-                }
-                return true;
-            } else {
+        public boolean consume(Skill skill, DeathKnight deathKnight) {
+            DeathKnightResourceCost cost = (DeathKnightResourceCost) skill.cost();
+            if (cost == null) {
                 return false;
             }
+
+            Set<Integer> toBeUsed = supplyRunes(cost.getRuneList());
+            boolean hasEnoughRunicPower = hasRunicPower(cost.runicPower());
+            if (toBeUsed.size() != cost.getRuneList().size() || !hasEnoughRunicPower) {
+                return false;
+            }
+
+            Optional<DeathKnightTalentPool.BloodOfTheNorth> bloodOfTheNorth = deathKnight.getBloodOfTheNorth();
+            final boolean setRunesToDeath;
+            if (bloodOfTheNorth.isPresent() && skill.name().equals(BloodStrike.BLOOD_STRIKE)) {
+                setRunesToDeath = RandomUtils.roll(bloodOfTheNorth.get().deathRuneChance(),
+                        WorldSpaceTime.getInstance().getRandomGenerator());
+                if (setRunesToDeath) {
+                    LogUtils.log("flip runes to death runes");
+                }
+            } else {
+                setRunesToDeath = false;
+            }
+
+            // consume runes
+            Instant nextAvailable = Instant.now().plusSeconds(10);
+            for (int runeIndex : toBeUsed) {
+                DeathKnightRune rune = getRune(runeIndex);
+                rune.setCoolDown(nextAvailable);
+                if (setRunesToDeath) {
+                    rune.flipToDeath();
+                } else {
+                    rune.flipBack();
+                }
+                WorldSpaceTime.getInstance().pushRuneCoolDownEvent(deathKnight, runeIndex, 10000);
+            }
+
+            // consume runic power
+            int maxLevel = getMaxRunicPower();
+            runicPowerLevel_ -= cost.runicPower();
+            if (runicPowerLevel_ < 0) {
+                LogUtils.log("really really bad");
+            } else if (runicPowerLevel_ > maxLevel){
+                runicPowerLevel_ = maxLevel;
+            }
+
+            return true;
         }
 
         private String getRuneSummary() {
             List<String> runeSummarySegments = new ArrayList<>();
 
             for (int i = 0; i < runes_.size(); ++i) {
-                DeathKnightRune rune = getRune(i);
+                DeathKnight.DeathKnightRune rune = getRune(i);
                 if (rune.isAvailable()) {
-                    runeSummarySegments.add(String.format("%s(%d)", rune.runeType, i));
+                    runeSummarySegments.add(String.format("%s(%d)", rune.getRuneType(), i));
                 }
             }
 
@@ -191,16 +248,6 @@ public class DeathKnight extends AbstractCharacter {
     }
 
     @Override
-    public boolean hasResourceToCast(String name) {
-        Optional<CharacterSkill> skillOptional = getSkill(name);
-        if (skillOptional.isEmpty()) {
-            return false;
-        }
-        DeathKnightResourceCost cost = (DeathKnightResourceCost) skillOptional.get().get().cost();
-        return hasResource(cost);
-    }
-
-    @Override
     public boolean equipWeapon(Weapon item) {
         switch (item.style()) {
             case TwoHandedWeapon -> {
@@ -215,12 +262,13 @@ public class DeathKnight extends AbstractCharacter {
         return false;
     }
 
-    protected boolean hasResource(DeathKnightResourceCost resourceCost) {
-        return resource_.hasResource(resourceCost);
+    public DeathKnightResource getDeathKnightResource() {
+        return this.resource_;
     }
 
-    public boolean consumeResource(DeathKnightResourceCost resourceCost) {
-        boolean ok = resource_.consume(resourceCost, this);
+    public boolean consumeResource(Skill skill) {
+        LogUtils.log(String.format("%s has %s", name(), resource_.summary()));
+        boolean ok = resource_.consume(skill, this);
         if (ok) {
             LogUtils.log(String.format("%s has %s", name(), resource_.summary()));
         }
@@ -234,7 +282,7 @@ public class DeathKnight extends AbstractCharacter {
 
     @Override
     protected void onAttackWithMainHand_() {
-        Optional<Talent> talent = getTalent(DeathKnightTalentPool.KILLING_MACHINE);
+        Optional<DeathKnightTalentPool.KillingMachine> talent = getKillingMachine();
         if (talent.isEmpty()) {
             return;
         }
@@ -242,12 +290,12 @@ public class DeathKnight extends AbstractCharacter {
         if (offHandAttackSpeed().isPresent()) {
             attacksIn1Min += 60000.0 / offHandAttackSpeed().get().toMillis();
         }
-        DeathKnightTalentPool.KillingMachine killingMachine = (DeathKnightTalentPool.KillingMachine) talent.get();
-        double chance = killingMachine.procRatePerMinute() / attacksIn1Min;
+
+        double chance = talent.get().procRatePerMinute() / attacksIn1Min;
         LogUtils.log(String.format("%s's KM proc chance is %s", name(), chance));
 
         if (RandomUtils.roll(chance, WorldSpaceTime.getInstance().getRandomGenerator())) {
-            LogUtils.log("KM procs");
+            LogUtils.log(String.format("%s's %s is triggered", name(), talent.get().name()));
             receiveEffect(new KillingMachineEffect(this));
         }
     }
@@ -255,6 +303,88 @@ public class DeathKnight extends AbstractCharacter {
     @Override
     protected void onAttackWithOffHand_() {
 
+    }
+
+    public void setRunicPowerMastery(DeathKnightTalentPool.RunicPowerMastery talent) {
+        setTalent(talent);
+        resource_.setMaxRunicPowerBonus(talent.runicPowerBonus());
+    }
+
+    public Optional<DeathKnightTalentPool.RunicPowerMastery> getRunicPowerMastery() {
+        return getTalent(DeathKnightTalentPool.RUNIC_POWER_MASTERY)
+                .map(talent -> (DeathKnightTalentPool.RunicPowerMastery) talent);
+    }
+
+    public void setBlackIce(DeathKnightTalentPool.BlackIce talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.BlackIce> getBlackIce() {
+        return getTalent(DeathKnightTalentPool.BLACK_ICE)
+                .map(talent -> (DeathKnightTalentPool.BlackIce) talent);
+    }
+
+    public void setAnnihilation(DeathKnightTalentPool.Annihilation talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.Annihilation> getAnnihilation() {
+        return getTalent(DeathKnightTalentPool.ANNIHILATION)
+                .map(talent -> (DeathKnightTalentPool.Annihilation) talent);
+    }
+
+    public void setKillingMachine(DeathKnightTalentPool.KillingMachine talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.KillingMachine> getKillingMachine() {
+        return getTalent(DeathKnightTalentPool.KILLING_MACHINE)
+                .map(talent -> (DeathKnightTalentPool.KillingMachine) talent);
+    }
+
+    public void setChillOfTheGrave(DeathKnightTalentPool.ChillOfTheGrave talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.ChillOfTheGrave> getChillOfTheGrave() {
+        return getTalent(DeathKnightTalentPool.CHILL_OF_THE_GRAVE)
+                .map(talent -> (DeathKnightTalentPool.ChillOfTheGrave) talent);
+    }
+
+    public void setGlacierRot(DeathKnightTalentPool.GlacierRot talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.GlacierRot> getGlacierRot() {
+        return getTalent(DeathKnightTalentPool.GLACIER_ROT)
+                .map(talent -> (DeathKnightTalentPool.GlacierRot) talent);
+    }
+
+    public void setRime(DeathKnightTalentPool.Rime talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.Rime> getRime() {
+        return getTalent(DeathKnightTalentPool.RIME)
+                .map(talent -> (DeathKnightTalentPool.Rime) talent);
+    }
+
+    public void setBloodOfTheNorth(DeathKnightTalentPool.BloodOfTheNorth talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.BloodOfTheNorth> getBloodOfTheNorth() {
+        return getTalent(DeathKnightTalentPool.BLOOD_OF_THE_NORTH)
+                .map(talent -> (DeathKnightTalentPool.BloodOfTheNorth) talent);
+    }
+
+    public void setGuileOfGorefield(DeathKnightTalentPool.GuileOfGorefiend talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.GuileOfGorefiend> getGuileOfGorefiend() {
+        return getTalent(DeathKnightTalentPool.GUILE_OF_GOREFIEND)
+                .map(talent -> (DeathKnightTalentPool.GuileOfGorefiend) talent);
     }
 
     @Override

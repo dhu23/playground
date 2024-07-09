@@ -37,11 +37,6 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
-    public boolean hasResourceToCast(String name) {
-        return false;
-    }
-
-    @Override
     public boolean equipWeapon(Weapon item) {
         return false;
     }

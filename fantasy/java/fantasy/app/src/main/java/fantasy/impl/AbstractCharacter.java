@@ -348,8 +348,7 @@ public abstract class AbstractCharacter implements Character {
 
     @Override
     public boolean cast(String name) {
-        // TODO clean duplicated underlying calls
-        if (!canCast(name)) {
+        if (!isCoolDownReady(name)) {
             return false;
         }
         Optional<CharacterSkill> skillOptional = getSkill(name);

@@ -71,31 +71,26 @@ public abstract class DeathKnightPlayControl implements PlayControl{
     }
 
     protected void castObliterate() {
-        if (deathKnight_.canCast(Obliterate.OBLITERATE)) {
-            deathKnight_.cast(Obliterate.OBLITERATE);
-        }
+        deathKnight_.cast(Obliterate.OBLITERATE);
     }
 
     protected void castFrostStrike() {
-        if (deathKnight_.canCast(FrostStrike.FROST_STRIKE)) {
-            deathKnight_.cast(FrostStrike.FROST_STRIKE);
-        }
+        deathKnight_.cast(FrostStrike.FROST_STRIKE);
     }
 
     protected void castBloodStrike() {
-        if (deathKnight_.canCast(BloodStrike.BLOOD_STRIKE)) {
-            deathKnight_.cast(BloodStrike.BLOOD_STRIKE);
-        }
+        deathKnight_.cast(BloodStrike.BLOOD_STRIKE);
     }
 
-    protected boolean spamStrikes() {
+    protected void spamStrikes() {
         if (deathKnight_.isUnderEffect(KillingMachineEffect.KILLING_MACHINE)) {
             castFrostStrike();
         }
+        if (deathKnight_.getDeathKnightResource().hasRune(DeathKnightResourceCost.RuneType.Blood)) {
+            castBloodStrike();
+        }
         castObliterate();
         castFrostStrike();
-        castBloodStrike();
-        return true;
     }
 
     protected abstract void playRotation();

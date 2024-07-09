@@ -57,6 +57,7 @@ public class App {
 
     private static DeathKnight enhanceWithTalents(DeathKnight dk) {
         dk.setTalent(DeathKnightTalentPool.KillingMachine.LEVEL_5);
+        dk.setTalent(DeathKnightTalentPool.BloodOfTheNorth.LEVEL_3);
         return dk;
     }
 

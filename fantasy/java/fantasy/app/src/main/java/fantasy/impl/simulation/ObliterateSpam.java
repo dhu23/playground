@@ -10,8 +10,6 @@ public class ObliterateSpam extends DeathKnightPlayControl {
     }
 
     protected void playRotation() {
-        if (deathKnight_.canCast(Obliterate.OBLITERATE)) {
-            deathKnight_.cast(Obliterate.OBLITERATE);
-        }
+        castObliterate();
     }
 }

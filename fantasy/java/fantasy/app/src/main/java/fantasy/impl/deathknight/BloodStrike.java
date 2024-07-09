@@ -37,6 +37,15 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         double base = deathKnight.dealWeaponDamage() * 0.4 + getBonusDamage_();
 
+        double diseaseEnhancement = 0.0;
+        if (target.isUnderEffect(deathKnight, FrostFever.FROST_FEVER)) {
+            diseaseEnhancement += 0.125;
+        }
+        if (target.isUnderEffect(deathKnight, BloodPlague.BLOOD_PLAGUE)) {
+            diseaseEnhancement += 0.125;
+        }
+        base *= (1.0 + diseaseEnhancement);
+
         // damage mitigation
         base *= (1.0 - target.damageMitigation());
 

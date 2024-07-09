@@ -65,11 +65,7 @@ public interface Character extends Named {
     void attackWithOffHand();
 
     boolean cast(String name);
-    boolean hasResourceToCast(String name);
     boolean isCoolDownReady(String name);
-    default boolean canCast(String name) {
-        return hasResourceToCast(name) && isCoolDownReady(name);
-    }
 
     void triggerGlobalCoolDown(Skill skill);
     void clearGlobalCoolDown();
