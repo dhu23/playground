@@ -41,7 +41,7 @@ public class App {
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
         DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(120), true);
+        runRotation(dk, Duration.ofSeconds(300), true);
     }
 
     private static DeathKnight createBasicDeathKnight() {
@@ -56,8 +56,14 @@ public class App {
     }
 
     private static DeathKnight enhanceWithTalents(DeathKnight dk) {
-        dk.setTalent(DeathKnightTalentPool.KillingMachine.LEVEL_5);
-//        dk.setTalent(DeathKnightTalentPool.BloodOfTheNorth.LEVEL_3);
+        dk.setRunicPowerMastery(DeathKnightTalentPool.RunicPowerMastery.LEVEL_2);
+        dk.setBlackIce(DeathKnightTalentPool.BlackIce.LEVEL_2);
+        dk.setChillOfTheGrave(DeathKnightTalentPool.ChillOfTheGrave.LEVEL_2);
+        dk.setGlacierRot(DeathKnightTalentPool.GlacierRot.LEVEL_3);
+        dk.setKillingMachine(DeathKnightTalentPool.KillingMachine.LEVEL_5);
+        dk.setRime(DeathKnightTalentPool.Rime.LEVEL_3);
+        dk.setBloodOfTheNorth(DeathKnightTalentPool.BloodOfTheNorth.LEVEL_3);
+        dk.setGuileOfGorefield(DeathKnightTalentPool.GuileOfGorefiend.LEVEL_3);
         return dk;
     }
 

@@ -1,9 +1,8 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.AbstractEffect;
 import fantasy.impl.AbstractTalent;
-import fantasy.intf.Talent;
-import org.checkerframework.checker.units.qual.A;
+
+import java.util.Set;
 
 public class DeathKnightTalentPool {
     public static final String RUNIC_POWER_MASTERY = "Runic Power Mastery";
@@ -103,6 +102,9 @@ public class DeathKnightTalentPool {
         public static final ChillOfTheGrave LEVEL_1 = new ChillOfTheGrave(1);
         public static final ChillOfTheGrave LEVEL_2 = new ChillOfTheGrave(2);
 
+        // TODO: Howling blast and chain of ice should also be here
+        protected static final Set<String> AFFECTED_SKILLS = Set.of(IcyTouch.ICY_TOUCH, Obliterate.OBLITERATE);
+
         public ChillOfTheGrave(int rank) {
             super(CHILL_OF_THE_GRAVE, rank);
         }
@@ -113,6 +115,10 @@ public class DeathKnightTalentPool {
                 case 2 -> 5;
                 default -> throw new IllegalStateException("Unexpected value: " + rank());
             };
+        }
+
+        public boolean isAffected(String skillName) {
+            return AFFECTED_SKILLS.contains(skillName);
         }
     }
 
@@ -183,7 +189,12 @@ public class DeathKnightTalentPool {
         }
 
         public int damageBonusPercentage() {
-            return 3 * rank();
+            return switch (rank()) {
+                case 1 -> 3;
+                case 2 -> 6;
+                case 3 -> 10;
+                default -> throw new IllegalStateException("Unexpected value: " + rank());
+            };
         }
 
         public double deathRuneChance() {

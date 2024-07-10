@@ -5,6 +5,7 @@ import fantasy.LogUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
+import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -45,6 +46,11 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
             diseaseEnhancement += 0.125;
         }
         base *= (1.0 + diseaseEnhancement);
+
+        Optional<DeathKnightTalentPool.BloodOfTheNorth> bloodOfTheNorth = deathKnight.getBloodOfTheNorth();
+        if (bloodOfTheNorth.isPresent()) {
+            base *= (1.0 + bloodOfTheNorth.get().damageBonusPercentage() * 0.01);
+        }
 
         // damage mitigation
         base *= (1.0 - target.damageMitigation());

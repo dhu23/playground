@@ -15,6 +15,16 @@ public class LogUtils {
         System.out.println(String.format("%s: " + pattern, Instant.now(), objects));
     }
 
+    public static String reportDamage(Character caster, Character target, String skill, int amount) {
+        String line = String.format("%s's %s inflicts %d damage to %s", caster.name(), skill, amount, target.name());
+        log(line);
+        return line;
+    }
+
+    public static String reportDamage(Character caster, Character target, Skill skill, int amount) {
+        return reportDamage(caster, target, skill.name(), amount);
+    }
+
     // TODO move to somewhere else
     public enum EffectType {
         Damage,
@@ -40,6 +50,14 @@ public class LogUtils {
     }
 
     public void report(Character caster, Character target, EffectType effectType, String skill, int amount, boolean critical) {
+        switch (effectType) {
+            case Damage -> {
+                reportDamage(caster, target, skill, amount);
+            }
+            case Healing -> {
+
+            }
+        }
         List<String> tokens = List.of(Instant.now().toString(), caster.name(), target.name(),
                 effectType.name(), skill, String.valueOf(amount), critical ? "Y" : "N");
         try {

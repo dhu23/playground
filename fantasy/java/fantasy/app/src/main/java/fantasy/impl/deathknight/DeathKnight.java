@@ -182,8 +182,14 @@ public class DeathKnight extends AbstractCharacter {
             }
 
             // consume runic power
+            int runicPowerCost = cost.runicPower();
+            Optional<DeathKnightTalentPool.ChillOfTheGrave> chillOfTheGrave = deathKnight.getChillOfTheGrave();
+            if (chillOfTheGrave.isPresent() && chillOfTheGrave.get().isAffected(skill.name())) {
+                runicPowerCost -= chillOfTheGrave.get().extraRunicPowerGenerated();
+            }
+
             int maxLevel = getMaxRunicPower();
-            runicPowerLevel_ -= cost.runicPower();
+            runicPowerLevel_ -= runicPowerCost;
             if (runicPowerLevel_ < 0) {
                 LogUtils.log("really really bad");
             } else if (runicPowerLevel_ > maxLevel){
@@ -239,6 +245,11 @@ public class DeathKnight extends AbstractCharacter {
 
     @Override
     public double damageMitigation() {
+        return 0;
+    }
+
+    @Override
+    public double criticalChance() {
         return 0;
     }
 

@@ -49,6 +49,7 @@ public interface Character extends Named {
     IntegerInterval weaponDamage();
     int armor();
     double damageMitigation();
+    double criticalChance();
 
     int dealWeaponDamage();
 

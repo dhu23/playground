@@ -32,6 +32,11 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
+    public double criticalChance() {
+        return 0;
+    }
+
+    @Override
     public int dealWeaponDamage() {
         return 0;
     }

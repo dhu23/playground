@@ -4,6 +4,7 @@ import fantasy.LogUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
+import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -34,17 +35,41 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
         double base = deathKnight.dealWeaponDamage() * 0.55 + getBonusDamage_();
 
+        // talent bonuses
+        Optional<DeathKnightTalentPool.BlackIce> blackIce = deathKnight.getBlackIce();
+        if (blackIce.isPresent()) {
+            double bonus = 1.0 + blackIce.get().frostAndShadowDamageBonusPercentage();
+            base *= bonus;
+        }
+
+        Optional<DeathKnightTalentPool.GlacierRot> glacierRot = deathKnight.getGlacierRot();
+        if (glacierRot.isPresent() && target.isUnderEffect(FrostFever.FROST_FEVER)) {
+            base *= (1.0 + glacierRot.get().damageBonusPercentage() * 0.01);
+        }
+
+        Optional<DeathKnightTalentPool.BloodOfTheNorth> bloodOfTheNorth = deathKnight.getBloodOfTheNorth();
+        if (bloodOfTheNorth.isPresent()) {
+            base *= (1.0 + bloodOfTheNorth.get().damageBonusPercentage() * 0.01);
+        }
+
         // Frost Strike is not affected by target's damage mitigation
 
-        int damage = (int) base;
+        double criticalBonus = 2.0;
+        // critical strike bonus
+        Optional<DeathKnightTalentPool.GuileOfGorefiend> guileOfGorefiend = deathKnight.getGuileOfGorefiend();
+        if (guileOfGorefiend.isPresent()) {
+            criticalBonus += guileOfGorefiend.get().criticalStrikeDamageBonusPercentage() * 0.01;
+        }
+
         boolean critical = false;
         if (deathKnight.isUnderEffect(KillingMachineEffect.KILLING_MACHINE)) {
             // TODO make it a coefficient from DeathKnight class
-            damage *= 2.0;
+            base *= criticalBonus;
             critical = true;
             deathKnight.removeEffect(KillingMachineEffect.KILLING_MACHINE);
         }
 
+        int damage = (int) base;
         target.sufferDamage(damage);
         WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage, critical);
         return true;

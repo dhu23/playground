@@ -1,9 +1,11 @@
 package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
+import fantasy.impl.RandomUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
+import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -45,12 +47,32 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
         }
         base *= (1.0 + diseaseEnhancement);
 
+        double criticalBonus = 2.0;
+        // critical strike bonus
+        Optional<DeathKnightTalentPool.GuileOfGorefiend> guileOfGorefiend = deathKnight.getGuileOfGorefiend();
+        if (guileOfGorefiend.isPresent()) {
+            criticalBonus += guileOfGorefiend.get().criticalStrikeDamageBonusPercentage() * 0.01;
+        }
+
+        double criticalChance = deathKnight.criticalChance();
+        Optional<DeathKnightTalentPool.Rime> rime = deathKnight.getRime();
+        if (rime.isPresent()) {
+            criticalChance += rime.get().criticalStrikePercentageBonus() * 0.01;
+        }
+        boolean critical = false;
+        if (RandomUtils.roll(criticalChance, WorldSpaceTime.getInstance().getRandomGenerator())) {
+            base *= criticalBonus;
+            critical = true;
+        }
+
         // damage mitigation
         base *= (1.0 - target.damageMitigation());
 
+        // TODO: implement Annihilation talent
+
         int damage = (int) base;
         target.sufferDamage(damage);
-        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage, false);
+        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage, critical);
         return true;
     }
 
