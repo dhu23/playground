@@ -332,7 +332,7 @@ public abstract class AbstractCharacter implements Character {
             Character target = target_.get();
             int base = (int) (dealWeaponDamage() * (1.0 - target.damageMitigation()));
             target.sufferDamage(base);
-            WorldSpaceTime.getInstance().getLog().report(this, target, LogUtils.EffectType.Damage, Skill.AUTO_ATTACK, base);
+            WorldSpaceTime.getInstance().getLog().report(this, target, LogUtils.EffectType.Damage, Skill.AUTO_ATTACK, base, false);
         }
     }
 

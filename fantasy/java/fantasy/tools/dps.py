@@ -31,8 +31,26 @@ def assign_dk_skill_color(skill):
     return m[skill]
 
 
+
+def calculate_dps(df):
+    total_damage = df['value'].sum()
+    time_period = (df['dt'].iloc[-1] - df['dt'].iloc[0]).total_seconds()
+    return total_damage / time_period
+
+
+def short(df):
+    return df[['dt', 'skill', 'value', 'critical', 'dps']]
+
+
 def plot_data(df):
     df['dt'] = pd.to_datetime(df['time'])
+
+    df['time_diff'] = df['dt'] - df['dt'].iloc[0]
+    df['time_diff_secs'] = df['time_diff'].dt.total_seconds()
+    df['total_value'] = df['value'].cumsum()
+
+    df['time_diff_secs'] = df['time_diff_secs'].replace(0, pd.NA)
+    df['dps'] = df['total_value'] / df['time_diff_secs']
 
     ca = ColorAssignment(set(df['skill']))
 
@@ -58,9 +76,7 @@ def plot_data(df):
     )  # Adjust location and position
 
     # Calculate DPS
-    total_damage = df['value'].sum()
-    time_period = (df['dt'].iloc[-1] - df['dt'].iloc[0]).total_seconds()
-    dps = total_damage / time_period
+    dps = calculate_dps(df)
 
     # Display DPS on the plot
     plt.text(
@@ -87,7 +103,6 @@ def plot_data(df):
 
 
 if __name__ == '__main__':
-    #df1 = pd.read_csv('../logs/log.1719798265343')
-    #df2 = pd.read_csv('../logs/log.1719801701983')
-    df1 = pd.read_csv('../logs/log.1720495748666')
+    df1 = pd.read_csv('../logs/log.1720563130250')
+    df2 = pd.read_csv('../logs/log.1720563502034')
     plot_data(df1)

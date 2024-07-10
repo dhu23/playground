@@ -43,7 +43,7 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
         target.receiveEffect(new FrostFever(deathKnight, target, getFrostFeverTickDamage()));
 
         target.sufferDamage(base);
-        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage, this, base);
+        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage, this, base, false);
         return true;
     }
 

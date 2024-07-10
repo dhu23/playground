@@ -6,7 +6,6 @@ import fantasy.intf.Skill;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.List;
@@ -14,16 +13,6 @@ import java.util.List;
 public class LogUtils {
     public static void log(String pattern, Object... objects) {
         System.out.println(String.format("%s: " + pattern, Instant.now(), objects));
-    }
-
-    public static String reportDamage(Character caster, Character target, String skill, int amount) {
-        String line = String.format("%s's %s inflicts %d damage to %s", caster.name(), skill, amount, target.name());
-        log(line);
-        return line;
-    }
-
-    public static String reportDamage(Character caster, Character target, Skill skill, int amount) {
-        return reportDamage(caster, target, skill.name(), amount);
     }
 
     // TODO move to somewhere else
@@ -36,11 +25,11 @@ public class LogUtils {
 
     private Path logPath;
 
-    private static final List<String> HEADER = List.of("time", "caster", "target", "effect_type", "skill", "value");
+    private static final List<String> HEADER = List.of("time", "caster", "target", "effect_type", "skill", "value", "critical");
 
     /**
      * file format
-     * time | caster name | target | damage/heal | skill | amount
+     * time | caster name | target | damage/heal | skill | amount | critical
      * @param path
      */
     public LogUtils(String path) throws IOException {
@@ -50,17 +39,9 @@ public class LogUtils {
         Files.write(this.logPath, List.of(String.join(",", HEADER)));
     }
 
-    public void report(Character caster, Character target, EffectType effectType, String skill, int amount) {
-        switch (effectType) {
-            case Damage -> {
-                reportDamage(caster, target, skill, amount);
-            }
-            case Healing -> {
-
-            }
-        }
+    public void report(Character caster, Character target, EffectType effectType, String skill, int amount, boolean critical) {
         List<String> tokens = List.of(Instant.now().toString(), caster.name(), target.name(),
-                effectType.name(), skill, String.valueOf(amount));
+                effectType.name(), skill, String.valueOf(amount), critical ? "Y" : "N");
         try {
             Files.write(this.logPath, List.of(String.join(",", tokens)), StandardOpenOption.APPEND);
         } catch (IOException e) {
@@ -68,7 +49,7 @@ public class LogUtils {
         }
     }
 
-    public void report(Character caster, Character target, EffectType effectType, Skill skill, int amount) {
-        report(caster, target, effectType, skill.name(), amount);
+    public void report(Character caster, Character target, EffectType effectType, Skill skill, int amount, boolean critical) {
+        report(caster, target, effectType, skill.name(), amount, critical);
     }
 }

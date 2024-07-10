@@ -41,7 +41,7 @@ public class App {
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
         DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(300), true);
+        runRotation(dk, Duration.ofSeconds(120), true);
     }
 
     private static DeathKnight createBasicDeathKnight() {
@@ -57,7 +57,7 @@ public class App {
 
     private static DeathKnight enhanceWithTalents(DeathKnight dk) {
         dk.setTalent(DeathKnightTalentPool.KillingMachine.LEVEL_5);
-        dk.setTalent(DeathKnightTalentPool.BloodOfTheNorth.LEVEL_3);
+//        dk.setTalent(DeathKnightTalentPool.BloodOfTheNorth.LEVEL_3);
         return dk;
     }
 

@@ -51,7 +51,7 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
 
         int damage = (int) base;
         target.sufferDamage(damage);
-        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage);
+        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage, false);
         return true;
     }
 

@@ -50,7 +50,7 @@ public abstract class AmountOverTimeEffect extends AbstractEffect {
             case Damage -> this.target_.sufferDamage(tick);
             case Healing -> this.target_.receiveHealing(tick);
         }
-        WorldSpaceTime.getInstance().getLog().report(this.caster_, this.target_, this.effectType_, name(), tick);
+        WorldSpaceTime.getInstance().getLog().report(this.caster_, this.target_, this.effectType_, name(), tick, false);
     }
 
     protected abstract int getTicketAmount();
