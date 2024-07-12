@@ -10,24 +10,11 @@ import fantasy.impl.deathknight.*;
 import fantasy.impl.item.ImmutableWeapon;
 import fantasy.impl.item.Weapon;
 import fantasy.impl.simulation.*;
-import fantasy.intf.DeathKnightPlayControl;
+import fantasy.impl.deathknight.DeathKnightPlayControl;
 
 import java.time.Duration;
 
 
-// TODO
-// 1. make WorldSpaceTime non-Singleton
-// 2. add resource cooldown (done)
-// 3. add new skills for the full rotation (in progress)
-// 4. add file logging (done)
-// 5. add journal collection for analysis (done)
-// 6. machine time simulation
-// 7. add analytics tools, both in process and out process (out process done)
-// 8. add auto attack (done)
-// 9. add critical attack and miss/parry/dodge
-// 10. move amount over time stack into the receiver instead of the message itself (done)
-// 11. support stackable effects (done)
-// 12. add talents - killing machine, chill of the grave, annihilation, runic power mastery, glacier rot
 public class App {
     public static final Weapon REFORGED_TRUESILVER_CHAMPION = ImmutableWeapon.of(
             ImmutableIntegerInterval.of(449, 674), 3600,
@@ -56,14 +43,22 @@ public class App {
     }
 
     private static DeathKnight enhanceWithTalents(DeathKnight dk) {
+        // blood talents
+        dk.setSubversion(DeathKnightTalentPool.Subversion.LEVEL_3);
+        dk.setTwoHandedWeaponSpecialization(DeathKnightTalentPool.TwoHandedWeaponSpecialization.LEVEL_2);
+        // frost talents
         dk.setRunicPowerMastery(DeathKnightTalentPool.RunicPowerMastery.LEVEL_2);
-        dk.setBlackIce(DeathKnightTalentPool.BlackIce.LEVEL_2);
+        dk.setBlackIce(DeathKnightTalentPool.BlackIce.LEVEL_5);
         dk.setChillOfTheGrave(DeathKnightTalentPool.ChillOfTheGrave.LEVEL_2);
         dk.setGlacierRot(DeathKnightTalentPool.GlacierRot.LEVEL_3);
+        dk.setAnnihilation(DeathKnightTalentPool.Annihilation.LEVEL_3);
         dk.setKillingMachine(DeathKnightTalentPool.KillingMachine.LEVEL_5);
         dk.setRime(DeathKnightTalentPool.Rime.LEVEL_3);
         dk.setBloodOfTheNorth(DeathKnightTalentPool.BloodOfTheNorth.LEVEL_3);
         dk.setGuileOfGorefield(DeathKnightTalentPool.GuileOfGorefiend.LEVEL_3);
+        // unholy talents
+        dk.setViciousStrikes(DeathKnightTalentPool.ViciousStrikes.LEVEL_2);
+        dk.setEpidemic(DeathKnightTalentPool.Epidemic.LEVEL_2);
         return dk;
     }
 

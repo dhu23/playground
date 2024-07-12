@@ -1,5 +1,6 @@
 package fantasy.intf;
 
+import fantasy.impl.SkillUtils;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.item.Weapon;
 
@@ -16,6 +17,7 @@ public interface Character extends Named {
     int modifyHp(int amount);
     int sufferDamage(int amount);
     int receiveHealing(int amount);
+    int receive(SkillUtils.SkillAmount amount);
 
     Duration mainHandAttackSpeed();
     Optional<Duration> offHandAttackSpeed();

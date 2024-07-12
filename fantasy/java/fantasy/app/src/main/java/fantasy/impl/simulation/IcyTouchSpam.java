@@ -1,8 +1,7 @@
 package fantasy.impl.simulation;
 
-import fantasy.LogUtils;
 import fantasy.impl.deathknight.DeathKnight;
-import fantasy.intf.DeathKnightPlayControl;
+import fantasy.impl.deathknight.DeathKnightPlayControl;
 
 // the main goal is to test cool-down overwrite
 public class IcyTouchSpam extends DeathKnightPlayControl {

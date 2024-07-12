@@ -1,11 +1,14 @@
-package fantasy.intf;
+package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
-import fantasy.impl.deathknight.*;
+import fantasy.intf.Character;
+import fantasy.intf.Effect;
+import fantasy.intf.PlayControl;
+import fantasy.intf.Skill;
 
 import java.util.Optional;
 
-public abstract class DeathKnightPlayControl implements PlayControl{
+public abstract class DeathKnightPlayControl implements PlayControl {
     protected final DeathKnight deathKnight_;
 
     public DeathKnightPlayControl(DeathKnight deathKnight) {
@@ -70,27 +73,44 @@ public abstract class DeathKnightPlayControl implements PlayControl{
         return false;
     }
 
-    protected void castObliterate() {
+    protected void castObliterate(boolean blindly) {
         deathKnight_.cast(Obliterate.OBLITERATE);
     }
 
-    protected void castFrostStrike() {
+    protected void castFrostStrike(boolean blindly) {
         deathKnight_.cast(FrostStrike.FROST_STRIKE);
     }
 
-    protected void castBloodStrike() {
+    protected void castBloodStrike(boolean blindly) {
         deathKnight_.cast(BloodStrike.BLOOD_STRIKE);
     }
 
-    protected void spamStrikes() {
+    protected void spamStrikes(boolean blindly) {
+        Optional<Character> targetOptional = deathKnight_.getTarget();
+        if (targetOptional.isEmpty()) {
+            return;
+        }
+
+        Character target = targetOptional.get();
+        boolean hasBloodPlague = target.isUnderEffect(BloodPlague.BLOOD_PLAGUE);
+        boolean hasFrostFever = target.isUnderEffect(FrostFever.FROST_FEVER);
+
         if (deathKnight_.isUnderEffect(KillingMachineEffect.KILLING_MACHINE)) {
-            castFrostStrike();
+            if (blindly || (hasFrostFever || hasBloodPlague)) {
+                castFrostStrike(blindly);
+            }
         }
         if (deathKnight_.getDeathKnightResource().hasRune(DeathKnightResourceCost.RuneType.Blood)) {
-            castBloodStrike();
+            if (blindly || (hasFrostFever && hasBloodPlague)) {
+                castBloodStrike(blindly);
+            }
         }
-        castObliterate();
-        castFrostStrike();
+        if (blindly || (hasFrostFever && hasBloodPlague)) {
+            castObliterate(blindly);
+        }
+        if (blindly || (hasFrostFever || hasBloodPlague)) {
+            castFrostStrike(blindly);
+        }
     }
 
     protected abstract void playRotation();

@@ -22,6 +22,7 @@ public abstract class AbstractCharacter implements Character {
     private HashMap<String, CharacterSkill> skills_;
     private HashMap<String, Talent> talents_;
 
+    // TODO support multiple effects from different casters
     protected HashMap<String, Effect> effects_;
 
     protected Optional<Character> target_;
@@ -133,6 +134,29 @@ public abstract class AbstractCharacter implements Character {
     public int receiveHealing(int amount) {
         Preconditions.checkState(amount > 0);
         return modifyHp(amount);
+    }
+
+    @Override
+    public int receive(SkillUtils.SkillAmount amount) {
+        switch (amount.type()) {
+            case Physical -> {
+                int damage = (int) (amount.amount() * (1.0 - damageMitigation()));
+                sufferDamage(damage);
+                WorldSpaceTime.getInstance().getLog().report(
+                        amount.caster(), amount.target(), amount.type(), amount.skillName(),
+                        damage, amount.critical());
+            }
+            case Frost, Shadow, Fire, Arcane, Holy, Natural -> {
+                sufferDamage(amount.amount());
+                WorldSpaceTime.getInstance().getLog().report(
+                        amount.caster(), amount.target(), amount.type(), amount.skillName(),
+                        amount.amount(), amount.critical());
+            }
+            case Healing -> {
+                receiveHealing(amount.amount());
+            }
+        }
+        return hp();
     }
 
     @Override
@@ -330,9 +354,17 @@ public abstract class AbstractCharacter implements Character {
             onAttackWithMainHand_();
 
             Character target = target_.get();
-            int base = (int) (dealWeaponDamage() * (1.0 - target.damageMitigation()));
-            target.sufferDamage(base);
-            WorldSpaceTime.getInstance().getLog().report(this, target, LogUtils.EffectType.Damage, Skill.AUTO_ATTACK, base, false);
+            SkillUtils.SkillAmount amount = SkillUtils.calculate(this, target, "Auto Attack",
+                    SkillUtils.AmountType.Physical,
+                    dealWeaponDamage(), 1.0, criticalChance(), 2.0,
+                    WorldSpaceTime.getInstance().getRandomGenerator());
+//                    (int) (dealWeaponDamage() * (1.0 - target.damageMitigation())),
+//                    1.0, )
+            target.receive(amount);
+//            int base = ;
+//            target.sufferDamage(base);
+//            WorldSpaceTime.getInstance().getLog().report(this, target, LogUtils.EffectType.Damage, Skill.AUTO_ATTACK,
+//                    ImmutableSkillAmount.of(base, false));
         }
     }
 

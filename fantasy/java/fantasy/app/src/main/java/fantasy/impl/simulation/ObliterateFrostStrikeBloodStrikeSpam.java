@@ -1,7 +1,7 @@
 package fantasy.impl.simulation;
 
 import fantasy.impl.deathknight.DeathKnight;
-import fantasy.intf.DeathKnightPlayControl;
+import fantasy.impl.deathknight.DeathKnightPlayControl;
 
 public class ObliterateFrostStrikeBloodStrikeSpam extends DeathKnightPlayControl {
     public ObliterateFrostStrikeBloodStrikeSpam(DeathKnight deathKnight) {
@@ -9,6 +9,6 @@ public class ObliterateFrostStrikeBloodStrikeSpam extends DeathKnightPlayControl
     }
 
     protected void playRotation() {
-        spamStrikes();
+        spamStrikes(true);
     }
 }

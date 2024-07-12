@@ -250,7 +250,7 @@ public class DeathKnight extends AbstractCharacter {
 
     @Override
     public double criticalChance() {
-        return 0;
+        return 0.03;
     }
 
     @Override
@@ -314,6 +314,24 @@ public class DeathKnight extends AbstractCharacter {
     @Override
     protected void onAttackWithOffHand_() {
 
+    }
+
+    public void setSubversion(DeathKnightTalentPool.Subversion talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.Subversion> getSubversion() {
+        return getTalent(DeathKnightTalentPool.SUBVERSION)
+                .map(talent -> (DeathKnightTalentPool.Subversion) talent);
+    }
+
+    public void setTwoHandedWeaponSpecialization(DeathKnightTalentPool.TwoHandedWeaponSpecialization talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.TwoHandedWeaponSpecialization> getTwoHandedWeaponSpecialization() {
+        return getTalent(DeathKnightTalentPool.TWO_HANDED_WEAPON_SPECIALIZATION)
+                .map(talent -> (DeathKnightTalentPool.TwoHandedWeaponSpecialization) talent);
     }
 
     public void setRunicPowerMastery(DeathKnightTalentPool.RunicPowerMastery talent) {
@@ -396,6 +414,24 @@ public class DeathKnight extends AbstractCharacter {
     public Optional<DeathKnightTalentPool.GuileOfGorefiend> getGuileOfGorefiend() {
         return getTalent(DeathKnightTalentPool.GUILE_OF_GOREFIEND)
                 .map(talent -> (DeathKnightTalentPool.GuileOfGorefiend) talent);
+    }
+
+    public void setViciousStrikes(DeathKnightTalentPool.ViciousStrikes talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.ViciousStrikes> getViciousStrikes() {
+        return getTalent(DeathKnightTalentPool.VICIOUS_STRIKES)
+                .map(talent -> (DeathKnightTalentPool.ViciousStrikes) talent);
+    }
+
+    public void setEpidemic(DeathKnightTalentPool.Epidemic talent) {
+        setTalent(talent);
+    }
+
+    public Optional<DeathKnightTalentPool.Epidemic> getEpidemic() {
+        return getTalent(DeathKnightTalentPool.EPIDEMIC)
+                .map(talent -> (DeathKnightTalentPool.Epidemic) talent);
     }
 
     @Override

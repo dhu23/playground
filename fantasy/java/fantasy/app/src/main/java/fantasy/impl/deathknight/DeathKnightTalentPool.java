@@ -5,6 +5,45 @@ import fantasy.impl.AbstractTalent;
 import java.util.Set;
 
 public class DeathKnightTalentPool {
+    public static final String SUBVERSION = "Subversion";
+
+    /**
+     * Increases the critical strike chance of Blood Strike, Scourge Strike, Heart Strike and Obliterate by 3/6/9%,
+     * and reduces threat generated while in Blood or Unholy Presence by 8/16/25%.
+     */
+    public static class Subversion extends AbstractTalent {
+        public static final Subversion LEVEL_1 = new Subversion(1);
+        public static final Subversion LEVEL_2 = new Subversion(2);
+        public static final Subversion LEVEL_3 = new Subversion(3);
+
+        public Subversion(int rank) {
+            super(SUBVERSION, rank);
+        }
+
+        public int criticalChanceBonusPercentage() {
+            return 3 * rank();
+        }
+    }
+
+    public static final String TWO_HANDED_WEAPON_SPECIALIZATION = "Two-Handed Weapon Specialization";
+
+    // TODO check weapon type to apply talent
+    /**
+     * Increases the damage you deal with two-handed melee weapons by 2/4%.
+     */
+    public static class TwoHandedWeaponSpecialization extends AbstractTalent {
+        public static final TwoHandedWeaponSpecialization LEVEL_1 = new TwoHandedWeaponSpecialization(1);
+        public static final TwoHandedWeaponSpecialization LEVEL_2 = new TwoHandedWeaponSpecialization(2);
+
+        public TwoHandedWeaponSpecialization(int rank) {
+            super(TWO_HANDED_WEAPON_SPECIALIZATION, rank);
+        }
+
+        public int bonusDamage() {
+            return 2 * rank();
+        }
+    }
+
     public static final String RUNIC_POWER_MASTERY = "Runic Power Mastery";
 
     /**
@@ -31,6 +70,9 @@ public class DeathKnightTalentPool {
     public static class BlackIce extends AbstractTalent {
         public static final BlackIce LEVEL_1 = new BlackIce(1);
         public static final BlackIce LEVEL_2 = new BlackIce(2);
+        public static final BlackIce LEVEL_3 = new BlackIce(3);
+        public static final BlackIce LEVEL_4 = new BlackIce(4);
+        public static final BlackIce LEVEL_5 = new BlackIce(5);
 
         public BlackIce(int rank) {
             super(BLACK_ICE, rank);
@@ -67,6 +109,10 @@ public class DeathKnightTalentPool {
                 case 3 -> 100;
                 default -> throw new IllegalStateException("Unexpected value: " + rank());
             };
+        }
+
+        public double chanceToRemoveDiseases() {
+            return (100 - percentageOfLeavingDiseasesAlong()) * 0.01;
         }
     }
 
@@ -224,6 +270,47 @@ public class DeathKnightTalentPool {
 
         public int criticalStrikeDamageBonusPercentage() {
             return 15 * rank();
+        }
+    }
+
+    public static final String VICIOUS_STRIKES = "Vicious Strikes";
+
+    /**
+     * Increases the critical strike chance by 3/6% and critical strike damage bonus by 15/30%
+     * of your Plague Strike and Scourge Strike.
+     */
+    public static class ViciousStrikes extends AbstractTalent {
+        public static final ViciousStrikes LEVEL_1 = new ViciousStrikes(1);
+        public static final ViciousStrikes LEVEL_2 = new ViciousStrikes(2);
+
+        public ViciousStrikes(int rank) {
+            super(VICIOUS_STRIKES, rank);
+        }
+
+        public int criticalPercentageBonus() {
+            return 3 * rank();
+        }
+
+        public int criticalDamageBonusPercentage() {
+            return 15 * rank();
+        }
+    }
+
+    public static final String EPIDEMIC = "Epidemic";
+
+    /**
+     * Increases the duration of Blood Plague and Frost Fever by 3/6 sec.
+     */
+    public static class Epidemic extends AbstractTalent {
+        public static final Epidemic LEVEL_1 = new Epidemic(1);
+        public static final Epidemic LEVEL_2 = new Epidemic(2);
+
+        public Epidemic(int rank) {
+            super(EPIDEMIC, rank);
+        }
+
+        public int extraDiseaseTickCount() {
+            return rank();
         }
     }
 }

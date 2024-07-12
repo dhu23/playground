@@ -1,7 +1,7 @@
 package fantasy.impl.simulation;
 
 import fantasy.impl.deathknight.DeathKnight;
-import fantasy.intf.DeathKnightPlayControl;
+import fantasy.impl.deathknight.DeathKnightPlayControl;
 
 public class ClassicFrostRotation extends DeathKnightPlayControl {
     public ClassicFrostRotation(DeathKnight deathKnight) {
@@ -9,8 +9,8 @@ public class ClassicFrostRotation extends DeathKnightPlayControl {
     }
 
     protected void playRotation() {
+        castPlagueStrike(false); // apply Blood Plague for Icy Touch
         castIcyTouch(false);
-        castPlagueStrike(false);
-        spamStrikes();
+        spamStrikes(false);
     }
 }

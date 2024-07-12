@@ -1,8 +1,7 @@
 package fantasy.impl.simulation;
 
 import fantasy.impl.deathknight.DeathKnight;
-import fantasy.impl.deathknight.Obliterate;
-import fantasy.intf.DeathKnightPlayControl;
+import fantasy.impl.deathknight.DeathKnightPlayControl;
 
 public class ObliterateSpam extends DeathKnightPlayControl {
     public ObliterateSpam(DeathKnight deathKnight) {
@@ -10,6 +9,6 @@ public class ObliterateSpam extends DeathKnightPlayControl {
     }
 
     protected void playRotation() {
-        castObliterate();
+        castObliterate(true);
     }
 }

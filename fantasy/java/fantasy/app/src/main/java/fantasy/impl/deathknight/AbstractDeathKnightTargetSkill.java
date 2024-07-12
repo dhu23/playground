@@ -18,12 +18,6 @@ public abstract class AbstractDeathKnightTargetSkill extends AbstractTargetSkill
             return false;
         }
 
-//        DeathKnightResourceCost cost = (DeathKnightResourceCost) cost();
-//        if (!deathKnight.hasResource(cost)) {
-//            LogUtils.log(String.format("%s doesn't have enough energy to cast %s", deathKnight.name(), name()));
-//            return false;
-//        }
-
         if (deathKnight.consumeResource(this)) {
             LogUtils.log(String.format("%s casts %s", deathKnight.name(), name()));
             return castOnTargetByDeathKnight(deathKnight, target);

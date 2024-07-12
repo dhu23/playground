@@ -2,6 +2,8 @@ package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
 
+import fantasy.impl.RandomUtils;
+import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -36,28 +38,17 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
 
     @Override
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
-        double base = deathKnight.dealWeaponDamage() * 0.4 + getBonusDamage_();
+        SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                deathKnight, target, this,
+                SkillUtils.AmountType.Physical,
+                deathKnight.dealWeaponDamage() * 0.4 + getBonusDamage_(),
+                getMultiplier(deathKnight, target),
+                getCriticalChance(deathKnight, target),
+                getCriticalMultiplier(deathKnight, target),
+                WorldSpaceTime.getInstance().getRandomGenerator());
 
-        double diseaseEnhancement = 0.0;
-        if (target.isUnderEffect(deathKnight, FrostFever.FROST_FEVER)) {
-            diseaseEnhancement += 0.125;
-        }
-        if (target.isUnderEffect(deathKnight, BloodPlague.BLOOD_PLAGUE)) {
-            diseaseEnhancement += 0.125;
-        }
-        base *= (1.0 + diseaseEnhancement);
-
-        Optional<DeathKnightTalentPool.BloodOfTheNorth> bloodOfTheNorth = deathKnight.getBloodOfTheNorth();
-        if (bloodOfTheNorth.isPresent()) {
-            base *= (1.0 + bloodOfTheNorth.get().damageBonusPercentage() * 0.01);
-        }
-
-        // damage mitigation
-        base *= (1.0 - target.damageMitigation());
-
-        int damage = (int) base;
-        target.sufferDamage(damage);
-        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage, false);
+        target.receive(amount);
+//        WorldSpaceTime.getInstance().getLog().report(amount);
         return true;
     }
 
@@ -71,5 +62,45 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
             case 6 -> 306;
             default -> throw new IllegalStateException("Unexpected value: " + level());
         };
+    }
+
+    protected double getMultiplier(DeathKnight deathKnight, Character target) {
+        double diseaseEnhancement = 0.0;
+        if (target.isUnderEffect(deathKnight, FrostFever.FROST_FEVER)) {
+            diseaseEnhancement += 0.125;
+        }
+        if (target.isUnderEffect(deathKnight, BloodPlague.BLOOD_PLAGUE)) {
+            diseaseEnhancement += 0.125;
+        }
+
+        double bonusMultiplier = 1.0 + diseaseEnhancement;
+        Optional<DeathKnightTalentPool.BloodOfTheNorth> bloodOfTheNorth = deathKnight.getBloodOfTheNorth();
+        if (bloodOfTheNorth.isPresent()) {
+            bonusMultiplier *= (1.0 + bloodOfTheNorth.get().damageBonusPercentage() * 0.01);
+        }
+
+        return bonusMultiplier;
+    }
+
+    protected double getCriticalChance(DeathKnight deathKnight, Character target) {
+        double criticalChance = deathKnight.criticalChance();
+        Optional<DeathKnightTalentPool.Subversion> subversion = deathKnight.getSubversion();
+        if (subversion.isPresent()) {
+            criticalChance += subversion.get().criticalChanceBonusPercentage() * 0.01;
+        }
+        Optional<DeathKnightTalentPool.Annihilation> annihilation = deathKnight.getAnnihilation();
+        if (annihilation.isPresent()) {
+            criticalChance += annihilation.get().criticalStrikePercentage() * 0.01;
+        }
+        return criticalChance;
+    }
+
+    protected double getCriticalMultiplier(DeathKnight deathKnight, Character target) {
+        double multiplier = 2.0;
+        Optional<DeathKnightTalentPool.GuileOfGorefiend> guileOfGorefiend = deathKnight.getGuileOfGorefiend();
+        if (guileOfGorefiend.isPresent()) {
+            multiplier += guileOfGorefiend.get().criticalStrikeDamageBonusPercentage() * 0.01;
+        }
+        return multiplier;
     }
 }

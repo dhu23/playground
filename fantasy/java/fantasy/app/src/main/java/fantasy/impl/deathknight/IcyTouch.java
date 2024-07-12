@@ -1,7 +1,9 @@
 package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
+import fantasy.impl.ImmutableSkillAmount;
 import fantasy.impl.RandomUtils;
+import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
@@ -39,39 +41,50 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
 
     @Override
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
-        double base = getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
-        double frostFeverBase = getFrostFeverTickDamage();
-
-        // talent bonuses
-        Optional<DeathKnightTalentPool.BlackIce> blackIce = deathKnight.getBlackIce();
-        if (blackIce.isPresent()) {
-            double bonus = 1.0 + blackIce.get().frostAndShadowDamageBonusPercentage();
-            base *= bonus;
-            frostFeverBase *= bonus;
-        }
+//        double base = getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
+//        double frostFeverBase = getFrostFeverTickDamage();
+//
+//        // talent bonuses
+//        Optional<DeathKnightTalentPool.BlackIce> blackIce = deathKnight.getBlackIce();
+//        if (blackIce.isPresent()) {
+//            double bonus = 1.0 + blackIce.get().frostAndShadowDamageBonusPercentage();
+//            base *= bonus;
+//            frostFeverBase *= bonus;
+//        }
 
         // inflict the de-buff on the target immediately
-        target.receiveEffect(new FrostFever(deathKnight, target, (int) frostFeverBase));
+        target.receiveEffect(new FrostFever(deathKnight, target,
+                getFrostFeverTickCount(deathKnight), getFrostFeverTickDamage(deathKnight, target)));
 
-        Optional<DeathKnightTalentPool.GlacierRot> glacierRot = deathKnight.getGlacierRot();
-        if (glacierRot.isPresent() && target.isUnderEffect(FrostFever.FROST_FEVER)) {
-            base *= (1.0 + glacierRot.get().damageBonusPercentage() * 0.01);
-        }
+//        Optional<DeathKnightTalentPool.GlacierRot> glacierRot = deathKnight.getGlacierRot();
+//        if (glacierRot.isPresent() && target.isUnderEffect(FrostFever.FROST_FEVER)) {
+//            base *= (1.0 + glacierRot.get().damageBonusPercentage() * 0.01);
+//        }
+//
+//        double criticalChance = deathKnight.criticalChance();
+//        Optional<DeathKnightTalentPool.Rime> rime = deathKnight.getRime();
+//        if (rime.isPresent()) {
+//            criticalChance += rime.get().criticalStrikePercentageBonus() * 0.01;
+//        }
+//        boolean critical = false;
+//        if (RandomUtils.roll(criticalChance, WorldSpaceTime.getInstance().getRandomGenerator())) {
+//            base *= 1.5; // spell critically hits for 150% damage
+//            critical = true;
+//        }
 
-        double criticalChance = deathKnight.criticalChance();
-        Optional<DeathKnightTalentPool.Rime> rime = deathKnight.getRime();
-        if (rime.isPresent()) {
-            criticalChance += rime.get().criticalStrikePercentageBonus() * 0.01;
-        }
-        boolean critical = false;
-        if (RandomUtils.roll(criticalChance, WorldSpaceTime.getInstance().getRandomGenerator())) {
-            base *= 1.5; // spell critically hits for 150% damage
-            critical = true;
-        }
+        SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                deathKnight, target, this, SkillUtils.AmountType.Frost,
+                getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator()),
+                getMultiplier(deathKnight, target),
+                getCriticalChance(deathKnight, target),
+                1.5,
+                WorldSpaceTime.getInstance().getRandomGenerator());
 
-        int damage = (int) base;
-        target.sufferDamage(damage);
-        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage, this, damage, critical);
+        target.receive(amount);
+
+//        int damage = (int) base;
+//        target.sufferDamage(damage);
+//        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage, this, damage, critical);
         return true;
     }
 
@@ -86,7 +99,45 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
         };
     }
 
-    protected int getFrostFeverTickDamage() {
-        return 21;
+    protected int getFrostFeverTickDamage(DeathKnight deathKnight, Character target) {
+        double base = 21;
+        Optional<Double> blackIceMultiplier = getBlackIceMultiplier(deathKnight, target);
+        int tick = (int) (base * blackIceMultiplier.orElse(1.0));
+        LogUtils.log(String.format("FF tick : %s, black Ice: %s", tick, blackIceMultiplier));
+        return tick;
+    }
+
+    protected int getFrostFeverTickCount(DeathKnight deathKnight) {
+        int count = 5;
+        Optional<DeathKnightTalentPool.Epidemic> epidemic = deathKnight.getEpidemic();
+        if (epidemic.isPresent()) {
+            count += epidemic.get().extraDiseaseTickCount();
+        }
+        return count;
+    }
+
+    protected Optional<Double> getBlackIceMultiplier(DeathKnight deathKnight, Character character) {
+        return deathKnight.getBlackIce().map(blackIce -> 1.0 + blackIce.frostAndShadowDamageBonusPercentage());
+    }
+
+    protected double getMultiplier(DeathKnight deathKnight, Character target) {
+        double multiplier = getBlackIceMultiplier(deathKnight, target).orElse(1.0);
+
+        Optional<DeathKnightTalentPool.GlacierRot> glacierRot = deathKnight.getGlacierRot();
+        if (glacierRot.isPresent() &&
+                (target.isUnderEffect(FrostFever.FROST_FEVER) || target.isUnderEffect(BloodPlague.BLOOD_PLAGUE))) {
+            multiplier *= (1.0 + glacierRot.get().damageBonusPercentage() * 0.01);
+        }
+        return multiplier;
+    }
+
+    protected double getCriticalChance(DeathKnight deathKnight, Character target) {
+        double chance = deathKnight.criticalChance();
+
+        Optional<DeathKnightTalentPool.Rime> rime = deathKnight.getRime();
+        if (rime.isPresent()) {
+            chance += rime.get().criticalStrikePercentageBonus() * 0.01;
+        }
+        return chance;
     }
 }

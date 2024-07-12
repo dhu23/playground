@@ -1,6 +1,7 @@
 package fantasy.impl.deathknight;
 
 import fantasy.LogUtils;
+import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -33,45 +34,17 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
 
     @Override
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
-        double base = deathKnight.dealWeaponDamage() * 0.55 + getBonusDamage_();
+        SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                deathKnight, target, this, SkillUtils.AmountType.Frost,
+                deathKnight.dealWeaponDamage() * 0.55 + getBonusDamage_(),
+                getMultiplier(deathKnight, target),
+                getCriticalChance(deathKnight, target),
+                getCriticalMultiplier(deathKnight, target),
+                WorldSpaceTime.getInstance().getRandomGenerator());
 
-        // talent bonuses
-        Optional<DeathKnightTalentPool.BlackIce> blackIce = deathKnight.getBlackIce();
-        if (blackIce.isPresent()) {
-            double bonus = 1.0 + blackIce.get().frostAndShadowDamageBonusPercentage();
-            base *= bonus;
-        }
-
-        Optional<DeathKnightTalentPool.GlacierRot> glacierRot = deathKnight.getGlacierRot();
-        if (glacierRot.isPresent() && target.isUnderEffect(FrostFever.FROST_FEVER)) {
-            base *= (1.0 + glacierRot.get().damageBonusPercentage() * 0.01);
-        }
-
-        Optional<DeathKnightTalentPool.BloodOfTheNorth> bloodOfTheNorth = deathKnight.getBloodOfTheNorth();
-        if (bloodOfTheNorth.isPresent()) {
-            base *= (1.0 + bloodOfTheNorth.get().damageBonusPercentage() * 0.01);
-        }
-
-        // Frost Strike is not affected by target's damage mitigation
-
-        double criticalBonus = 2.0;
-        // critical strike bonus
-        Optional<DeathKnightTalentPool.GuileOfGorefiend> guileOfGorefiend = deathKnight.getGuileOfGorefiend();
-        if (guileOfGorefiend.isPresent()) {
-            criticalBonus += guileOfGorefiend.get().criticalStrikeDamageBonusPercentage() * 0.01;
-        }
-
-        boolean critical = false;
-        if (deathKnight.isUnderEffect(KillingMachineEffect.KILLING_MACHINE)) {
-            // TODO make it a coefficient from DeathKnight class
-            base *= criticalBonus;
-            critical = true;
-            deathKnight.removeEffect(KillingMachineEffect.KILLING_MACHINE);
-        }
-
-        int damage = (int) base;
-        target.sufferDamage(damage);
-        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage, critical);
+        target.receive(amount);
+//        target.sufferDamage(amount.amount());
+//        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, amount);
         return true;
     }
 
@@ -85,5 +58,48 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
             case 6 -> 138;
             default -> throw new IllegalStateException("Unexpected value: " + level());
         };
+    }
+
+    protected double getMultiplier(DeathKnight deathKnight, Character target) {
+        double multiplier = 1.0;
+        Optional<DeathKnightTalentPool.BlackIce> blackIce = deathKnight.getBlackIce();
+        if (blackIce.isPresent()) {
+            multiplier *= (1.0 + blackIce.get().frostAndShadowDamageBonusPercentage());
+        }
+
+        Optional<DeathKnightTalentPool.GlacierRot> glacierRot = deathKnight.getGlacierRot();
+        if (glacierRot.isPresent() &&
+                (target.isUnderEffect(FrostFever.FROST_FEVER) || target.isUnderEffect(BloodPlague.BLOOD_PLAGUE))) {
+            multiplier *= (1.0 + glacierRot.get().damageBonusPercentage() * 0.01);
+        }
+
+        Optional<DeathKnightTalentPool.BloodOfTheNorth> bloodOfTheNorth = deathKnight.getBloodOfTheNorth();
+        if (bloodOfTheNorth.isPresent()) {
+            multiplier *= (1.0 + bloodOfTheNorth.get().damageBonusPercentage() * 0.01);
+        }
+        return multiplier;
+    }
+
+    protected double getCriticalChance(DeathKnight deathKnight, Character target) {
+        if (deathKnight.isUnderEffect(KillingMachineEffect.KILLING_MACHINE)) {
+            deathKnight.removeEffect(KillingMachineEffect.KILLING_MACHINE);
+            return 1.0;
+        } else {
+            double chance = deathKnight.criticalChance();
+            Optional<DeathKnightTalentPool.Annihilation> annihilation = deathKnight.getAnnihilation();
+            if (annihilation.isPresent()) {
+                chance += annihilation.get().criticalStrikePercentage() * 0.01;
+            }
+            return chance;
+        }
+    }
+
+    protected double getCriticalMultiplier(DeathKnight deathKnight, Character target) {
+        double multipler = 2.0;
+        Optional<DeathKnightTalentPool.GuileOfGorefiend> guileOfGorefiend = deathKnight.getGuileOfGorefiend();
+        if (guileOfGorefiend.isPresent()) {
+            multipler += guileOfGorefiend.get().criticalStrikeDamageBonusPercentage() * 0.01;
+        }
+        return multipler;
     }
 }

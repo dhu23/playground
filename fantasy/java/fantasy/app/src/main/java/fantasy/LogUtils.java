@@ -1,5 +1,6 @@
 package fantasy;
 
+import fantasy.impl.SkillUtils;
 import fantasy.intf.Character;
 import fantasy.intf.Skill;
 
@@ -49,17 +50,17 @@ public class LogUtils {
         Files.write(this.logPath, List.of(String.join(",", HEADER)));
     }
 
-    public void report(Character caster, Character target, EffectType effectType, String skill, int amount, boolean critical) {
-        switch (effectType) {
-            case Damage -> {
-                reportDamage(caster, target, skill, amount);
-            }
-            case Healing -> {
+    public void report(Character caster, Character target, SkillUtils.AmountType amountType, String skillName, int amount, boolean critical) {
+        switch (amountType) {
+           case Healing -> {
 
+            }
+            default -> {
+                reportDamage(caster, target, skillName, amount);
             }
         }
         List<String> tokens = List.of(Instant.now().toString(), caster.name(), target.name(),
-                effectType.name(), skill, String.valueOf(amount), critical ? "Y" : "N");
+                amountType.name(), skillName, String.valueOf(amount), critical ? "Y" : "N");
         try {
             Files.write(this.logPath, List.of(String.join(",", tokens)), StandardOpenOption.APPEND);
         } catch (IOException e) {
@@ -67,7 +68,7 @@ public class LogUtils {
         }
     }
 
-    public void report(Character caster, Character target, EffectType effectType, Skill skill, int amount, boolean critical) {
-        report(caster, target, effectType, skill.name(), amount, critical);
+    public void report(Character caster, Character target, SkillUtils.AmountType amountType, Skill skill, int amount, boolean critical) {
+        report(caster, target, amountType, skill.name(), amount, critical);
     }
 }
