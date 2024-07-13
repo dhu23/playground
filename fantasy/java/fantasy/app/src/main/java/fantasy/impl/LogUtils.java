@@ -1,6 +1,5 @@
-package fantasy;
+package fantasy.impl;
 
-import fantasy.impl.SkillUtils;
 import fantasy.intf.Character;
 import fantasy.intf.Skill;
 

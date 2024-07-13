@@ -1,7 +1,6 @@
 package fantasy.impl;
 
 import com.google.common.base.Preconditions;
-import fantasy.LogUtils;
 import fantasy.impl.item.Weapon;
 import fantasy.intf.*;
 import fantasy.intf.Character;
@@ -197,7 +196,6 @@ public abstract class AbstractCharacter implements Character {
 
     @Override
     public boolean isUnderEffect(String name) {
-//        LogUtils.log(String.format("%s under effects: %s", name(), effects_.keySet()));
         return effects_.containsKey(name);
     }
 

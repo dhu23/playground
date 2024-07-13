@@ -1,11 +1,9 @@
 package fantasy.impl.deathknight;
 
-import fantasy.LogUtils;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.TreeMap;
 
@@ -37,6 +35,10 @@ public class PlagueStrike extends AbstractDeathKnightTargetSkill {
 
     @Override
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
+        // inflict the de-buff on the target
+        target.receiveEffect(new BloodPlague(deathKnight, target,
+                getBloodPlagueTickCount(deathKnight), getBloodPlagueTickDamage()));
+
         SkillUtils.SkillAmount amount = SkillUtils.calculate(
                 deathKnight, target, this, SkillUtils.AmountType.Physical,
                 deathKnight.dealWeaponDamage() * 0.5 + getBonusDamage_(),
@@ -46,17 +48,6 @@ public class PlagueStrike extends AbstractDeathKnightTargetSkill {
                 WorldSpaceTime.getInstance().getRandomGenerator());
 
         target.receive(amount);
-
-//        // damage mitigation
-//        base *= (1.0 - target.damageMitigation());
-//
-//        // inflict the de-buff on the target
-        target.receiveEffect(new BloodPlague(deathKnight, target,
-                getBloodPlagueTickCount(deathKnight), getBloodPlagueTickDamage()));
-//
-//        int damage = (int) base;
-//        target.sufferDamage(damage);
-//        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage, false);
         return true;
     }
 
@@ -88,9 +79,6 @@ public class PlagueStrike extends AbstractDeathKnightTargetSkill {
 
     protected double getMultiplier(DeathKnight deathKnight, Character target) {
         return 1.0;
-//        return deathKnight.getTwoHandedWeaponSpecialization()
-//                .map(twoHandedWeaponSpecialization -> twoHandedWeaponSpecialization.bonusDamage() * 0.01 + 1.0)
-//                .orElse(1.0);
     }
 
     protected double getCriticalChance(DeathKnight deathKnight, Character target) {

@@ -1,6 +1,5 @@
 package fantasy.impl;
 
-import fantasy.LogUtils;
 import fantasy.intf.Character;
 import fantasy.intf.Effect;
 

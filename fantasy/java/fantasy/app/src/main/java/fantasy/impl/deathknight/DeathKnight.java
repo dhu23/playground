@@ -1,6 +1,6 @@
 package fantasy.impl.deathknight;
 
-import fantasy.LogUtils;
+import fantasy.impl.LogUtils;
 import fantasy.impl.AbstractCharacter;
 import fantasy.impl.RandomUtils;
 import fantasy.impl.WorldSpaceTime;

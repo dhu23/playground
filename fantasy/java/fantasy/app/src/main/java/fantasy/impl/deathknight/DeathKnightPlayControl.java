@@ -1,6 +1,6 @@
 package fantasy.impl.deathknight;
 
-import fantasy.LogUtils;
+import fantasy.impl.LogUtils;
 import fantasy.intf.Character;
 import fantasy.intf.Effect;
 import fantasy.intf.PlayControl;
@@ -32,7 +32,6 @@ public abstract class DeathKnightPlayControl implements PlayControl {
 
     @Override
     public void onGlobalCoolDownFinish() {
-//        LogUtils.log("PlayControl: Global Cool Down is clear");
         playRotation();
     }
 
@@ -53,7 +52,6 @@ public abstract class DeathKnightPlayControl implements PlayControl {
             return false;
         }
         Character target = targetOptional.get();
-//        LogUtils.log(String.format("%s is under frost fever: %s", target.name(), target.isUnderEffect(FrostFever.FROST_FEVER)));
         if (ignoreFrostFever || !target.isUnderEffect(FrostFever.FROST_FEVER)) {
             return deathKnight_.cast(IcyTouch.ICY_TOUCH);
         }

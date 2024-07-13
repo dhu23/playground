@@ -1,7 +1,6 @@
 package fantasy.impl.deathknight;
 
-import com.google.common.base.Preconditions;
-import fantasy.LogUtils;
+import fantasy.impl.LogUtils;
 import fantasy.impl.AbstractTargetSkill;
 import fantasy.intf.Character;
 

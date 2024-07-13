@@ -1,8 +1,5 @@
 package fantasy.impl.deathknight;
 
-import fantasy.LogUtils;
-
-import fantasy.impl.RandomUtils;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
@@ -48,7 +45,6 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
                 WorldSpaceTime.getInstance().getRandomGenerator());
 
         target.receive(amount);
-//        WorldSpaceTime.getInstance().getLog().report(amount);
         return true;
     }
 

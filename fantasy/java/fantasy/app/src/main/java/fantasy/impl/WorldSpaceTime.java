@@ -1,7 +1,6 @@
 package fantasy.impl;
 
 import com.google.common.annotations.VisibleForTesting;
-import fantasy.LogUtils;
 import fantasy.impl.deathknight.DeathKnight;
 import fantasy.impl.event.*;
 import fantasy.intf.Character;

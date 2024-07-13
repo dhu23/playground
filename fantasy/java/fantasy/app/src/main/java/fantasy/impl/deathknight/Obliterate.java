@@ -1,12 +1,10 @@
 package fantasy.impl.deathknight;
 
-import fantasy.LogUtils;
 import fantasy.impl.RandomUtils;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
 
-import javax.swing.text.html.Option;
 import java.util.Optional;
 import java.util.TreeMap;
 
@@ -47,18 +45,7 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
                 WorldSpaceTime.getInstance().getRandomGenerator());
 
         target.receive(amount);
-//
-//        LogUtils.log(String.format("Obliterate crit chance: %s", criticalChance));
-//        boolean critical = false;
-//        if (RandomUtils.roll(criticalChance, WorldSpaceTime.getInstance().getRandomGenerator())) {
-//            base *= criticalBonus;
-//            critical = true;
-//        }
-//
-//        // damage mitigation
-//        base *= (1.0 - target.damageMitigation());
 
-        // TODO: implement Annihilation talent
         double chanceToRemoveDiseases = deathKnight.getAnnihilation()
                 .map(DeathKnightTalentPool.Annihilation::chanceToRemoveDiseases).orElse(1.0);
         if (RandomUtils.roll(chanceToRemoveDiseases, WorldSpaceTime.getInstance().getRandomGenerator())) {
@@ -66,10 +53,6 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
             target.removeEffect(BloodPlague.BLOOD_PLAGUE);
         }
 
-
-//        int damage = (int) base;
-//        target.sufferDamage(damage);
-//        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, damage, critical);
         return true;
     }
 

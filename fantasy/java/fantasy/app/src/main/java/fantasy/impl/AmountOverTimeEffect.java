@@ -23,34 +23,11 @@ public abstract class AmountOverTimeEffect extends AbstractEffect {
         return this.baseTicketAmount_;
     }
 
-//    @Override
-//    public void tick() {
-//        if (this.remainingTickCount_ <= 0) {
-//            return;
-//        }
-//
-//        int tick = getTicketAmount();
-//        switch (amountType_) {
-//            case Damage -> this.target_.sufferDamage(tick);
-//            case Healing -> this.target_.receiveHealing(tick);
-//        }
-//        WorldSpaceTime.getInstance().getLog().report(this.caster_, this.target_, this.amountType_, name(), tick);
-//        LogUtils.log(String.format("%s remaining tick: %s", name(), this.remainingTickCount_));
-//        --this.remainingTickCount_;
-//
-//        this.nextTickTime_ = Instant.now().plus(this.tickFrequency_);
-//    }
-
     @Override
     protected void onTick_() {
         int tick = getTicketAmount();
         SkillUtils.SkillAmount amount = ImmutableSkillAmount.of(tick, amountType_, false, caster_, target_, name());
         target_.receive(amount);
-//        switch (amountType_) {
-//            case Damage -> this.target_.sufferDamage(tick);
-//            case Healing -> this.target_.receiveHealing(tick);
-//        }
-//        WorldSpaceTime.getInstance().getLog().report(this.caster_, this.target_, this.amountType_, name(), tick, false);
     }
 
     protected abstract int getTicketAmount();

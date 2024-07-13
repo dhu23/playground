@@ -1,6 +1,5 @@
 package fantasy.impl.deathknight;
 
-import fantasy.LogUtils;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
@@ -43,8 +42,6 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
                 WorldSpaceTime.getInstance().getRandomGenerator());
 
         target.receive(amount);
-//        target.sufferDamage(amount.amount());
-//        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage,this, amount);
         return true;
     }
 

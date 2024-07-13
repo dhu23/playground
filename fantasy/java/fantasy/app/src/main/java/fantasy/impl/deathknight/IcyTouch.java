@@ -1,15 +1,12 @@
 package fantasy.impl.deathknight;
 
-import fantasy.LogUtils;
-import fantasy.impl.ImmutableSkillAmount;
-import fantasy.impl.RandomUtils;
+import fantasy.impl.LogUtils;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.intf.Character;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.TreeMap;
 
@@ -41,36 +38,9 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
 
     @Override
     protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
-//        double base = getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
-//        double frostFeverBase = getFrostFeverTickDamage();
-//
-//        // talent bonuses
-//        Optional<DeathKnightTalentPool.BlackIce> blackIce = deathKnight.getBlackIce();
-//        if (blackIce.isPresent()) {
-//            double bonus = 1.0 + blackIce.get().frostAndShadowDamageBonusPercentage();
-//            base *= bonus;
-//            frostFeverBase *= bonus;
-//        }
-
         // inflict the de-buff on the target immediately
         target.receiveEffect(new FrostFever(deathKnight, target,
                 getFrostFeverTickCount(deathKnight), getFrostFeverTickDamage(deathKnight, target)));
-
-//        Optional<DeathKnightTalentPool.GlacierRot> glacierRot = deathKnight.getGlacierRot();
-//        if (glacierRot.isPresent() && target.isUnderEffect(FrostFever.FROST_FEVER)) {
-//            base *= (1.0 + glacierRot.get().damageBonusPercentage() * 0.01);
-//        }
-//
-//        double criticalChance = deathKnight.criticalChance();
-//        Optional<DeathKnightTalentPool.Rime> rime = deathKnight.getRime();
-//        if (rime.isPresent()) {
-//            criticalChance += rime.get().criticalStrikePercentageBonus() * 0.01;
-//        }
-//        boolean critical = false;
-//        if (RandomUtils.roll(criticalChance, WorldSpaceTime.getInstance().getRandomGenerator())) {
-//            base *= 1.5; // spell critically hits for 150% damage
-//            critical = true;
-//        }
 
         SkillUtils.SkillAmount amount = SkillUtils.calculate(
                 deathKnight, target, this, SkillUtils.AmountType.Frost,
@@ -81,10 +51,6 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
                 WorldSpaceTime.getInstance().getRandomGenerator());
 
         target.receive(amount);
-
-//        int damage = (int) base;
-//        target.sufferDamage(damage);
-//        WorldSpaceTime.getInstance().getLog().report(deathKnight, target, LogUtils.EffectType.Damage, this, damage, critical);
         return true;
     }
 
