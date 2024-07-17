@@ -1,5 +1,6 @@
 package fantasy.impl.deathknight;
 
+import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.RandomUtils;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
@@ -15,7 +16,7 @@ import java.util.TreeMap;
  * but consumes the diseases.
  * </pre>
  */
-public class Obliterate extends AbstractDeathKnightTargetSkill {
+public class Obliterate extends AbstractTargetSkill {
     public static final String OBLITERATE = "Obliterate";
 
     public static final Obliterate LEVEL_1 = new Obliterate(1);
@@ -34,26 +35,31 @@ public class Obliterate extends AbstractDeathKnightTargetSkill {
         return ImmutableDeathKnightResourceCost.of(runes, -15);
     }
 
+
     @Override
-    protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
-        SkillUtils.SkillAmount amount = SkillUtils.calculate(
-                deathKnight, target, this, SkillUtils.AmountType.Physical,
-                deathKnight.dealWeaponDamage() * 0.8 + getBonusDamage_(),
-                getMultiplier(deathKnight, target),
-                getCriticalChance(deathKnight, target),
-                getCriticalMultiplier(deathKnight, target),
-                WorldSpaceTime.getInstance().getRandomGenerator());
+    protected boolean castOnTarget_(Character caster, Character target) {
+        if (caster instanceof DeathKnight deathKnight) {
+            SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                    caster, target, this, SkillUtils.AmountType.Physical,
+                    caster.dealWeaponDamage() * 0.8 + getBonusDamage_(),
+                    getMultiplier(deathKnight, target),
+                    getCriticalChance(deathKnight, target),
+                    getCriticalMultiplier(deathKnight, target),
+                    WorldSpaceTime.getInstance().getRandomGenerator());
 
-        target.receive(amount);
+            target.receive(amount);
 
-        double chanceToRemoveDiseases = deathKnight.getAnnihilation()
-                .map(DeathKnightTalentPool.Annihilation::chanceToRemoveDiseases).orElse(1.0);
-        if (RandomUtils.roll(chanceToRemoveDiseases, WorldSpaceTime.getInstance().getRandomGenerator())) {
-            target.removeEffect(FrostFever.FROST_FEVER);
-            target.removeEffect(BloodPlague.BLOOD_PLAGUE);
+            double chanceToRemoveDiseases = deathKnight.getAnnihilation()
+                    .map(DeathKnightTalentPool.Annihilation::chanceToRemoveDiseases).orElse(1.0);
+            if (RandomUtils.roll(chanceToRemoveDiseases, WorldSpaceTime.getInstance().getRandomGenerator())) {
+                target.removeEffect(FrostFever.FROST_FEVER);
+                target.removeEffect(BloodPlague.BLOOD_PLAGUE);
+            }
+
+            return true;
+        } else {
+            return false;
         }
-
-        return true;
     }
 
     protected int getBonusDamage_() {

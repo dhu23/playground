@@ -1,5 +1,6 @@
 package fantasy.impl.deathknight;
 
+import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.LogUtils;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
@@ -17,7 +18,7 @@ import java.util.TreeMap;
  * Very high threat when in Frost Presence.
  * </pre>
  */
-public class IcyTouch extends AbstractDeathKnightTargetSkill {
+public class IcyTouch extends AbstractTargetSkill {
     public static final String ICY_TOUCH = "Icy Touch";
 
     public static final IcyTouch LEVEL_1 = new IcyTouch(1);
@@ -37,21 +38,25 @@ public class IcyTouch extends AbstractDeathKnightTargetSkill {
     }
 
     @Override
-    protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
-        // inflict the de-buff on the target immediately
-        target.receiveEffect(new FrostFever(deathKnight, target,
-                getFrostFeverTickCount(deathKnight), getFrostFeverTickDamage(deathKnight, target)));
+    protected boolean castOnTarget_(Character caster, Character target) {
+        if (caster instanceof DeathKnight deathKnight) {
+            // inflict the de-buff on the target immediately
+            target.receiveEffect(new FrostFever(caster, target,
+                    getFrostFeverTickCount(deathKnight), getFrostFeverTickDamage(deathKnight, target)));
 
-        SkillUtils.SkillAmount amount = SkillUtils.calculate(
-                deathKnight, target, this, SkillUtils.AmountType.Frost,
-                getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator()),
-                getMultiplier(deathKnight, target),
-                getCriticalChance(deathKnight, target),
-                1.5,
-                WorldSpaceTime.getInstance().getRandomGenerator());
+            SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                    caster, target, this, SkillUtils.AmountType.Frost,
+                    getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator()),
+                    getMultiplier(deathKnight, target),
+                    getCriticalChance(deathKnight, target),
+                    1.5,
+                    WorldSpaceTime.getInstance().getRandomGenerator());
 
-        target.receive(amount);
-        return true;
+            target.receive(amount);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     protected IntegerInterval getBaseDamage() {

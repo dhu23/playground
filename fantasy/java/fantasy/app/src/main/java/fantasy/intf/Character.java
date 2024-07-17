@@ -22,6 +22,7 @@ public interface Character extends Named {
     Duration mainHandAttackSpeed();
     Optional<Duration> offHandAttackSpeed();
 
+    boolean consumeResource(Skill skill);
     void setSkill(Skill skill);
     void setTalent(Talent talent);
 
@@ -70,7 +71,6 @@ public interface Character extends Named {
     boolean cast(String name);
     boolean isCoolDownReady(String name);
 
-    void triggerGlobalCoolDown(Skill skill);
     void clearGlobalCoolDown();
     boolean isUnderGlobalCoolDown();
 

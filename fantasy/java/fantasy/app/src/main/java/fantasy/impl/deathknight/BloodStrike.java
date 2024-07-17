@@ -1,5 +1,6 @@
 package fantasy.impl.deathknight;
 
+import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
@@ -13,7 +14,7 @@ import java.util.TreeMap;
  * total damage increased by 12.5% for each of your diseases on the target.
  * </pre>
  */
-public class BloodStrike extends AbstractDeathKnightTargetSkill {
+public class BloodStrike extends AbstractTargetSkill {
     public static final String BLOOD_STRIKE = "Blood Strike";
 
     public static final BloodStrike LEVEL_1 = new BloodStrike(1);
@@ -34,18 +35,22 @@ public class BloodStrike extends AbstractDeathKnightTargetSkill {
     }
 
     @Override
-    protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
-        SkillUtils.SkillAmount amount = SkillUtils.calculate(
-                deathKnight, target, this,
-                SkillUtils.AmountType.Physical,
-                deathKnight.dealWeaponDamage() * 0.4 + getBonusDamage_(),
-                getMultiplier(deathKnight, target),
-                getCriticalChance(deathKnight, target),
-                getCriticalMultiplier(deathKnight, target),
-                WorldSpaceTime.getInstance().getRandomGenerator());
+    protected boolean castOnTarget_(Character caster, Character target) {
+        if (caster instanceof DeathKnight deathKnight) {
+            SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                    caster, target, this,
+                    SkillUtils.AmountType.Physical,
+                    caster.dealWeaponDamage() * 0.4 + getBonusDamage_(),
+                    getMultiplier(deathKnight, target),
+                    getCriticalChance(deathKnight, target),
+                    getCriticalMultiplier(deathKnight, target),
+                    WorldSpaceTime.getInstance().getRandomGenerator());
 
-        target.receive(amount);
-        return true;
+            target.receive(amount);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     protected int getBonusDamage_() {

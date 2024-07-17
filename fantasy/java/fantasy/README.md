@@ -23,13 +23,13 @@
 | skill type    | example          | relationship to time | relationship to space |
 |---------------|------------------|:--------------------:|:---------------------:|
 | targeted      | Icy Touch        |       Instant        |         Point         |
+| non-targeted  | Arcane Explosion |       Instant        |         Point         |
 | targeted      | Arcane Barrage   |       Instant        | Projectile Collision  |
 | targeted      | Holy Light       |         cast         |         Point         |
 | targeted      | Fireball         |         cast         | Projectile Collision  |
 | targeted      | Mind Flay        |      channeling      |         Point         |
 | targeted      | Penance          |      channeling      | Projectile Collision  |
 | environmental | Blizzard         |      channeling      |    Location Check     |
-| environmental | Arcane Explosion |       Instant        |         Point         |
 | environmental | Consecration     |       Instant        |    Location Check     |
 
 Implementation consideration:

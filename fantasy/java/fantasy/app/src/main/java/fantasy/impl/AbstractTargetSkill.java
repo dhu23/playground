@@ -19,7 +19,11 @@ public abstract class AbstractTargetSkill extends AbstractSkill {
             return false;
         }
 
-        return castOnTarget_(caster, targetOptional.get());
+        if (caster.consumeResource(this)) {
+            LogUtils.log(String.format("%s casts %s", caster.name(), name()));
+            return castOnTarget_(caster, targetOptional.get());
+        }
+        return false;
     }
 
     protected abstract boolean castOnTarget_(Character caster, Character target);

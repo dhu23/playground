@@ -255,7 +255,6 @@ public abstract class AbstractCharacter implements Character {
         control_ = Optional.of(playControl);
     }
 
-    @Override
     public void triggerGlobalCoolDown(Skill skill) {
         if (!onGlobalCoolDown_) {
             onGlobalCoolDown_ = true;
@@ -356,13 +355,8 @@ public abstract class AbstractCharacter implements Character {
                     SkillUtils.AmountType.Physical,
                     dealWeaponDamage(), 1.0, criticalChance(), 2.0,
                     WorldSpaceTime.getInstance().getRandomGenerator());
-//                    (int) (dealWeaponDamage() * (1.0 - target.damageMitigation())),
-//                    1.0, )
+
             target.receive(amount);
-//            int base = ;
-//            target.sufferDamage(base);
-//            WorldSpaceTime.getInstance().getLog().report(this, target, LogUtils.EffectType.Damage, Skill.AUTO_ATTACK,
-//                    ImmutableSkillAmount.of(base, false));
         }
     }
 

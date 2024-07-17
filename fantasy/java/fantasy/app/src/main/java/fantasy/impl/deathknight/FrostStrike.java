@@ -1,5 +1,6 @@
 package fantasy.impl.deathknight;
 
+import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.SkillUtils;
 import fantasy.impl.WorldSpaceTime;
 import fantasy.intf.Character;
@@ -13,7 +14,7 @@ import java.util.TreeMap;
  * causing 55% weapon damage plus 48 as Frost damage.
  * </pre>
  */
-public class FrostStrike extends AbstractDeathKnightTargetSkill {
+public class FrostStrike extends AbstractTargetSkill {
     public static final String FROST_STRIKE = "Frost Strike";
 
     public static final FrostStrike LEVEL_1 = new FrostStrike(1);
@@ -32,17 +33,21 @@ public class FrostStrike extends AbstractDeathKnightTargetSkill {
     }
 
     @Override
-    protected boolean castOnTargetByDeathKnight(DeathKnight deathKnight, Character target) {
-        SkillUtils.SkillAmount amount = SkillUtils.calculate(
-                deathKnight, target, this, SkillUtils.AmountType.Frost,
-                deathKnight.dealWeaponDamage() * 0.55 + getBonusDamage_(),
-                getMultiplier(deathKnight, target),
-                getCriticalChance(deathKnight, target),
-                getCriticalMultiplier(deathKnight, target),
-                WorldSpaceTime.getInstance().getRandomGenerator());
+    protected boolean castOnTarget_(Character caster, Character target) {
+        if (caster instanceof DeathKnight deathKnight) {
+            SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                    caster, target, this, SkillUtils.AmountType.Frost,
+                    caster.dealWeaponDamage() * 0.55 + getBonusDamage_(),
+                    getMultiplier(deathKnight, target),
+                    getCriticalChance(deathKnight, target),
+                    getCriticalMultiplier(deathKnight, target),
+                    WorldSpaceTime.getInstance().getRandomGenerator());
 
-        target.receive(amount);
-        return true;
+            target.receive(amount);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     protected int getBonusDamage_() {
