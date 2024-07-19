@@ -1,11 +1,10 @@
 package fantasy.impl.deathknight;
 
 import fantasy.impl.AbstractTargetSkill;
-import fantasy.impl.LogUtils;
 import fantasy.impl.SkillUtils;
-import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
+import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
 import java.util.Optional;
@@ -46,11 +45,11 @@ public class IcyTouch extends AbstractTargetSkill {
 
             SkillUtils.SkillAmount amount = SkillUtils.calculate(
                     caster, target, this, SkillUtils.AmountType.Frost,
-                    getBaseDamage().sample(RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator()),
+                    getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator()),
                     getMultiplier(deathKnight, target),
                     getCriticalChance(deathKnight, target),
                     1.5,
-                    RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
+                    WorldSpaceTime.getInstance().getRandomGenerator());
 
             target.receive(amount);
             return true;
@@ -73,9 +72,7 @@ public class IcyTouch extends AbstractTargetSkill {
     protected int getFrostFeverTickDamage(DeathKnight deathKnight, Character target) {
         double base = 21;
         Optional<Double> blackIceMultiplier = getBlackIceMultiplier(deathKnight, target);
-        int tick = (int) (base * blackIceMultiplier.orElse(1.0));
-        LogUtils.log(String.format("FF tick : %s, black Ice: %s", tick, blackIceMultiplier));
-        return tick;
+        return (int) (base * blackIceMultiplier.orElse(1.0));
     }
 
     protected int getFrostFeverTickCount(DeathKnight deathKnight) {

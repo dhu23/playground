@@ -15,8 +15,8 @@ public interface Character extends Named {
     int maxHp();
 
     int modifyHp(int amount);
-    int sufferDamage(int amount);
-    int receiveHealing(int amount);
+    int reduceHp(int amount);
+    int increaseHp(int amount);
     int receive(SkillUtils.SkillAmount amount);
 
     Duration mainHandAttackSpeed();

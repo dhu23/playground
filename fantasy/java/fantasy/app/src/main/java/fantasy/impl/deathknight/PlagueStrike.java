@@ -2,7 +2,8 @@ package fantasy.impl.deathknight;
 
 import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.SkillUtils;
-import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
+import fantasy.impl.spacetime.RealTimeImpl1;
+import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
 import java.util.Optional;
@@ -48,7 +49,7 @@ public class PlagueStrike extends AbstractTargetSkill {
                     getMultiplier(deathKnight, target),
                     getCriticalChance(deathKnight, target),
                     getCriticalMultiplier(deathKnight, target),
-                    RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
+                    WorldSpaceTime.getInstance().getRandomGenerator());
 
             target.receive(amount);
             return true;

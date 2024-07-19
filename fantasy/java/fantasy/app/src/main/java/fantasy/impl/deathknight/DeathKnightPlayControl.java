@@ -37,7 +37,7 @@ public abstract class DeathKnightPlayControl implements PlayControl {
 
     @Override
     public void onSkillCoolDownFinish(Skill skill) {
-        LogUtils.log(String.format("PlayControl: %s's %s Cool Down is clear", deathKnight_.name(), skill.name()));
+//        LogUtils.log(String.format("PlayControl: %s's %s Cool Down is clear", deathKnight_.name(), skill.name()));
         playRotation();
     }
 

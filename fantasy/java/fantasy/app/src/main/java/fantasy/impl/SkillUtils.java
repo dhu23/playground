@@ -3,10 +3,14 @@ package fantasy.impl;
 import fantasy.intf.Character;
 import fantasy.intf.Skill;
 import org.immutables.value.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.random.RandomGenerator;
 
 public class SkillUtils {
+    private static final Logger logger = LoggerFactory.getLogger(SkillUtils.class);
+
     public enum AmountType {
         Physical,
         Frost,
@@ -45,7 +49,7 @@ public class SkillUtils {
                                         RandomGenerator randomGenerator) {
         double damage = base;
         damage *= bonusMultiplier;
-        LogUtils.log(String.format("%s base: %s, multiplier: %s, crit chance: %s, crit multiplier: %s",
+        logger.info(String.format("%s base: %s, multiplier: %s, crit chance: %s, crit multiplier: %s",
                 skillName, base, bonusMultiplier, criticalChance, criticalMultiplier));
         boolean critical = RandomUtils.roll(criticalChance, randomGenerator);
         if (critical) {

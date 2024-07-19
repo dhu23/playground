@@ -2,9 +2,12 @@ package fantasy.impl;
 
 import com.google.common.base.Preconditions;
 import fantasy.impl.item.Weapon;
-import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
+import fantasy.impl.spacetime.RealTimeImpl1;
+import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.*;
 import fantasy.intf.Character;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -12,6 +15,8 @@ import java.util.HashMap;
 import java.util.Optional;
 
 public abstract class AbstractCharacter implements Character {
+    private static final Logger logger = LoggerFactory.getLogger(AbstractCharacter.class);
+
     protected String name;
     protected int level;
     protected int hp;
@@ -125,13 +130,13 @@ public abstract class AbstractCharacter implements Character {
     }
 
     @Override
-    public int sufferDamage(int amount) {
+    public int reduceHp(int amount) {
         Preconditions.checkState(amount > 0);
         return modifyHp(-amount);
     }
 
     @Override
-    public int receiveHealing(int amount) {
+    public int increaseHp(int amount) {
         Preconditions.checkState(amount > 0);
         return modifyHp(amount);
     }
@@ -141,19 +146,19 @@ public abstract class AbstractCharacter implements Character {
         switch (amount.type()) {
             case Physical -> {
                 int damage = (int) (amount.amount() * (1.0 - damageMitigation()));
-                sufferDamage(damage);
-                RealWorldSpaceTimeImpl1.getInstance().getLog().report(
+                reduceHp(damage);
+                WorldSpaceTime.getInstance().getLog().report(
                         amount.caster(), amount.target(), amount.type(), amount.skillName(),
                         damage, amount.critical());
             }
             case Frost, Shadow, Fire, Arcane, Holy, Natural -> {
-                sufferDamage(amount.amount());
-                RealWorldSpaceTimeImpl1.getInstance().getLog().report(
+                reduceHp(amount.amount());
+                WorldSpaceTime.getInstance().getLog().report(
                         amount.caster(), amount.target(), amount.type(), amount.skillName(),
                         amount.amount(), amount.critical());
             }
             case Healing -> {
-                receiveHealing(amount.amount());
+                increaseHp(amount.amount());
             }
         }
         return hp();
@@ -183,7 +188,7 @@ public abstract class AbstractCharacter implements Character {
 
     @Override
     public void receiveEffect(Effect effect) {
-        LogUtils.log(String.format("%s is affected by %s's %s", name(), effect.caster().name(), effect.name()));
+        logger.info(String.format("%s is affected by %s's %s", name(), effect.caster().name(), effect.name()));
         effects_.put(effect.name(), effect);
     }
 
@@ -191,7 +196,7 @@ public abstract class AbstractCharacter implements Character {
     public void removeEffect(String name) {
         Effect effect = effects_.remove(name);
         if (effect != null) {
-            LogUtils.log(String.format("%s's %s fades from %s", effect.caster().name(), effect.name(), name()));
+            logger.info(String.format("%s's %s fades from %s", effect.caster().name(), effect.name(), name()));
         }
     }
 
@@ -259,7 +264,7 @@ public abstract class AbstractCharacter implements Character {
     public void triggerGlobalCoolDown(Skill skill) {
         if (!onGlobalCoolDown_) {
             onGlobalCoolDown_ = true;
-            RealWorldSpaceTimeImpl1.getInstance().scheduleGlobalCoolDownEvent(this, skill, 1500);
+            WorldSpaceTime.getInstance().getWorldTime().scheduleGlobalCoolDownEvent(this, skill, 1500);
         }
     }
 
@@ -281,7 +286,7 @@ public abstract class AbstractCharacter implements Character {
         getSkill(name).ifPresent(characterSkill -> {
             if (characterSkill.get().coolDownInMillis() > 0) {
                 characterSkill.setCoolDown();
-                RealWorldSpaceTimeImpl1.getInstance().scheduleSkillCoolDownEvent(this, characterSkill.get());
+                WorldSpaceTime.getInstance().getWorldTime().scheduleSkillCoolDownEvent(this, characterSkill.get());
             }
         });
     }
@@ -315,7 +320,7 @@ public abstract class AbstractCharacter implements Character {
     protected Optional<CharacterSkill> getSkill(String name) {
         Optional<CharacterSkill> skill = Optional.ofNullable(skills_.get(name));
         if (skill.isEmpty()) {
-            LogUtils.log(String.format("%s has no skill: %s", name(), name));
+            logger.info(String.format("%s has no skill: %s", name(), name));
         }
         return skill;
     }
@@ -327,12 +332,12 @@ public abstract class AbstractCharacter implements Character {
 
             Character target = target_.get();
             int damage = (int) (dealWeaponDamage() * (1 - target.damageMitigation()));
-            target.sufferDamage(damage);
+            target.reduceHp(damage);
 
             attackWithMainHand();
             // TODO add full off hand support
-            RealWorldSpaceTimeImpl1.getInstance().scheduleMainHandAutoAttack(this);
-            RealWorldSpaceTimeImpl1.getInstance().scheduleOffHandAutoAttack(this);
+            WorldSpaceTime.getInstance().getWorldTime().scheduleMainHandAutoAttack(this);
+            WorldSpaceTime.getInstance().getWorldTime().scheduleOffHandAutoAttack(this);
         }
     }
 
@@ -355,7 +360,7 @@ public abstract class AbstractCharacter implements Character {
             SkillUtils.SkillAmount amount = SkillUtils.calculate(this, target, "Auto Attack",
                     SkillUtils.AmountType.Physical,
                     dealWeaponDamage(), 1.0, criticalChance(), 2.0,
-                    RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
+                    WorldSpaceTime.getInstance().getRandomGenerator());
 
             target.receive(amount);
         }
@@ -366,7 +371,7 @@ public abstract class AbstractCharacter implements Character {
     @Override
     public void attackWithOffHand() {
         onAttackWithOffHand_();
-        LogUtils.log("off hand attack is not implemented");
+        logger.info("off hand attack is not implemented");
     }
 
     protected abstract void onAttackWithOffHand_();

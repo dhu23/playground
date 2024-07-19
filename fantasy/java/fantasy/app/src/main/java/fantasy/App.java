@@ -4,13 +4,14 @@
 package fantasy;
 
 import fantasy.impl.DummyTarget;
-import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
+import fantasy.impl.spacetime.RealTimeImpl1;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.deathknight.*;
 import fantasy.impl.deathknight.playcontrol.ClassicFrostRotation;
 import fantasy.impl.item.ImmutableWeapon;
 import fantasy.impl.item.Weapon;
 import fantasy.impl.deathknight.DeathKnightPlayControl;
+import fantasy.impl.spacetime.WorldSpaceTime;
 
 import java.time.Duration;
 
@@ -21,6 +22,7 @@ public class App {
             "Reforged Truesilver Champion", Weapon.Style.TwoHandedWeapon, Weapon.Category.Sword);
 
     public static void main(String[] args) throws InterruptedException {
+        WorldSpaceTime.getInstance().begin();
         DeathKnight dk = enhanceWithTalents(createBasicDeathKnight());
 //        DeathKnightPlayControl obliterateSpam = new ObliterateSpam(dk);
 //        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
@@ -75,6 +77,6 @@ public class App {
 
         Thread.sleep(duration.toMillis());
 //        dk.turnOffAutoAttack();
-        RealWorldSpaceTimeImpl1.getInstance().stop();
+        WorldSpaceTime.getInstance().end();
     }
 }

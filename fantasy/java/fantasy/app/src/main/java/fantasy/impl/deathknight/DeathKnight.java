@@ -3,16 +3,21 @@ package fantasy.impl.deathknight;
 import fantasy.impl.LogUtils;
 import fantasy.impl.AbstractCharacter;
 import fantasy.impl.RandomUtils;
-import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
+import fantasy.impl.spacetime.RealTimeImpl1;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.item.Weapon;
+import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.*;
 
 public class DeathKnight extends AbstractCharacter {
+    private static final Logger logger = LoggerFactory.getLogger(DeathKnight.class);
+
     private DeathKnightResource resource_;
 
     public static class DeathKnightRune {
@@ -160,9 +165,9 @@ public class DeathKnight extends AbstractCharacter {
             final boolean setRunesToDeath;
             if (bloodOfTheNorth.isPresent() && skill.name().equals(BloodStrike.BLOOD_STRIKE)) {
                 setRunesToDeath = RandomUtils.roll(bloodOfTheNorth.get().deathRuneChance(),
-                        RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
+                        WorldSpaceTime.getInstance().getRandomGenerator());
                 if (setRunesToDeath) {
-                    LogUtils.log("flip runes to death runes");
+                    logger.debug("flip runes to death runes");
                 }
             } else {
                 setRunesToDeath = false;
@@ -178,7 +183,7 @@ public class DeathKnight extends AbstractCharacter {
                 } else {
                     rune.flipBack();
                 }
-                RealWorldSpaceTimeImpl1.getInstance().scheduleRuneCoolDownEvent(deathKnight, runeIndex, 10000);
+                WorldSpaceTime.getInstance().getWorldTime().scheduleRuneCoolDownEvent(deathKnight, runeIndex, 10000);
             }
 
             // consume runic power
@@ -191,7 +196,7 @@ public class DeathKnight extends AbstractCharacter {
             int maxLevel = getMaxRunicPower();
             runicPowerLevel_ -= runicPowerCost;
             if (runicPowerLevel_ < 0) {
-                LogUtils.log("really really bad");
+                logger.error("really really bad");
             } else if (runicPowerLevel_ > maxLevel){
                 runicPowerLevel_ = maxLevel;
             }
@@ -255,7 +260,7 @@ public class DeathKnight extends AbstractCharacter {
 
     @Override
     public int dealWeaponDamage() {
-        return weaponDamage().sample(RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
+        return weaponDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
     }
 
     @Override
@@ -278,10 +283,10 @@ public class DeathKnight extends AbstractCharacter {
     }
 
     public boolean consumeResource(Skill skill) {
-        LogUtils.log(String.format("%s has %s", name(), resource_.summary()));
+        logger.info(String.format("%s has %s", name(), resource_.summary()));
         boolean ok = resource_.consume(skill, this);
         if (ok) {
-            LogUtils.log(String.format("%s has %s", name(), resource_.summary()));
+            logger.info(String.format("%s has %s", name(), resource_.summary()));
         }
         return ok;
     }
@@ -303,10 +308,10 @@ public class DeathKnight extends AbstractCharacter {
         }
 
         double chance = talent.get().procRatePerMinute() / attacksIn1Min;
-        LogUtils.log(String.format("%s's KM proc chance is %s", name(), chance));
+        logger.info(String.format("%s's KM proc chance is %s", name(), chance));
 
-        if (RandomUtils.roll(chance, RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator())) {
-            LogUtils.log(String.format("%s's %s is triggered", name(), talent.get().name()));
+        if (RandomUtils.roll(chance, WorldSpaceTime.getInstance().getRandomGenerator())) {
+            logger.info(String.format("%s's %s is triggered", name(), talent.get().name()));
             receiveEffect(new KillingMachineEffect(this));
         }
     }

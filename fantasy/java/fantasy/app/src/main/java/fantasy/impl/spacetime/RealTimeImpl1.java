@@ -7,58 +7,41 @@ import fantasy.impl.event.*;
 import fantasy.intf.Character;
 import fantasy.intf.Effect;
 import fantasy.intf.Skill;
+import fantasy.intf.WorldTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.random.RandomGenerator;
 
 
-public class RealWorldSpaceTimeImpl1 {
-    private static final RealWorldSpaceTimeImpl1 INSTANCE = new RealWorldSpaceTimeImpl1();
+public class RealTimeImpl1 implements WorldTime {
+    private static final Logger logger = LoggerFactory.getLogger(RealTimeImpl1.class);
 
-    private final LogUtils logUtils_;
-    private final AtomicLong counter_;
-    private final RandomGenerator randomGenerator_;
+    private final SequenceNumber sequence_;
     private final EventQueue<Event<WorldEvent.EventType, Object>> eventQueue_;
 
-    public static RealWorldSpaceTimeImpl1 getInstance() {
-        return INSTANCE;
-    }
-
     // TODO move log utils out
-    public RealWorldSpaceTimeImpl1() {
-        try {
-            this.logUtils_ = new LogUtils("./logs");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        counter_ = new AtomicLong(0);
-        this.randomGenerator_ = new Random();
+    public RealTimeImpl1(SequenceNumber sequenceNumber) {
+        sequence_ = sequenceNumber;
         this.eventQueue_ = new EventQueue<>(event -> {
             try {
                 onEvent_(event);
             } catch (Exception e) {
-                LogUtils.log(String.format("got error %s", e));
+                logger.error(String.format("got error %s", e));
             }
         });
+    }
+
+    @Override
+    public void start() {
         this.eventQueue_.start();
     }
 
-    public long getId() {
-        return counter_.getAndIncrement();
-    }
-
-    public RandomGenerator getRandomGenerator() {
-        return randomGenerator_;
-    }
-
-    public LogUtils getLog() {
-        return logUtils_;
-    }
-
+    @Override
     public void stop() {
         this.eventQueue_.stop();
     }
@@ -97,7 +80,7 @@ public class RealWorldSpaceTimeImpl1 {
                 if (now.isBefore(gcd.availableTime())) {
                     pushEvent(event);
                 } else {
-                    LogUtils.log(String.format("%s global cool down is clear", gcd.caster().name()));
+                    logger.info(String.format("%s global cool down is clear", gcd.caster().name()));
                     gcd.caster().clearGlobalCoolDown();
                 }
             }
@@ -106,7 +89,7 @@ public class RealWorldSpaceTimeImpl1 {
                 if (now.isBefore(scd.availableTime())) {
                     pushEvent(event);
                 } else {
-                    LogUtils.log(String.format("%s's %s cool down is clear", scd.caster().name(), scd.skill().name()));
+                    logger.info(String.format("%s's %s cool down is clear", scd.caster().name(), scd.skill().name()));
                     scd.caster().clearSkillCoolDown(scd.skill().name());
                 }
             }
@@ -116,7 +99,7 @@ public class RealWorldSpaceTimeImpl1 {
                     pushEvent(event);
                 } else {
                     DeathKnight dk = (DeathKnight) rcd.caster();
-                    LogUtils.log(String.format("%s rune is ready: %s", rcd.caster().name(), rcd.runeId()));
+                    logger.info(String.format("%s rune is ready: %s", rcd.caster().name(), rcd.runeId()));
                     dk.clearRuneCoolDown(rcd.runeId());
                 }
             }
@@ -136,7 +119,7 @@ public class RealWorldSpaceTimeImpl1 {
 
                             Character caster = effect.caster();
                             if (effect.isExpired()) {
-                                LogUtils.log(String.format("%s's %s effect expired on target %s",
+                                logger.info(String.format("%s's %s effect expired on target %s",
                                         caster.name(), effect.name(), target.name()));
                                 target.removeEffect(effect);
                                 effect.caster().onEffectExpiration(target, effect);
@@ -150,7 +133,8 @@ public class RealWorldSpaceTimeImpl1 {
         }
     }
 
-    private void scheduleAutoAttack(Character caster, long nextInMillis, boolean mainHand) {
+    @Override
+    public void scheduleAutoAttack(Character caster, long nextInMillis, boolean mainHand) {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.AutoAttack,
@@ -158,25 +142,17 @@ public class RealWorldSpaceTimeImpl1 {
         pushEvent(event);
     }
 
-    public void scheduleMainHandAutoAttack(Character caster) {
-        scheduleAutoAttack(caster, caster.mainHandAttackSpeed().toMillis(), true);
-    }
-
-    public void scheduleOffHandAutoAttack(Character caster) {
-        caster.offHandAttackSpeed().ifPresent(offHandSpeed -> {
-            scheduleAutoAttack(caster, offHandSpeed.toMillis(), false);
-        });
-    }
-
+    @Override
     public void scheduleGlobalCoolDownEvent(Character caster, Skill skill, long coolDownInMillis) {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.GlobalCoolDown,
                         ImmutableGlobalCoolDown.of(caster, skill, now.plusMillis(coolDownInMillis)));
         pushEvent(event);
-        LogUtils.log(String.format("%s's global cool down is triggered by casting %s", caster.name(), skill.name()));
+        logger.info(String.format("%s's global cool down is triggered by casting %s", caster.name(), skill.name()));
     }
 
+    @Override
     public void scheduleSkillCoolDownEvent(Character caster, Skill skill) {
         if (skill.coolDownInMillis() < 0) {
             return;
@@ -184,20 +160,22 @@ public class RealWorldSpaceTimeImpl1 {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.SkillCoolDown,
-                        ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis()), getId()));
+                        ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis()), sequence_.getId()));
         pushEvent(event);
-        LogUtils.log(String.format("%s's skill cool down is triggered by casting %s", caster.name(), skill.name()));
+        logger.info(String.format("%s's skill cool down is triggered by casting %s", caster.name(), skill.name()));
     }
 
-    public void scheduleRuneCoolDownEvent(DeathKnight dk, int runeId, long coolDownInMillis) {
+    @Override
+    public void scheduleRuneCoolDownEvent(Character caster, int runeId, long coolDownInMillis) {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
-                        ImmutableRuneCoolDown.of(dk, runeId, now.plusMillis(coolDownInMillis), getId()));
+                        ImmutableRuneCoolDown.of(caster, runeId, now.plusMillis(coolDownInMillis), sequence_.getId()));
         pushEvent(event);
-        LogUtils.log(String.format("%s's rune is on cool down: %d", dk.name(), runeId));
+        logger.info(String.format("%s's rune is on cool down: %d", caster.name(), runeId));
     }
 
+    @Override
     public void scheduleTickNotice(Effect effect) {
         effect.nextTick().ifPresent(nextTick -> {
             Event<WorldEvent.EventType, Object> event =
