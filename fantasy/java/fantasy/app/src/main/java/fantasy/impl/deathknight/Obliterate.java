@@ -3,7 +3,7 @@ package fantasy.impl.deathknight;
 import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.RandomUtils;
 import fantasy.impl.SkillUtils;
-import fantasy.impl.WorldSpaceTime;
+import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
 import fantasy.intf.Character;
 
 import java.util.Optional;
@@ -45,13 +45,13 @@ public class Obliterate extends AbstractTargetSkill {
                     getMultiplier(deathKnight, target),
                     getCriticalChance(deathKnight, target),
                     getCriticalMultiplier(deathKnight, target),
-                    WorldSpaceTime.getInstance().getRandomGenerator());
+                    RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
 
             target.receive(amount);
 
             double chanceToRemoveDiseases = deathKnight.getAnnihilation()
                     .map(DeathKnightTalentPool.Annihilation::chanceToRemoveDiseases).orElse(1.0);
-            if (RandomUtils.roll(chanceToRemoveDiseases, WorldSpaceTime.getInstance().getRandomGenerator())) {
+            if (RandomUtils.roll(chanceToRemoveDiseases, RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator())) {
                 target.removeEffect(FrostFever.FROST_FEVER);
                 target.removeEffect(BloodPlague.BLOOD_PLAGUE);
             }

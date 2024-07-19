@@ -1,6 +1,7 @@
-package fantasy.impl;
+package fantasy.impl.spacetime;
 
 import com.google.common.annotations.VisibleForTesting;
+import fantasy.impl.*;
 import fantasy.impl.deathknight.DeathKnight;
 import fantasy.impl.event.*;
 import fantasy.intf.Character;
@@ -15,20 +16,20 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.random.RandomGenerator;
 
 
-public class WorldSpaceTime {
-    private static final WorldSpaceTime INSTANCE = new WorldSpaceTime();
+public class RealWorldSpaceTimeImpl1 {
+    private static final RealWorldSpaceTimeImpl1 INSTANCE = new RealWorldSpaceTimeImpl1();
 
     private final LogUtils logUtils_;
     private final AtomicLong counter_;
     private final RandomGenerator randomGenerator_;
     private final EventQueue<Event<WorldEvent.EventType, Object>> eventQueue_;
 
-    public static WorldSpaceTime getInstance() {
+    public static RealWorldSpaceTimeImpl1 getInstance() {
         return INSTANCE;
     }
 
     // TODO move log utils out
-    public WorldSpaceTime() {
+    public RealWorldSpaceTimeImpl1() {
         try {
             this.logUtils_ = new LogUtils("./logs");
         } catch (IOException e) {
@@ -72,14 +73,6 @@ public class WorldSpaceTime {
         Object obj = event.data();
         Instant now = Instant.now();
         switch (type) {
-            case Select -> {
-                WorldEvent.Select select = (WorldEvent.Select) obj;
-                if (select.target().isPresent()) {
-                    select.caster().selectTarget(select.target().get());
-                } else {
-                    select.caster().unSelectTarget();
-                }
-            }
             case AutoAttack -> {
                 WorldEvent.AutoAttack aa = (WorldEvent.AutoAttack) obj;
                 if (now.isBefore(aa.nextTime())) {
@@ -90,17 +83,13 @@ public class WorldSpaceTime {
 //                        LogUtils.log(String.format("%s's auto-attack inflicts dmg", caster.name()));
                         if (aa.isMainHand()) {
                             caster.attackWithMainHand();
-                            pushMainHandAutoAttack(aa.caster());
+                            scheduleMainHandAutoAttack(aa.caster());
                         } else {
                             caster.attackWithOffHand();
-                            pushOffHandAutoAttack(aa.caster());
+                            scheduleOffHandAutoAttack(aa.caster());
                         }
                     }
                 }
-            }
-            case Cast -> {
-                WorldEvent.Cast cast = (WorldEvent.Cast) obj;
-                cast.caster().cast(cast.spellName());
             }
             case GlobalCoolDown -> {
                 WorldEvent.GlobalCoolDown gcd = (WorldEvent.GlobalCoolDown) obj;
@@ -152,7 +141,7 @@ public class WorldSpaceTime {
                                 target.removeEffect(effect);
                                 effect.caster().onEffectExpiration(target, effect);
                             } else {
-                                pushTickNotice(effect);
+                                scheduleTickNotice(effect);
                             }
                         }
                     }
@@ -161,7 +150,25 @@ public class WorldSpaceTime {
         }
     }
 
-    public void pushGlobalCoolDownEvent(Character caster, Skill skill, long coolDownInMillis) {
+    private void scheduleAutoAttack(Character caster, long nextInMillis, boolean mainHand) {
+        Instant now = Instant.now();
+        Event<WorldEvent.EventType, Object> event =
+                ImmutableEvent.of(WorldEvent.EventType.AutoAttack,
+                        ImmutableAutoAttack.of(caster, now.plusMillis(nextInMillis), mainHand));
+        pushEvent(event);
+    }
+
+    public void scheduleMainHandAutoAttack(Character caster) {
+        scheduleAutoAttack(caster, caster.mainHandAttackSpeed().toMillis(), true);
+    }
+
+    public void scheduleOffHandAutoAttack(Character caster) {
+        caster.offHandAttackSpeed().ifPresent(offHandSpeed -> {
+            scheduleAutoAttack(caster, offHandSpeed.toMillis(), false);
+        });
+    }
+
+    public void scheduleGlobalCoolDownEvent(Character caster, Skill skill, long coolDownInMillis) {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.GlobalCoolDown,
@@ -170,7 +177,7 @@ public class WorldSpaceTime {
         LogUtils.log(String.format("%s's global cool down is triggered by casting %s", caster.name(), skill.name()));
     }
 
-    public void pushSkillCoolDownEvent(Character caster, Skill skill) {
+    public void scheduleSkillCoolDownEvent(Character caster, Skill skill) {
         if (skill.coolDownInMillis() < 0) {
             return;
         }
@@ -182,7 +189,7 @@ public class WorldSpaceTime {
         LogUtils.log(String.format("%s's skill cool down is triggered by casting %s", caster.name(), skill.name()));
     }
 
-    public void pushRuneCoolDownEvent(DeathKnight dk, int runeId, long coolDownInMillis) {
+    public void scheduleRuneCoolDownEvent(DeathKnight dk, int runeId, long coolDownInMillis) {
         Instant now = Instant.now();
         Event<WorldEvent.EventType, Object> event =
                 ImmutableEvent.of(WorldEvent.EventType.RuneCoolDown,
@@ -191,30 +198,12 @@ public class WorldSpaceTime {
         LogUtils.log(String.format("%s's rune is on cool down: %d", dk.name(), runeId));
     }
 
-    public void pushTickNotice(Effect effect) {
+    public void scheduleTickNotice(Effect effect) {
         effect.nextTick().ifPresent(nextTick -> {
             Event<WorldEvent.EventType, Object> event =
                     ImmutableEvent.of(WorldEvent.EventType.TickNotice,
                             ImmutableTickNotice.of(effect.target(), effect.name(), effect.id(), nextTick));
             pushEvent(event);
-        });
-    }
-
-    private void pushAutoAttack(Character caster, long nextInMillis, boolean mainHand) {
-        Instant now = Instant.now();
-        Event<WorldEvent.EventType, Object> event =
-                ImmutableEvent.of(WorldEvent.EventType.AutoAttack,
-                        ImmutableAutoAttack.of(caster, now.plusMillis(nextInMillis), mainHand));
-        pushEvent(event);
-    }
-
-    public void pushMainHandAutoAttack(Character caster) {
-        pushAutoAttack(caster, caster.mainHandAttackSpeed().toMillis(), true);
-    }
-
-    public void pushOffHandAutoAttack(Character caster) {
-        caster.offHandAttackSpeed().ifPresent(offHandSpeed -> {
-            pushAutoAttack(caster, offHandSpeed.toMillis(), false);
         });
     }
 }

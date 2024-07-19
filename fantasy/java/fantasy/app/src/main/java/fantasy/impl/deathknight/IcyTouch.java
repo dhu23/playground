@@ -3,7 +3,7 @@ package fantasy.impl.deathknight;
 import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.LogUtils;
 import fantasy.impl.SkillUtils;
-import fantasy.impl.WorldSpaceTime;
+import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.intf.Character;
@@ -46,11 +46,11 @@ public class IcyTouch extends AbstractTargetSkill {
 
             SkillUtils.SkillAmount amount = SkillUtils.calculate(
                     caster, target, this, SkillUtils.AmountType.Frost,
-                    getBaseDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator()),
+                    getBaseDamage().sample(RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator()),
                     getMultiplier(deathKnight, target),
                     getCriticalChance(deathKnight, target),
                     1.5,
-                    WorldSpaceTime.getInstance().getRandomGenerator());
+                    RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
 
             target.receive(amount);
             return true;

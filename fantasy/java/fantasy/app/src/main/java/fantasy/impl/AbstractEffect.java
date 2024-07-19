@@ -1,5 +1,6 @@
 package fantasy.impl;
 
+import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
 import fantasy.intf.Character;
 import fantasy.intf.Effect;
 
@@ -32,7 +33,7 @@ public abstract class AbstractEffect implements Effect {
         this.caster_ = caster;
         this.target_ = target;
 
-        this.id_ = WorldSpaceTime.getInstance().getId();
+        this.id_ = RealWorldSpaceTimeImpl1.getInstance().getId();
         this.stackCount_ = initialStackCount;
         this.remainingTickCount_ = totalTickCount;
         this.nextTickTime_ = Instant.now().plus(tickFrequency);
@@ -72,7 +73,7 @@ public abstract class AbstractEffect implements Effect {
             ++this.stackCount_;
         }
         // refresh duration and ticking
-        this.id_ = WorldSpaceTime.getInstance().getId();
+        this.id_ = RealWorldSpaceTimeImpl1.getInstance().getId();
         this.remainingTickCount_ = this.totalTickCount_;
         this.nextTickTime_ = Instant.now().plus(this.tickFrequency_);
     }

@@ -4,12 +4,12 @@
 package fantasy;
 
 import fantasy.impl.DummyTarget;
-import fantasy.impl.WorldSpaceTime;
+import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.deathknight.*;
+import fantasy.impl.deathknight.playcontrol.ClassicFrostRotation;
 import fantasy.impl.item.ImmutableWeapon;
 import fantasy.impl.item.Weapon;
-import fantasy.impl.simulation.*;
 import fantasy.impl.deathknight.DeathKnightPlayControl;
 
 import java.time.Duration;
@@ -75,6 +75,6 @@ public class App {
 
         Thread.sleep(duration.toMillis());
 //        dk.turnOffAutoAttack();
-        WorldSpaceTime.getInstance().stop();
+        RealWorldSpaceTimeImpl1.getInstance().stop();
     }
 }

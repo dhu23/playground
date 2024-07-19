@@ -1,31 +1,18 @@
-package fantasy.impl.event;
+package fantasy.impl.spacetime;
 
 import org.immutables.value.Value;
 import fantasy.intf.Character;
 import fantasy.intf.Skill;
 
-import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 
 public class WorldEvent {
     public enum EventType {
-        Select,
         AutoAttack,
-        Cast,
         GlobalCoolDown,
         SkillCoolDown,
         RuneCoolDown,
         TickNotice
-    }
-
-    @Value.Immutable
-    public static abstract class Select {
-        @Value.Parameter
-        public abstract Character caster();
-
-        @Value.Parameter
-        public abstract Optional<Character> target();
     }
 
     @Value.Immutable
@@ -38,15 +25,6 @@ public class WorldEvent {
 
         @Value.Parameter
         public abstract boolean isMainHand();
-    }
-
-    @Value.Immutable
-    public static abstract class Cast {
-        @Value.Parameter
-        public abstract Character caster();
-
-        @Value.Parameter
-        public abstract String spellName();
     }
 
     @Value.Immutable

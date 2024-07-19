@@ -1,4 +1,4 @@
-package fantasy.impl.simulation;
+package fantasy.impl.deathknight.playcontrol;
 
 import fantasy.impl.deathknight.DeathKnight;
 import fantasy.impl.deathknight.DeathKnightPlayControl;

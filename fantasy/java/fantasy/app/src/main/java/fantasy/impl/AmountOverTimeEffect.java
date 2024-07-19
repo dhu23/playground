@@ -1,5 +1,6 @@
 package fantasy.impl;
 
+import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
 import fantasy.intf.Character;
 
 import java.time.Duration;
@@ -16,7 +17,7 @@ public abstract class AmountOverTimeEffect extends AbstractEffect {
         this.amountType_ = amountType;
 
         // set up damage over time
-        WorldSpaceTime.getInstance().pushTickNotice(this);
+        RealWorldSpaceTimeImpl1.getInstance().scheduleTickNotice(this);
     }
 
     public int tickAmount() {

@@ -2,6 +2,7 @@ package fantasy.impl;
 
 import com.google.common.base.Preconditions;
 import fantasy.impl.item.Weapon;
+import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
 import fantasy.intf.*;
 import fantasy.intf.Character;
 
@@ -141,13 +142,13 @@ public abstract class AbstractCharacter implements Character {
             case Physical -> {
                 int damage = (int) (amount.amount() * (1.0 - damageMitigation()));
                 sufferDamage(damage);
-                WorldSpaceTime.getInstance().getLog().report(
+                RealWorldSpaceTimeImpl1.getInstance().getLog().report(
                         amount.caster(), amount.target(), amount.type(), amount.skillName(),
                         damage, amount.critical());
             }
             case Frost, Shadow, Fire, Arcane, Holy, Natural -> {
                 sufferDamage(amount.amount());
-                WorldSpaceTime.getInstance().getLog().report(
+                RealWorldSpaceTimeImpl1.getInstance().getLog().report(
                         amount.caster(), amount.target(), amount.type(), amount.skillName(),
                         amount.amount(), amount.critical());
             }
@@ -258,7 +259,7 @@ public abstract class AbstractCharacter implements Character {
     public void triggerGlobalCoolDown(Skill skill) {
         if (!onGlobalCoolDown_) {
             onGlobalCoolDown_ = true;
-            WorldSpaceTime.getInstance().pushGlobalCoolDownEvent(this, skill, 1500);
+            RealWorldSpaceTimeImpl1.getInstance().scheduleGlobalCoolDownEvent(this, skill, 1500);
         }
     }
 
@@ -280,7 +281,7 @@ public abstract class AbstractCharacter implements Character {
         getSkill(name).ifPresent(characterSkill -> {
             if (characterSkill.get().coolDownInMillis() > 0) {
                 characterSkill.setCoolDown();
-                WorldSpaceTime.getInstance().pushSkillCoolDownEvent(this, characterSkill.get());
+                RealWorldSpaceTimeImpl1.getInstance().scheduleSkillCoolDownEvent(this, characterSkill.get());
             }
         });
     }
@@ -330,8 +331,8 @@ public abstract class AbstractCharacter implements Character {
 
             attackWithMainHand();
             // TODO add full off hand support
-            WorldSpaceTime.getInstance().pushMainHandAutoAttack(this);
-            WorldSpaceTime.getInstance().pushOffHandAutoAttack(this);
+            RealWorldSpaceTimeImpl1.getInstance().scheduleMainHandAutoAttack(this);
+            RealWorldSpaceTimeImpl1.getInstance().scheduleOffHandAutoAttack(this);
         }
     }
 
@@ -354,7 +355,7 @@ public abstract class AbstractCharacter implements Character {
             SkillUtils.SkillAmount amount = SkillUtils.calculate(this, target, "Auto Attack",
                     SkillUtils.AmountType.Physical,
                     dealWeaponDamage(), 1.0, criticalChance(), 2.0,
-                    WorldSpaceTime.getInstance().getRandomGenerator());
+                    RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
 
             target.receive(amount);
         }

@@ -3,7 +3,7 @@ package fantasy.impl.deathknight;
 import fantasy.impl.LogUtils;
 import fantasy.impl.AbstractCharacter;
 import fantasy.impl.RandomUtils;
-import fantasy.impl.WorldSpaceTime;
+import fantasy.impl.spacetime.RealWorldSpaceTimeImpl1;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.item.Weapon;
@@ -160,7 +160,7 @@ public class DeathKnight extends AbstractCharacter {
             final boolean setRunesToDeath;
             if (bloodOfTheNorth.isPresent() && skill.name().equals(BloodStrike.BLOOD_STRIKE)) {
                 setRunesToDeath = RandomUtils.roll(bloodOfTheNorth.get().deathRuneChance(),
-                        WorldSpaceTime.getInstance().getRandomGenerator());
+                        RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
                 if (setRunesToDeath) {
                     LogUtils.log("flip runes to death runes");
                 }
@@ -178,7 +178,7 @@ public class DeathKnight extends AbstractCharacter {
                 } else {
                     rune.flipBack();
                 }
-                WorldSpaceTime.getInstance().pushRuneCoolDownEvent(deathKnight, runeIndex, 10000);
+                RealWorldSpaceTimeImpl1.getInstance().scheduleRuneCoolDownEvent(deathKnight, runeIndex, 10000);
             }
 
             // consume runic power
@@ -255,7 +255,7 @@ public class DeathKnight extends AbstractCharacter {
 
     @Override
     public int dealWeaponDamage() {
-        return weaponDamage().sample(WorldSpaceTime.getInstance().getRandomGenerator());
+        return weaponDamage().sample(RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator());
     }
 
     @Override
@@ -305,7 +305,7 @@ public class DeathKnight extends AbstractCharacter {
         double chance = talent.get().procRatePerMinute() / attacksIn1Min;
         LogUtils.log(String.format("%s's KM proc chance is %s", name(), chance));
 
-        if (RandomUtils.roll(chance, WorldSpaceTime.getInstance().getRandomGenerator())) {
+        if (RandomUtils.roll(chance, RealWorldSpaceTimeImpl1.getInstance().getRandomGenerator())) {
             LogUtils.log(String.format("%s's %s is triggered", name(), talent.get().name()));
             receiveEffect(new KillingMachineEffect(this));
         }
