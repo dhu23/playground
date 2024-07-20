@@ -1,7 +1,6 @@
 package fantasy.impl.deathknight;
 
 import fantasy.impl.AbstractEffect;
-import fantasy.impl.spacetime.RealTimeImpl1;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -13,7 +12,7 @@ public class KillingMachineEffect extends AbstractEffect {
     public KillingMachineEffect(Character caster) {
         super(KILLING_MACHINE, 1, 1, 1, Duration.ofSeconds(8), caster, caster);
 
-        // TODO change the API so that effects are registered with RealTimeImpl1
+        // TODO change the API so that effects are registered with RealTimeWithSpinning
         // therefore developers no longer need to remember to call it here
         WorldSpaceTime.getInstance().getWorldTime().scheduleTickNotice(this);
     }

@@ -2,7 +2,6 @@ package fantasy.impl.deathknight;
 
 import fantasy.impl.AbstractTargetSkill;
 import fantasy.impl.SkillUtils;
-import fantasy.impl.spacetime.RealTimeImpl1;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 

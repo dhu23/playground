@@ -30,11 +30,7 @@ public class WorldSpaceTime {
         }
         sequence_ = new SequenceNumber();
         randomGenerator_ = new Random();
-        worldTime_ = new RealTimeImpl1(sequence_);
-    }
-
-    public void begin() {
-        worldTime_.start();
+        worldTime_ = new RealTimeWithSpinning(sequence_);
     }
 
     public void end() {

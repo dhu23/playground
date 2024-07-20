@@ -1,7 +1,6 @@
 package fantasy.intf;
 
 public interface WorldTime {
-    void start();
     void stop();
 
     default void scheduleMainHandAutoAttack(Character caster) {

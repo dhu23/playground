@@ -102,7 +102,28 @@ def plot_data(df):
     plt.show()
 
 
+def read_data(path):
+    return pd.read_csv(path)
+
+
+def analyze_data(df):
+    group_by_cols = ['skill', 'critical']
+    total_value_group = df.groupby(group_by_cols)['value'].sum().unstack(fill_value=0)
+    total_value = total_value_group.sum().sum()
+    # this way it returns a series, if done with [['value']], a dateframe
+    avg_value_group = df.groupby(group_by_cols)['value'].mean().unstack(fill_value=0.0)
+    hits_group = df.groupby(group_by_cols)['value'].count().unstack(fill_value=0)
+    total_hits = hits_group.sum(axis=1)
+    return pd.DataFrame({
+        #'total crit': total_value_group['Y'],
+        #'total non-crit': total_value_group['N'],
+        'total': total_value_group.sum(axis=1),
+        'avg crit': avg_value_group['Y'],
+        'avg non-crit': avg_value_group['N'],
+        '(%) of total': total_value_group.sum(axis=1) / total_value * 100.0,
+        'crit (%)': hits_group['Y'] / total_hits * 100.0,
+    })
+
+
 if __name__ == '__main__':
-    df1 = pd.read_csv('../logs/log.1720563130250')
-    df2 = pd.read_csv('../logs/log.1720563502034')
-    plot_data(df1)
+    pass

@@ -1,9 +1,7 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.LogUtils;
 import fantasy.impl.AbstractCharacter;
 import fantasy.impl.RandomUtils;
-import fantasy.impl.spacetime.RealTimeImpl1;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.item.Weapon;

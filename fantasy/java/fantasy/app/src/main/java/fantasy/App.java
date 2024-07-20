@@ -4,7 +4,6 @@
 package fantasy;
 
 import fantasy.impl.DummyTarget;
-import fantasy.impl.spacetime.RealTimeImpl1;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.deathknight.*;
 import fantasy.impl.deathknight.playcontrol.ClassicFrostRotation;
@@ -20,9 +19,11 @@ public class App {
     public static final Weapon REFORGED_TRUESILVER_CHAMPION = ImmutableWeapon.of(
             ImmutableIntegerInterval.of(449, 674), 3600,
             "Reforged Truesilver Champion", Weapon.Style.TwoHandedWeapon, Weapon.Category.Sword);
+    public static final Weapon SWORD_OF_JUSTICE = ImmutableWeapon.of(
+            ImmutableIntegerInterval.of(514, 772), 3800,
+            "Sword of Justice", Weapon.Style.TwoHandedWeapon, Weapon.Category.Sword);
 
     public static void main(String[] args) throws InterruptedException {
-        WorldSpaceTime.getInstance().begin();
         DeathKnight dk = enhanceWithTalents(createBasicDeathKnight());
 //        DeathKnightPlayControl obliterateSpam = new ObliterateSpam(dk);
 //        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
@@ -30,7 +31,7 @@ public class App {
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
         DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(300), true);
+        runRotation(dk, Duration.ofSeconds(360), true);
     }
 
     private static DeathKnight createBasicDeathKnight() {
@@ -40,7 +41,8 @@ public class App {
         dk.setSkill(BloodStrike.LEVEL_6);
         dk.setSkill(IcyTouch.LEVEL_5);
         dk.setSkill(PlagueStrike.LEVEL_6);
-        dk.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
+//        dk.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
+        dk.equipWeapon(SWORD_OF_JUSTICE);
         return dk;
     }
 

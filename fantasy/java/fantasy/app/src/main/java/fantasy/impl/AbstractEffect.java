@@ -1,6 +1,5 @@
 package fantasy.impl;
 
-import fantasy.impl.spacetime.RealTimeImpl1;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 import fantasy.intf.Effect;

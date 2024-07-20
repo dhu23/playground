@@ -2,7 +2,6 @@ package fantasy.impl;
 
 import com.google.common.base.Preconditions;
 import fantasy.impl.item.Weapon;
-import fantasy.impl.spacetime.RealTimeImpl1;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.*;
 import fantasy.intf.Character;
