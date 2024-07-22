@@ -1,38 +1,37 @@
 package fantasy.impl.spacetime;
 
-import fantasy.intf.Character;
-import fantasy.intf.Effect;
-import fantasy.intf.Skill;
-import fantasy.intf.WorldTime;
+import fantasy.impl.event.Event;
 
-public class RealTimeWithSleeping implements WorldTime {
-    @Override
-    public void stop() {
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
+public class RealTimeWithSleeping extends AbstractWorldTime {
+    private final ScheduledExecutorService scheduledExecutorService_;
+
+    public RealTimeWithSleeping(SequenceNumber sequenceNumber) {
+        super(sequenceNumber);
+        scheduledExecutorService_ = Executors.newSingleThreadScheduledExecutor();
     }
 
     @Override
-    public void scheduleAutoAttack(Character caster, long nextInMillis, boolean mainHand) {
-
+    protected void receiveEvent(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event) {
+        Instant now = Instant.now();
+        Instant targetInstant = event.data().availableTime();
+        if (now.isBefore(targetInstant)) {
+            Duration wait = Duration.between(now, targetInstant);
+            scheduledExecutorService_.schedule(() -> {
+                pushEventToQueue(event);
+            }, wait.toMillis(), TimeUnit.MILLISECONDS);
+        } else {
+            pushEventToQueue(event);
+        }
     }
 
     @Override
-    public void scheduleGlobalCoolDownEvent(Character caster, Skill skill, long coolDownInMillis) {
-
-    }
-
-    @Override
-    public void scheduleSkillCoolDownEvent(Character caster, Skill skill) {
-
-    }
-
-    @Override
-    public void scheduleRuneCoolDownEvent(Character caster, int runeId, long coolDownInMillis) {
-
-    }
-
-    @Override
-    public void scheduleTickNotice(Effect effect) {
-
+    protected void onEvent_(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event) {
+        processEvent(event);
     }
 }

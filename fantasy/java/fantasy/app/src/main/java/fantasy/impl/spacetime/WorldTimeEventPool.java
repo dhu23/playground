@@ -6,7 +6,7 @@ import fantasy.intf.Skill;
 
 import java.time.Instant;
 
-public class WorldEvent {
+public class WorldTimeEventPool {
     public enum EventType {
         AutoAttack,
         GlobalCoolDown,
@@ -15,20 +15,25 @@ public class WorldEvent {
         TickNotice
     }
 
+    public interface WorldTimeEvent {
+        Instant availableTime();
+    }
+
     @Value.Immutable
-    public static abstract class AutoAttack {
+    public static abstract class AutoAttack implements WorldTimeEvent {
         @Value.Parameter
         public abstract Character caster();
 
         @Value.Parameter
-        public abstract Instant nextTime();
+        @Override
+        public abstract Instant availableTime();
 
         @Value.Parameter
         public abstract boolean isMainHand();
     }
 
     @Value.Immutable
-    public static abstract class GlobalCoolDown {
+    public static abstract class GlobalCoolDown implements WorldTimeEvent {
         @Value.Parameter
         public abstract Character caster();
 
@@ -36,11 +41,12 @@ public class WorldEvent {
         public abstract Skill triggeredBy();
 
         @Value.Parameter
+        @Override
         public abstract Instant availableTime();
     }
 
     @Value.Immutable
-    public static abstract class SkillCoolDown {
+    public static abstract class SkillCoolDown implements WorldTimeEvent {
         @Value.Parameter
         public abstract Character caster();
 
@@ -48,6 +54,7 @@ public class WorldEvent {
         public abstract Skill skill();
 
         @Value.Parameter
+        @Override
         public abstract Instant availableTime();
 
         @Value.Parameter
@@ -55,7 +62,7 @@ public class WorldEvent {
     }
 
     @Value.Immutable
-    public static abstract class RuneCoolDown {
+    public static abstract class RuneCoolDown implements WorldTimeEvent{
         @Value.Parameter
         public abstract Character caster();
 
@@ -63,6 +70,7 @@ public class WorldEvent {
         public abstract int runeId();
 
         @Value.Parameter
+        @Override
         public abstract Instant availableTime();
 
         @Value.Parameter
@@ -70,7 +78,7 @@ public class WorldEvent {
     }
 
     @Value.Immutable
-    public static abstract class TickNotice {
+    public static abstract class TickNotice implements WorldTimeEvent{
         @Value.Parameter
         public abstract Character target();
 
@@ -81,6 +89,7 @@ public class WorldEvent {
         public abstract long id();
 
         @Value.Parameter
-        public abstract Instant nextTickTime();
+        @Override
+        public abstract Instant availableTime();
     }
 }

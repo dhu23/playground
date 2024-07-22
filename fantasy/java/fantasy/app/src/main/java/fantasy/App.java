@@ -31,7 +31,7 @@ public class App {
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
         DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(360), true);
+        runRotation(dk, Duration.ofSeconds(120), true);
     }
 
     private static DeathKnight createBasicDeathKnight() {
