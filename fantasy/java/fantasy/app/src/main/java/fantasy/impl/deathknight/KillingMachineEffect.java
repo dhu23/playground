@@ -12,9 +12,9 @@ public class KillingMachineEffect extends AbstractEffect {
     public KillingMachineEffect(Character caster) {
         super(KILLING_MACHINE, 1, 1, 1, Duration.ofSeconds(8), caster, caster);
 
-        // TODO change the API so that effects are registered with RealTimeWithSpinning
+        // TODO change the API so that effects are registered with RealTimingWithSpinning
         // therefore developers no longer need to remember to call it here
-        WorldSpaceTime.getInstance().getWorldTime().scheduleTickNotice(this);
+        WorldSpaceTime.getInstance().getWorldTiming().scheduleTickNotice(this);
     }
 
     @Override

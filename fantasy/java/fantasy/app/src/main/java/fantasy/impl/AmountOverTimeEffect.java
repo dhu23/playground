@@ -17,7 +17,7 @@ public abstract class AmountOverTimeEffect extends AbstractEffect {
         this.amountType_ = amountType;
 
         // set up damage over time
-        WorldSpaceTime.getInstance().getWorldTime().scheduleTickNotice(this);
+        WorldSpaceTime.getInstance().getWorldTiming().scheduleTickNotice(this);
     }
 
     public int tickAmount() {

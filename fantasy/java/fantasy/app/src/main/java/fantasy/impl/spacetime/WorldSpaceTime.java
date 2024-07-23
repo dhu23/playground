@@ -1,10 +1,14 @@
 package fantasy.impl.spacetime;
 
 import fantasy.impl.LogUtils;
-import fantasy.intf.WorldTime;
+import fantasy.intf.WorldClock;
+import fantasy.intf.WorldTiming;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.random.RandomGenerator;
 
 /**
@@ -17,12 +21,14 @@ public class WorldSpaceTime {
         return INSTANCE;
     }
 
+    private final CountDownLatch stopLatch_;
     private final LogUtils logUtils_;
     private final SequenceNumber sequence_;
     private final RandomGenerator randomGenerator_;
-    private final WorldTime worldTime_;
+    private WorldTiming worldTiming_;
 
     public WorldSpaceTime() {
+        stopLatch_ = new CountDownLatch(1);
         try {
             this.logUtils_ = new LogUtils("./logs");
         } catch (IOException e) {
@@ -30,12 +36,19 @@ public class WorldSpaceTime {
         }
         sequence_ = new SequenceNumber();
         randomGenerator_ = new Random();
-//        worldTime_ = new RealTimeWithSpinning(sequence_);
-        worldTime_ = new RealTimeWithSleeping(sequence_);
+        worldTiming_ = null;
     }
 
-    public void end() {
-        worldTime_.stop();
+    public void setUp(Duration duration) {
+        Instant now = Instant.now();
+//        worldTiming_ = new RealTimingWithSpinning(sequence_, now.plus(duration));
+//        worldTiming_ = new RealTimingWithSleeping(sequence_, now.plus(duration));
+        worldTiming_ = new MachineSpeedTiming(now, sequence_, now.plus(duration));
+    }
+
+    public void await() {
+        worldTiming_.await();
+        worldTiming_.stop();
     }
 
     public LogUtils getLog() {
@@ -50,7 +63,11 @@ public class WorldSpaceTime {
         return randomGenerator_;
     }
 
-    public WorldTime getWorldTime() {
-        return worldTime_;
+    public WorldClock getClock() {
+        return worldTiming_.getClock();
+    }
+
+    public WorldTiming getWorldTiming() {
+        return worldTiming_;
     }
 }

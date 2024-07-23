@@ -172,7 +172,7 @@ public class DeathKnight extends AbstractCharacter {
             }
 
             // consume runes
-            Instant nextAvailable = Instant.now().plusSeconds(10);
+            Instant nextAvailable = WorldSpaceTime.getInstance().getClock().now().plusSeconds(10);
             for (int runeIndex : toBeUsed) {
                 DeathKnightRune rune = getRune(runeIndex);
                 rune.setCoolDown(nextAvailable);
@@ -181,7 +181,7 @@ public class DeathKnight extends AbstractCharacter {
                 } else {
                     rune.flipBack();
                 }
-                WorldSpaceTime.getInstance().getWorldTime().scheduleRuneCoolDownEvent(deathKnight, runeIndex, 10000);
+                WorldSpaceTime.getInstance().getWorldTiming().scheduleRuneCoolDownEvent(deathKnight, runeIndex, 10000);
             }
 
             // consume runic power

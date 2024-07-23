@@ -30,7 +30,7 @@ public class LogUtils {
         Files.write(this.logPath, List.of(String.join(",", HEADER)));
     }
 
-    public void report(Character caster, Character target,
+    public void report(Instant now, Character caster, Character target,
                        SkillUtils.AmountType amountType, String skillName, int amount, boolean critical) {
         switch (amountType) {
            case Healing -> {
@@ -42,7 +42,7 @@ public class LogUtils {
                 logger.info(line);
             }
         }
-        List<String> tokens = List.of(Instant.now().toString(), caster.name(), target.name(),
+        List<String> tokens = List.of(now.toString(), caster.name(), target.name(),
                 amountType.name(), skillName, String.valueOf(amount), critical ? "Y" : "N");
         try {
             Files.write(this.logPath, List.of(String.join(",", tokens)), StandardOpenOption.APPEND);

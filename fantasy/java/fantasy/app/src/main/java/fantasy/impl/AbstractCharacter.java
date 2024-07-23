@@ -51,19 +51,11 @@ public abstract class AbstractCharacter implements Character {
         }
 
         public void setCoolDown() {
-            lastCastTime = Optional.of(Instant.now());
+            lastCastTime = Optional.of(WorldSpaceTime.getInstance().getClock().now());
         }
 
         public void clearCoolDown() {
             lastCastTime = Optional.empty();
-        }
-
-        public Instant getNextAvailableTime() {
-            if (lastCastTime.isEmpty()) {
-                return Instant.now();
-            } else {
-                return lastCastTime.get().plusMillis(this.skill.coolDownInMillis());
-            }
         }
 
         public boolean isUnderCoolDown() {
@@ -71,7 +63,7 @@ public abstract class AbstractCharacter implements Character {
                 return false;
             } else {
                 Instant next = lastCastTime.get().plusMillis(this.skill.coolDownInMillis());
-                return Instant.now().isBefore(next);
+                return WorldSpaceTime.getInstance().getClock().now().isBefore(next);
             }
         }
     }
@@ -147,12 +139,14 @@ public abstract class AbstractCharacter implements Character {
                 int damage = (int) (amount.amount() * (1.0 - damageMitigation()));
                 reduceHp(damage);
                 WorldSpaceTime.getInstance().getLog().report(
+                        WorldSpaceTime.getInstance().getClock().now(),
                         amount.caster(), amount.target(), amount.type(), amount.skillName(),
                         damage, amount.critical());
             }
             case Frost, Shadow, Fire, Arcane, Holy, Natural -> {
                 reduceHp(amount.amount());
                 WorldSpaceTime.getInstance().getLog().report(
+                        WorldSpaceTime.getInstance().getClock().now(),
                         amount.caster(), amount.target(), amount.type(), amount.skillName(),
                         amount.amount(), amount.critical());
             }
@@ -241,7 +235,6 @@ public abstract class AbstractCharacter implements Character {
 
     @Override
     public void selectTarget(Character character) {
-        System.out.println(String.format("%s: Selecting %s", Instant.now(), character.name()));
         target_ = Optional.ofNullable(character);
         control_.ifPresent(PlayControl::onSelect);
     }
@@ -263,7 +256,7 @@ public abstract class AbstractCharacter implements Character {
     public void triggerGlobalCoolDown(Skill skill) {
         if (!onGlobalCoolDown_) {
             onGlobalCoolDown_ = true;
-            WorldSpaceTime.getInstance().getWorldTime().scheduleGlobalCoolDownEvent(this, skill, 1500);
+            WorldSpaceTime.getInstance().getWorldTiming().scheduleGlobalCoolDownEvent(this, skill, 1500);
         }
     }
 
@@ -285,7 +278,7 @@ public abstract class AbstractCharacter implements Character {
         getSkill(name).ifPresent(characterSkill -> {
             if (characterSkill.get().coolDownInMillis() > 0) {
                 characterSkill.setCoolDown();
-                WorldSpaceTime.getInstance().getWorldTime().scheduleSkillCoolDownEvent(this, characterSkill.get());
+                WorldSpaceTime.getInstance().getWorldTiming().scheduleSkillCoolDownEvent(this, characterSkill.get());
             }
         });
     }
@@ -335,8 +328,8 @@ public abstract class AbstractCharacter implements Character {
 
             attackWithMainHand();
             // TODO add full off hand support
-            WorldSpaceTime.getInstance().getWorldTime().scheduleMainHandAutoAttack(this);
-            WorldSpaceTime.getInstance().getWorldTime().scheduleOffHandAutoAttack(this);
+            WorldSpaceTime.getInstance().getWorldTiming().scheduleMainHandAutoAttack(this);
+            WorldSpaceTime.getInstance().getWorldTiming().scheduleOffHandAutoAttack(this);
         }
     }
 

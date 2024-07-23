@@ -1,7 +1,10 @@
 package fantasy.intf;
 
-public interface WorldTime {
+public interface WorldTiming {
     void stop();
+    void await(); // blocks until condition is satisfied
+
+    WorldClock getClock();
 
     default void scheduleMainHandAutoAttack(Character caster) {
         scheduleAutoAttack(caster, caster.mainHandAttackSpeed().toMillis(), true);

@@ -36,7 +36,7 @@ public abstract class AbstractEffect implements Effect {
         this.id_ = WorldSpaceTime.getInstance().getSequence().getId();
         this.stackCount_ = initialStackCount;
         this.remainingTickCount_ = totalTickCount;
-        this.nextTickTime_ = Instant.now().plus(tickFrequency);
+        this.nextTickTime_ = WorldSpaceTime.getInstance().getClock().now().plus(tickFrequency);
     }
 
     @Override
@@ -75,7 +75,7 @@ public abstract class AbstractEffect implements Effect {
         // refresh duration and ticking
         this.id_ = WorldSpaceTime.getInstance().getSequence().getId();
         this.remainingTickCount_ = this.totalTickCount_;
-        this.nextTickTime_ = Instant.now().plus(this.tickFrequency_);
+        this.nextTickTime_ = WorldSpaceTime.getInstance().getClock().now().plus(this.tickFrequency_);
     }
 
     @Override
@@ -98,7 +98,7 @@ public abstract class AbstractEffect implements Effect {
         --this.remainingTickCount_;
 //        LogUtils.log(String.format("%s remaining tick: %s", name(), this.remainingTickCount_));
 
-        this.nextTickTime_ = Instant.now().plus(this.tickFrequency_);
+        this.nextTickTime_ = WorldSpaceTime.getInstance().getClock().now().plus(this.tickFrequency_);
     }
 
     protected abstract void onTick_();

@@ -31,7 +31,7 @@ public class App {
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
         DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(120), true);
+        runRotation(dk, Duration.ofSeconds(30), true);
     }
 
     private static DeathKnight createBasicDeathKnight() {
@@ -71,14 +71,19 @@ public class App {
     }
 
     private static void runRotation(DeathKnight dk, Duration duration, boolean useAutoAttack) throws InterruptedException {
+        WorldSpaceTime.getInstance().setUp(duration);
+
         DummyTarget dummy = new DummyTarget();
         dk.selectTarget(dummy);
         if (useAutoAttack) {
             dk.turnOnAutoAttack();
         }
 
-        Thread.sleep(duration.toMillis());
+        WorldSpaceTime.getInstance().await();
+//        WorldSpaceTime.getInstance().start();
+
+//        Thread.sleep(duration.toMillis());
 //        dk.turnOffAutoAttack();
-        WorldSpaceTime.getInstance().end();
+//        WorldSpaceTime.getInstance().end();
     }
 }

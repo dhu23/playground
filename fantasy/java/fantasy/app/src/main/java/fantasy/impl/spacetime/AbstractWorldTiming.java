@@ -2,41 +2,40 @@ package fantasy.impl.spacetime;
 
 import fantasy.impl.deathknight.DeathKnight;
 import fantasy.impl.event.Event;
-import fantasy.impl.event.EventQueue;
 import fantasy.impl.event.ImmutableEvent;
+import fantasy.intf.*;
 import fantasy.intf.Character;
-import fantasy.intf.Effect;
-import fantasy.intf.Skill;
-import fantasy.intf.WorldTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 
-public abstract class AbstractWorldTime implements WorldTime {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractWorldTime.class);
+public abstract class AbstractWorldTiming implements WorldTiming {
+    private static final Logger logger = LoggerFactory.getLogger(AbstractWorldTiming.class);
 
+    protected final WorldClock clock_;
+    protected final Instant endTime_;
     protected final SequenceNumber sequence_;
-    protected final EventQueue<Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent>> eventQueue_;
 
-    public AbstractWorldTime(SequenceNumber sequenceNumber) {
+    public AbstractWorldTiming(WorldClock clock, @Nullable Instant endTime,
+                               SequenceNumber sequenceNumber) {
+        clock_ = clock;
+        endTime_ = endTime;
         sequence_ = sequenceNumber;
-        this.eventQueue_ = new EventQueue<>(event -> {
-            try {
-                onEvent_(event);
-            } catch (Exception e) {
-                logger.error(String.format("got error %s", e));
-            }
-        });
-        this.eventQueue_.start();
     }
 
     protected abstract void receiveEvent(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event);
     protected abstract void onEvent_(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event);
 
-    protected void pushEventToQueue(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event) {
-        this.eventQueue_.pushEvent(event);
+    protected boolean shouldEnd() {
+        return endTime_ != null && clock_.now().isAfter(endTime_);
+    }
+
+    protected Instant now() {
+        return clock_.now();
     }
 
     protected void processEvent(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event) {
@@ -124,13 +123,13 @@ public abstract class AbstractWorldTime implements WorldTime {
     }
 
     @Override
-    public void stop() {
-        this.eventQueue_.stop();
+    public WorldClock getClock() {
+        return this.clock_;
     }
 
     @Override
     public void scheduleAutoAttack(Character caster, long nextInMillis, boolean mainHand) {
-        Instant now = Instant.now();
+        Instant now = clock_.now();
         Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
                 ImmutableEvent.of(WorldTimeEventPool.EventType.AutoAttack,
                         ImmutableAutoAttack.of(caster, now.plusMillis(nextInMillis), mainHand));
@@ -139,7 +138,7 @@ public abstract class AbstractWorldTime implements WorldTime {
 
     @Override
     public void scheduleGlobalCoolDownEvent(Character caster, Skill skill, long coolDownInMillis) {
-        Instant now = Instant.now();
+        Instant now = clock_.now();
         Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
                 ImmutableEvent.of(WorldTimeEventPool.EventType.GlobalCoolDown,
                         ImmutableGlobalCoolDown.of(caster, skill, now.plusMillis(coolDownInMillis)));
@@ -152,7 +151,7 @@ public abstract class AbstractWorldTime implements WorldTime {
         if (skill.coolDownInMillis() < 0) {
             return;
         }
-        Instant now = Instant.now();
+        Instant now = clock_.now();
         Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
                 ImmutableEvent.of(WorldTimeEventPool.EventType.SkillCoolDown,
                         ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis()), sequence_.getId()));
@@ -162,7 +161,7 @@ public abstract class AbstractWorldTime implements WorldTime {
 
     @Override
     public void scheduleRuneCoolDownEvent(Character caster, int runeId, long coolDownInMillis) {
-        Instant now = Instant.now();
+        Instant now = clock_.now();
         Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
                 ImmutableEvent.of(WorldTimeEventPool.EventType.RuneCoolDown,
                         ImmutableRuneCoolDown.of(caster, runeId, now.plusMillis(coolDownInMillis), sequence_.getId()));
