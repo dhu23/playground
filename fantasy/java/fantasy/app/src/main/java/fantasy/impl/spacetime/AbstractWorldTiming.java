@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
 
 public abstract class AbstractWorldTiming implements WorldTiming {
     private static final Logger logger = LoggerFactory.getLogger(AbstractWorldTiming.class);
@@ -27,8 +26,8 @@ public abstract class AbstractWorldTiming implements WorldTiming {
         sequence_ = sequenceNumber;
     }
 
-    protected abstract void receiveEvent(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event);
-    protected abstract void onEvent_(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event);
+    protected abstract void receiveEvent(Event<WorldTimeEventPool.EventType, Object> event);
+    protected abstract void onEvent_(Event<WorldTimeEventPool.EventType, Object> event);
 
     protected boolean shouldEnd() {
         return endTime_ != null && clock_.now().isAfter(endTime_);
@@ -38,33 +37,41 @@ public abstract class AbstractWorldTiming implements WorldTiming {
         return clock_.now();
     }
 
-    protected void processEvent(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event) {
+    protected void processEvent(Event<WorldTimeEventPool.EventType, Object> event) {
         WorldTimeEventPool.EventType type = event.type();
-        WorldTimeEventPool.WorldTimeEvent worldTimeEvent = event.data();
+        Object data = event.data();
         switch (type) {
+            // timer events
             case AutoAttack -> {
-                if (worldTimeEvent instanceof WorldTimeEventPool.AutoAttack aa) {
+                if (data instanceof WorldTimeEventPool.AutoAttack aa) {
                     onAutoAttack(aa);
                 }
             }
             case GlobalCoolDown -> {
-                if (worldTimeEvent instanceof WorldTimeEventPool.GlobalCoolDown gcd) {
+                if (data instanceof WorldTimeEventPool.GlobalCoolDown gcd) {
                     onGlobalCoolDown(gcd);
                 }
             }
             case SkillCoolDown -> {
-                if (worldTimeEvent instanceof WorldTimeEventPool.SkillCoolDown scd) {
+                if (data instanceof WorldTimeEventPool.SkillCoolDown scd) {
                     onSkillCoolDown(scd);
                 }
             }
             case RuneCoolDown -> {
-                if (worldTimeEvent instanceof WorldTimeEventPool.RuneCoolDown rcd) {
+                if (data instanceof WorldTimeEventPool.RuneCoolDown rcd) {
                     onRuneCoolDown(rcd);
                 }
             }
             case TickNotice -> {
-                if (worldTimeEvent instanceof WorldTimeEventPool.TickNotice tn) {
+                if (data instanceof WorldTimeEventPool.TickNotice tn) {
                     onTickNotice(tn);
+                }
+            }
+
+            // command events
+            case Select -> {
+                if (data instanceof WorldTimeEventPool.Select select) {
+                    onSelect(select);
                 }
             }
         }
@@ -81,6 +88,12 @@ public abstract class AbstractWorldTiming implements WorldTiming {
                 scheduleOffHandAutoAttack(aa.caster());
             }
         }
+    }
+
+    protected void onSelect(WorldTimeEventPool.Select select) {
+        Character caster = select.caster();
+        Character target = select.target();
+        caster.selectTarget(target);
     }
 
     protected void onGlobalCoolDown(WorldTimeEventPool.GlobalCoolDown gcd) {
@@ -130,16 +143,18 @@ public abstract class AbstractWorldTiming implements WorldTiming {
     @Override
     public void scheduleAutoAttack(Character caster, long nextInMillis, boolean mainHand) {
         Instant now = clock_.now();
-        Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
+        Event<WorldTimeEventPool.EventType, Object> event =
                 ImmutableEvent.of(WorldTimeEventPool.EventType.AutoAttack,
                         ImmutableAutoAttack.of(caster, now.plusMillis(nextInMillis), mainHand));
+        logger.info("schedule next auto attack {}", event);
+        logger.info("clock is {}, now is {}, instant.now is {}", clock_, now, Instant.now());
         receiveEvent(event);
     }
 
     @Override
     public void scheduleGlobalCoolDownEvent(Character caster, Skill skill, long coolDownInMillis) {
         Instant now = clock_.now();
-        Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
+        Event<WorldTimeEventPool.EventType, Object> event =
                 ImmutableEvent.of(WorldTimeEventPool.EventType.GlobalCoolDown,
                         ImmutableGlobalCoolDown.of(caster, skill, now.plusMillis(coolDownInMillis)));
         receiveEvent(event);
@@ -152,7 +167,7 @@ public abstract class AbstractWorldTiming implements WorldTiming {
             return;
         }
         Instant now = clock_.now();
-        Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
+        Event<WorldTimeEventPool.EventType, Object> event =
                 ImmutableEvent.of(WorldTimeEventPool.EventType.SkillCoolDown,
                         ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis()), sequence_.getId()));
         receiveEvent(event);
@@ -162,7 +177,7 @@ public abstract class AbstractWorldTiming implements WorldTiming {
     @Override
     public void scheduleRuneCoolDownEvent(Character caster, int runeId, long coolDownInMillis) {
         Instant now = clock_.now();
-        Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
+        Event<WorldTimeEventPool.EventType, Object> event =
                 ImmutableEvent.of(WorldTimeEventPool.EventType.RuneCoolDown,
                         ImmutableRuneCoolDown.of(caster, runeId, now.plusMillis(coolDownInMillis), sequence_.getId()));
         receiveEvent(event);
@@ -172,7 +187,7 @@ public abstract class AbstractWorldTiming implements WorldTiming {
     @Override
     public void scheduleTickNotice(Effect effect) {
         effect.nextTick().ifPresent(nextTick -> {
-            Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event =
+            Event<WorldTimeEventPool.EventType, Object> event =
                     ImmutableEvent.of(WorldTimeEventPool.EventType.TickNotice,
                             ImmutableTickNotice.of(effect.target(), effect.name(), effect.id(), nextTick));
             receiveEvent(event);

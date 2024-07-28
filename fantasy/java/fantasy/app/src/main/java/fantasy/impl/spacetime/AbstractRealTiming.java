@@ -17,10 +17,10 @@ import java.util.function.Supplier;
 public abstract class AbstractRealTiming extends AbstractWorldTiming {
     private static final Logger logger = LoggerFactory.getLogger(AbstractRealTiming.class);
 
-    protected final ThreadedProcessor<Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent>> eventQueue_;
+    protected final ThreadedProcessor<Event<WorldTimeEventPool.EventType, Object>> eventQueue_;
 
-    public AbstractRealTiming(WorldClock clock, @Nullable Instant endTime, SequenceNumber sequenceNumber) {
-        super(clock, endTime, sequenceNumber);
+    public AbstractRealTiming(@Nullable Instant endTime, SequenceNumber sequenceNumber) {
+        super(new RealWorldWallClock(), endTime, sequenceNumber);
         this.eventQueue_ = new EventBlockingQueueProcessor<>(this::onEvent_, this::shouldEnd);
     }
 
@@ -38,7 +38,7 @@ public abstract class AbstractRealTiming extends AbstractWorldTiming {
         }
     }
 
-    protected void pushEventToBlockingQueue(Event<WorldTimeEventPool.EventType, WorldTimeEventPool.WorldTimeEvent> event) {
+    protected void pushEventToBlockingQueue(Event<WorldTimeEventPool.EventType, Object> event) {
         this.eventQueue_.add(event);
     }
 

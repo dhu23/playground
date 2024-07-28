@@ -1,7 +1,7 @@
 # TODO
 * make WorldSpaceTime non-Singleton 
 * add new skills for the full rotation (in progress)
-* machine time simulation
+* machine time simulation, model timer events and command events separately
 * add analytics tools, both in process and out process (out process done)
 * add critical attack and miss/parry/dodge
 

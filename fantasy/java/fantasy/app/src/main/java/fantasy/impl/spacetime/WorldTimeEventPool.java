@@ -12,7 +12,9 @@ public class WorldTimeEventPool {
         GlobalCoolDown,
         SkillCoolDown,
         RuneCoolDown,
-        TickNotice
+        TickNotice,
+
+        Select,
     }
 
     public interface WorldTimeEvent {
@@ -91,5 +93,16 @@ public class WorldTimeEventPool {
         @Value.Parameter
         @Override
         public abstract Instant availableTime();
+    }
+
+
+    // commands
+    @Value.Immutable
+    public static abstract class Select {
+        @Value.Parameter
+        public abstract Character caster();
+
+        @Value.Parameter
+        public abstract Character target();
     }
 }

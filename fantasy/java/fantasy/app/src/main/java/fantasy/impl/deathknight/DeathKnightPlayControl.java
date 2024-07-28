@@ -22,6 +22,7 @@ public abstract class DeathKnightPlayControl implements PlayControl {
 
     @Override
     public void onSelect() {
+        deathKnight_.turnOnAutoAttack();
         playRotation();
     }
 
