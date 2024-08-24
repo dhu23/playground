@@ -21,4 +21,6 @@ public interface WorldTiming {
     void scheduleSkillCoolDownEvent(Character caster, Skill skill);
     void scheduleRuneCoolDownEvent(Character caster, int runeId, long coolDownInMillis);
     void scheduleTickNotice(Effect effect);
+
+    void select(Character caster, Character target);
 }

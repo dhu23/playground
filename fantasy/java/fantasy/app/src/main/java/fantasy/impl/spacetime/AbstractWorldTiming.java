@@ -77,6 +77,7 @@ public abstract class AbstractWorldTiming implements WorldTiming {
         }
     }
 
+    // on-event logic to process the actual event logic
     protected void onAutoAttack(WorldTimeEventPool.AutoAttack aa) {
         Character caster = aa.caster();
         if (aa.caster().isAutoAttacking()) {
@@ -192,5 +193,13 @@ public abstract class AbstractWorldTiming implements WorldTiming {
                             ImmutableTickNotice.of(effect.target(), effect.name(), effect.id(), nextTick));
             receiveEvent(event);
         });
+    }
+
+    @Override
+    public void select(Character caster, Character target) {
+        Event<WorldTimeEventPool.EventType, Object> event =
+                ImmutableEvent.of(WorldTimeEventPool.EventType.Select,
+                        ImmutableSelect.of(caster, target));
+        receiveEvent(event);
     }
 }

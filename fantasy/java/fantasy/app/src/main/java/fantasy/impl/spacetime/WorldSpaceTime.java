@@ -41,9 +41,9 @@ public class WorldSpaceTime {
 
     public void setUp(Duration duration) {
         Instant now = Instant.now();
-        worldTiming_ = new RealTimingWithSpinning(sequence_, now.plus(duration));
+//        worldTiming_ = new RealTimingWithSpinning(sequence_, now.plus(duration));
 //        worldTiming_ = new RealTimingWithSleeping(sequence_, now.plus(duration));
-//        worldTiming_ = new MachineSpeedTiming(now, sequence_, now.plus(duration));
+        worldTiming_ = new MachineSpeedTiming(now, sequence_, now.plus(duration));
     }
 
     public void await() {

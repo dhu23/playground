@@ -31,7 +31,7 @@ public class App {
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
         DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(120), true);
+        runRotation(dk, Duration.ofSeconds(60), true);
     }
 
     private static DeathKnight createBasicDeathKnight() {
@@ -74,7 +74,8 @@ public class App {
         WorldSpaceTime.getInstance().setUp(duration);
 
         DummyTarget dummy = new DummyTarget();
-        dk.selectTarget(dummy);
+        WorldSpaceTime.getInstance().getWorldTiming().select(dk, dummy);
+//        dk.selectTarget(dummy);
 //        if (useAutoAttack) {
 //            dk.turnOnAutoAttack();
 //        }

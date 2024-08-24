@@ -22,7 +22,7 @@ public class RealTimingWithSpinning extends AbstractRealTiming {
 
     @Override
     protected void onEvent_(Event<WorldTimeEventPool.EventType, Object> event) {
-        logger.info("processing {}", event);
+//        logger.info("processing {}", event);
         if (event.data() instanceof WorldTimeEventPool.WorldTimeEvent worldTimeEvent) {
             Instant now = now();
 
