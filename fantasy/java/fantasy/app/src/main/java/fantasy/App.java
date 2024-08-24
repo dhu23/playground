@@ -7,6 +7,8 @@ import fantasy.impl.DummyTarget;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.deathknight.*;
 import fantasy.impl.deathknight.playcontrol.ClassicFrostRotation;
+import fantasy.impl.deathknight.playcontrol.IcyTouchSpam;
+import fantasy.impl.deathknight.playcontrol.PlagueStrikeSpam;
 import fantasy.impl.item.ImmutableWeapon;
 import fantasy.impl.item.Weapon;
 import fantasy.impl.deathknight.DeathKnightPlayControl;
@@ -29,9 +31,10 @@ public class App {
 //        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
 //        DeathKnightPlayControl justKeepFrostFeverUp = new JustKeepFrostFeverUp(dk);
 //        DeathKnightPlayControl icyTouchSpam = new IcyTouchSpam(dk, 2);
+//        DeathKnightPlayControl plagueStrikeSpam = new PlagueStrikeSpam(dk);
         DeathKnightPlayControl classicFrostRotation = new ClassicFrostRotation(dk);
 
-        runRotation(dk, Duration.ofSeconds(60), true);
+        runRotation(dk, Duration.ofSeconds(300), true);
     }
 
     private static DeathKnight createBasicDeathKnight() {

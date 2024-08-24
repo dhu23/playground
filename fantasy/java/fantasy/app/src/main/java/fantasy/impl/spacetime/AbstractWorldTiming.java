@@ -172,7 +172,7 @@ public abstract class AbstractWorldTiming implements WorldTiming {
                 ImmutableEvent.of(WorldTimeEventPool.EventType.SkillCoolDown,
                         ImmutableSkillCoolDown.of(caster, skill, now.plusMillis(skill.coolDownInMillis()), sequence_.getId()));
         receiveEvent(event);
-        logger.info(String.format("%s's skill cool down is triggered by casting %s", caster.name(), skill.name()));
+        logger.info(String.format("%s's skill cool down of %s is triggered", caster.name(), skill.name()));
     }
 
     @Override
