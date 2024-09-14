@@ -1,9 +1,9 @@
 # TODO
-* make WorldSpaceTime non-Singleton 
-* add new skills for the full rotation (in progress)
-* machine time simulation, model timer events and command events separately
-* add analytics tools, both in process and out process (out process done)
-* add critical attack and miss/parry/dodge
+* make WorldSpaceTime non-Singleton
+* add analytics tools, both inside and outside of process (outside done)
+* miss/parry/dodge
+* add a healing class
+* create a competition between a damage dealer and a healer on dummy target
 
 # Design Ideas
 ## Skill types
@@ -49,3 +49,6 @@ Implementation consideration:
 * move amount over time stack into the receiver instead of the message itself (done)
 * add journal collection for analysis (done)
 * add talents - killing machine, chill of the grave, annihilation, runic power mastery, glacier rot
+* add new skills for the full rotation (done)
+* machine time simulation, model timer events and command events separately (done)
+* add critical attack (done)
