@@ -67,6 +67,11 @@ public abstract class AbstractWorldTiming implements WorldTiming {
                     onTickNotice(tn);
                 }
             }
+            case CastComplete -> {
+                if (data instanceof WorldTimeEventPool.CastComplete cc) {
+                    onCastComplete(cc);
+                }
+            }
 
             // command events
             case Select -> {
@@ -136,6 +141,11 @@ public abstract class AbstractWorldTiming implements WorldTiming {
         }
     }
 
+    protected void onCastComplete(WorldTimeEventPool.CastComplete cc) {
+        Character caster = cc.caster();
+        caster.onCastComplete(cc.skill().name());
+    }
+
     @Override
     public WorldClock getClock() {
         return this.clock_;
@@ -193,6 +203,15 @@ public abstract class AbstractWorldTiming implements WorldTiming {
                             ImmutableTickNotice.of(effect.target(), effect.name(), effect.id(), nextTick));
             receiveEvent(event);
         });
+    }
+
+    @Override
+    public void scheduleCastComplete(Character caster, Skill skill) {
+        Instant now = clock_.now();
+        Event<WorldTimeEventPool.EventType, Object> event =
+                ImmutableEvent.of(WorldTimeEventPool.EventType.TickNotice,
+                        ImmutableCastComplete.of(caster, skill, now.plusMillis(skill.castTimeInMillis())));
+        receiveEvent(event);
     }
 
     @Override

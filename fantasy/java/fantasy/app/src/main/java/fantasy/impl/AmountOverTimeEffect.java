@@ -1,5 +1,7 @@
 package fantasy.impl;
 
+import fantasy.impl.skill.ImmutableSkillAmount;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 

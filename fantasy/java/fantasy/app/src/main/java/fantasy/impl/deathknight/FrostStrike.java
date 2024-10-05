@@ -1,7 +1,7 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.AbstractTargetSkill;
-import fantasy.impl.SkillUtils;
+import fantasy.impl.skill.AbstractTargetSkill;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -25,7 +25,7 @@ public class FrostStrike extends AbstractTargetSkill {
     public static final FrostStrike LEVEL_6 = new FrostStrike(6);
 
     public FrostStrike(int level) {
-        super(FROST_STRIKE, level, getCost_(), 0);
+        super(FROST_STRIKE, level, getCost_(), 0, 0);
     }
 
     protected static DeathKnightResourceCost getCost_() {

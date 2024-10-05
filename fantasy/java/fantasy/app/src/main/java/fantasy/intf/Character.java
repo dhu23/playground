@@ -1,6 +1,6 @@
 package fantasy.intf;
 
-import fantasy.impl.SkillUtils;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.item.Weapon;
 
@@ -53,6 +53,7 @@ public interface Character extends Named {
     int armor();
     double damageMitigation();
     double criticalChance();
+    double spellCriticalChance();
 
     int dealWeaponDamage();
 
@@ -77,6 +78,10 @@ public interface Character extends Named {
     void triggerSkillCoolDown(String name);
     void clearSkillCoolDown(String name);
     boolean isSkillUnderCoolDown(String name);
+    void onCastComplete(String skillName);
+    void triggerCastDelay(String skillName);
+
+    Optional<String> isCasting();
 
     boolean equipWeapon(Weapon item);
 }

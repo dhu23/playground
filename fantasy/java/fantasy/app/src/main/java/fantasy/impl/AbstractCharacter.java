@@ -2,16 +2,19 @@ package fantasy.impl;
 
 import com.google.common.base.Preconditions;
 import fantasy.impl.item.Weapon;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.*;
 import fantasy.intf.Character;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public abstract class AbstractCharacter implements Character {
     private static final Logger logger = LoggerFactory.getLogger(AbstractCharacter.class);
@@ -36,6 +39,8 @@ public abstract class AbstractCharacter implements Character {
 
     protected Optional<Weapon> mainHand;
     protected Optional<Weapon> offHand;
+
+    protected Optional<String> _castingState;
 
     public static class CharacterSkill {
         private final Skill skill;
@@ -368,6 +373,15 @@ public abstract class AbstractCharacter implements Character {
 
     protected abstract void onAttackWithOffHand_();
 
+    protected boolean justCast_(CharacterSkill characterSkill) {
+        boolean casted = characterSkill.get().cast(this);
+        if (casted) {
+            triggerSkillCoolDown(characterSkill.skill.name());
+            triggerGlobalCoolDown(characterSkill.get());
+        }
+        return casted;
+    }
+
     @Override
     public boolean cast(String name) {
         if (!isCoolDownReady(name)) {
@@ -376,19 +390,54 @@ public abstract class AbstractCharacter implements Character {
         Optional<CharacterSkill> skillOptional = getSkill(name);
         if (skillOptional.isPresent()) {
             CharacterSkill characterSkill = skillOptional.get();
-            boolean casted = characterSkill.get().cast(this);
-            if (casted) {
-                triggerSkillCoolDown(name);
-                triggerGlobalCoolDown(characterSkill.get());
+
+            // check if this is a skill with cast time
+            if (characterSkill.skill.castTimeInMillis() > 0) {
+                if (_castingState.isEmpty()) {
+                    // TODO send casting delay
+                    _castingState = Optional.of(name);
+                    WorldSpaceTime.getInstance().getWorldTiming().scheduleCastComplete(this, characterSkill.skill);
+                    return true;
+                } else {
+                    // skill is still being cast
+                    return false;
+                }
             }
-            return casted;
+            return justCast_(characterSkill);
         } else {
             return false;
         }
     }
 
     @Override
+    public void triggerCastDelay(String skillName) {
+        getSkill(skillName).ifPresent(characterSkill -> {
+            WorldSpaceTime.getInstance().getWorldTiming().scheduleCastComplete(this, characterSkill.skill);
+        });
+    }
+
+    @Override
+    public void onCastComplete(String skillName) {
+        getSkill(skillName).ifPresent(characterSkill -> {
+            justCast_(characterSkill);
+            _castingState = Optional.empty();
+        });
+    }
+
+    @Override
+    public Optional<String> isCasting() {
+        return _castingState;
+    }
+
+    @Override
+    public String description() {
+        return String.format("%s (Level %s %s)", name(), level(), characterClassName());
+    }
+
+    @Override
     public String name() {
         return this.name;
     }
+
+    protected abstract String characterClassName();
 }

@@ -37,8 +37,18 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
+    public double spellCriticalChance() {
+        return 0;
+    }
+
+    @Override
     public int dealWeaponDamage() {
         return 0;
+    }
+
+    @Override
+    public void onCastComplete(String skillName) {
+
     }
 
     @Override
@@ -52,8 +62,8 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
-    public String description() {
-        return "";
+    protected String characterClassName() {
+        return "Dummy Target";
     }
 
     @Override

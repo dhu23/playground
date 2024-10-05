@@ -1,4 +1,4 @@
-package fantasy.impl;
+package fantasy.impl.skill;
 
 import fantasy.intf.Character;
 import fantasy.intf.ResourceCost;
@@ -10,8 +10,8 @@ import java.util.Optional;
 public abstract class AbstractTargetSkill extends AbstractSkill {
     private static final Logger logger = LoggerFactory.getLogger(AbstractTargetSkill.class);
 
-    public AbstractTargetSkill(String name, int level, ResourceCost cost, int coolDownInMillis) {
-        super(name, level, cost, coolDownInMillis);
+    public AbstractTargetSkill(String name, int level, ResourceCost cost, int coolDownInMillis, int castTimeInMillis) {
+        super(name, level, cost, coolDownInMillis, castTimeInMillis);
     }
 
     @Override

@@ -1,5 +1,6 @@
-package fantasy.impl;
+package fantasy.impl.skill;
 
+import fantasy.impl.RandomUtils;
 import fantasy.intf.Character;
 import fantasy.intf.Skill;
 import org.immutables.value.Value;

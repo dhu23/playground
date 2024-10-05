@@ -1,7 +1,7 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.AbstractTargetSkill;
-import fantasy.impl.SkillUtils;
+import fantasy.impl.skill.AbstractTargetSkill;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -31,7 +31,7 @@ public class BloodStrike extends AbstractTargetSkill {
     }
 
     public BloodStrike(int level) {
-        super(BLOOD_STRIKE, level, getCost_(), 0);
+        super(BLOOD_STRIKE, level, getCost_(), 0, 0);
     }
 
     @Override

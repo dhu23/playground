@@ -153,12 +153,14 @@ public class DeathKnight extends AbstractCharacter {
                 return false;
             }
 
+            // calculate if there is enough resource
             Set<Integer> toBeUsed = supplyRunes(cost.getRuneList());
             boolean hasEnoughRunicPower = hasRunicPower(cost.runicPower());
             if (toBeUsed.size() != cost.getRuneList().size() || !hasEnoughRunicPower) {
                 return false;
             }
 
+            // check rune conversion effect
             Optional<DeathKnightTalentPool.BloodOfTheNorth> bloodOfTheNorth = deathKnight.getBloodOfTheNorth();
             final boolean setRunesToDeath;
             if (bloodOfTheNorth.isPresent() && skill.name().equals(BloodStrike.BLOOD_STRIKE)) {
@@ -238,6 +240,7 @@ public class DeathKnight extends AbstractCharacter {
 
     @Override
     public IntegerInterval weaponDamage() {
+        // TODO stats enhancement needs to be added
         return this.mainHand.map(Weapon::weaponDamage).orElse(emptyHandedDamage());
     }
 
@@ -254,6 +257,11 @@ public class DeathKnight extends AbstractCharacter {
     @Override
     public double criticalChance() {
         return 0.03;
+    }
+
+    @Override
+    public double spellCriticalChance() {
+        return 0;
     }
 
     @Override
@@ -280,6 +288,7 @@ public class DeathKnight extends AbstractCharacter {
         return this.resource_;
     }
 
+    @Override
     public boolean consumeResource(Skill skill) {
         logger.info(String.format("%s has %s", name(), resource_.summary()));
         boolean ok = resource_.consume(skill, this);
@@ -296,6 +305,10 @@ public class DeathKnight extends AbstractCharacter {
 
     @Override
     protected void onAttackWithMainHand_() {
+        _evaluateKillingMachineProc();
+    }
+
+    private void _evaluateKillingMachineProc() {
         Optional<DeathKnightTalentPool.KillingMachine> talent = getKillingMachine();
         if (talent.isEmpty()) {
             return;
@@ -438,12 +451,12 @@ public class DeathKnight extends AbstractCharacter {
     }
 
     @Override
-    public String description() {
-        return String.format("%s (Level %s Death Knight)", name(), level());
+    public String shortDescription() {
+        return description();
     }
 
     @Override
-    public String shortDescription() {
-        return description();
+    protected String characterClassName() {
+        return "Death Knight";
     }
 }

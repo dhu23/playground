@@ -7,4 +7,5 @@ public interface Skill extends Named {
     ResourceCost cost();
     boolean cast(Character caster);
     int coolDownInMillis();
+    int castTimeInMillis();
 }

@@ -1,7 +1,7 @@
 package fantasy.impl.deathknight;
 
 import fantasy.impl.AmountOverTimeEffect;
-import fantasy.impl.SkillUtils;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.intf.Character;
 
 import java.time.Duration;

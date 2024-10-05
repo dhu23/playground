@@ -1,7 +1,7 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.AbstractTargetSkill;
-import fantasy.impl.SkillUtils;
+import fantasy.impl.skill.AbstractTargetSkill;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -25,7 +25,7 @@ public class PlagueStrike extends AbstractTargetSkill {
     public static final PlagueStrike LEVEL_6 = new PlagueStrike(6);
 
     public PlagueStrike(int level) {
-        super(PLAGUE_STRIKE, level, getCost_(), 4000);
+        super(PLAGUE_STRIKE, level, getCost_(), 4000, 0);
     }
 
     protected static DeathKnightResourceCost getCost_() {

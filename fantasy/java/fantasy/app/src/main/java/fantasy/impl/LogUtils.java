@@ -1,7 +1,7 @@
 package fantasy.impl;
 
+import fantasy.impl.skill.SkillUtils;
 import fantasy.intf.Character;
-import fantasy.intf.Skill;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -13,6 +13,7 @@ public class WorldTimeEventPool {
         SkillCoolDown,
         RuneCoolDown,
         TickNotice,
+        CastComplete,
 
         Select,
     }
@@ -80,7 +81,7 @@ public class WorldTimeEventPool {
     }
 
     @Value.Immutable
-    public static abstract class TickNotice implements WorldTimeEvent{
+    public static abstract class TickNotice implements WorldTimeEvent {
         @Value.Parameter
         public abstract Character target();
 
@@ -95,6 +96,18 @@ public class WorldTimeEventPool {
         public abstract Instant availableTime();
     }
 
+    @Value.Immutable
+    public static abstract class CastComplete implements WorldTimeEvent {
+        @Value.Parameter
+        public abstract Character caster();
+
+        @Value.Parameter
+        public abstract Skill skill();
+
+        @Value.Parameter
+        @Override
+        public abstract Instant availableTime();
+    }
 
     // commands
     @Value.Immutable

@@ -1,7 +1,7 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.AbstractTargetSkill;
-import fantasy.impl.SkillUtils;
+import fantasy.impl.skill.AbstractTargetSkill;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.spacetime.WorldSpaceTime;
@@ -27,7 +27,7 @@ public class IcyTouch extends AbstractTargetSkill {
     public static final IcyTouch LEVEL_5 = new IcyTouch(5);
 
     public IcyTouch(int level) {
-        super(ICY_TOUCH, level, getCost_(), 6000);
+        super(ICY_TOUCH, level, getCost_(), 6000, 0);
     }
 
     protected static DeathKnightResourceCost getCost_() {

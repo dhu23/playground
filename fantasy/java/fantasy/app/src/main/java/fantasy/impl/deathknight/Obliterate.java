@@ -1,8 +1,8 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.AbstractTargetSkill;
+import fantasy.impl.skill.AbstractTargetSkill;
 import fantasy.impl.RandomUtils;
-import fantasy.impl.SkillUtils;
+import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
@@ -25,7 +25,7 @@ public class Obliterate extends AbstractTargetSkill {
     public static final Obliterate LEVEL_4 = new Obliterate(4);
 
     public Obliterate(int level) {
-        super(OBLITERATE, level, getCost_(), 0);
+        super(OBLITERATE, level, getCost_(), 0, 0);
     }
 
     protected static DeathKnightResourceCost getCost_() {
