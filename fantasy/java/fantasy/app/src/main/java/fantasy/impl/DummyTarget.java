@@ -47,11 +47,6 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
-    public void onCastComplete(String skillName) {
-
-    }
-
-    @Override
     public boolean equipWeapon(Weapon item) {
         return false;
     }

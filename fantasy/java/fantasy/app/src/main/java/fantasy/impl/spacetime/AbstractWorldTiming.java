@@ -207,9 +207,10 @@ public abstract class AbstractWorldTiming implements WorldTiming {
 
     @Override
     public void scheduleCastComplete(Character caster, Skill skill) {
+        logger.info("scheduling skill cast complete...");
         Instant now = clock_.now();
         Event<WorldTimeEventPool.EventType, Object> event =
-                ImmutableEvent.of(WorldTimeEventPool.EventType.TickNotice,
+                ImmutableEvent.of(WorldTimeEventPool.EventType.CastComplete,
                         ImmutableCastComplete.of(caster, skill, now.plusMillis(skill.castTimeInMillis())));
         receiveEvent(event);
     }

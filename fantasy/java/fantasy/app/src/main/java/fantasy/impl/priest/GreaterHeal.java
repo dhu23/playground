@@ -10,7 +10,17 @@ import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
 public class GreaterHeal extends AbstractTargetSkill {
-    public static final String GREATER_HEAL = "Greater HEAL";
+    public static final String GREATER_HEAL = "Greater Heal";
+
+    public static final GreaterHeal LEVEL_1 = new GreaterHeal(1);
+    public static final GreaterHeal LEVEL_2 = new GreaterHeal(2);
+    public static final GreaterHeal LEVEL_3 = new GreaterHeal(3);
+    public static final GreaterHeal LEVEL_4 = new GreaterHeal(4);
+    public static final GreaterHeal LEVEL_5 = new GreaterHeal(5);
+    public static final GreaterHeal LEVEL_6 = new GreaterHeal(6);
+    public static final GreaterHeal LEVEL_7 = new GreaterHeal(7);
+    public static final GreaterHeal LEVEL_8 = new GreaterHeal(8);
+    public static final GreaterHeal LEVEL_9 = new GreaterHeal(9);
 
     public GreaterHeal(int level) {
         super(GREATER_HEAL, level, getCost_(), 0, 3000);
@@ -39,7 +49,18 @@ public class GreaterHeal extends AbstractTargetSkill {
     }
 
     protected IntegerInterval getBaseHealingRange_() {
-        return ImmutableIntegerInterval.of(3980, 4621);
+        return switch (level()) {
+            case 1 -> ImmutableIntegerInterval.of(924, 1039);
+            case 2 -> ImmutableIntegerInterval.of(1178, 1318);
+            case 3 -> ImmutableIntegerInterval.of(1470, 1642);
+            case 4 -> ImmutableIntegerInterval.of(1835, 2044);
+            case 5 -> ImmutableIntegerInterval.of(2006, 2235);
+            case 6 -> ImmutableIntegerInterval.of(2107, 2444);
+            case 7 -> ImmutableIntegerInterval.of(2433, 2822);
+            case 8 -> ImmutableIntegerInterval.of(3447, 3998);
+            case 9 -> ImmutableIntegerInterval.of(3980, 4621);
+            default -> throw new IllegalStateException("Unexpected value: " + level());
+        };
     }
 
     protected int getBaseHealing_() {

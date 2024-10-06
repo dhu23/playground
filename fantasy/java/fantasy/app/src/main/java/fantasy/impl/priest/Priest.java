@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Priest extends AbstractCharacter {
-    private static final Logger logger = LoggerFactory.getLogger(DeathKnight.class);
+    private static final Logger logger = LoggerFactory.getLogger(Priest.class);
 
     private ManaResource resource_;
 

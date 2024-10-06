@@ -79,7 +79,6 @@ public interface Character extends Named {
     void clearSkillCoolDown(String name);
     boolean isSkillUnderCoolDown(String name);
     void onCastComplete(String skillName);
-    void triggerCastDelay(String skillName);
 
     Optional<String> isCasting();
 

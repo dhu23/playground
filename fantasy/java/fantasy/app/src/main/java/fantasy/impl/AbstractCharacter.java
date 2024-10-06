@@ -9,12 +9,10 @@ import fantasy.intf.Character;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 public abstract class AbstractCharacter implements Character {
     private static final Logger logger = LoggerFactory.getLogger(AbstractCharacter.class);
@@ -40,7 +38,7 @@ public abstract class AbstractCharacter implements Character {
     protected Optional<Weapon> mainHand;
     protected Optional<Weapon> offHand;
 
-    protected Optional<String> _castingState;
+    protected Optional<String> castingState_;
 
     public static class CharacterSkill {
         private final Skill skill;
@@ -92,6 +90,8 @@ public abstract class AbstractCharacter implements Character {
 
         this.mainHand = Optional.empty();
         this.offHand = Optional.empty();
+
+        this.castingState_ = Optional.empty();
     }
 
     @Override
@@ -157,6 +157,10 @@ public abstract class AbstractCharacter implements Character {
             }
             case Healing -> {
                 increaseHp(amount.amount());
+                WorldSpaceTime.getInstance().getLog().report(
+                        WorldSpaceTime.getInstance().getClock().now(),
+                        amount.caster(), amount.target(), amount.type(), amount.skillName(),
+                        amount.amount(), amount.critical());
             }
         }
         return hp();
@@ -393,40 +397,34 @@ public abstract class AbstractCharacter implements Character {
 
             // check if this is a skill with cast time
             if (characterSkill.skill.castTimeInMillis() > 0) {
-                if (_castingState.isEmpty()) {
+                if (castingState_.isEmpty()) {
                     // TODO send casting delay
-                    _castingState = Optional.of(name);
+                    castingState_ = Optional.of(name);
                     WorldSpaceTime.getInstance().getWorldTiming().scheduleCastComplete(this, characterSkill.skill);
                     return true;
                 } else {
                     // skill is still being cast
                     return false;
                 }
+            } else {
+                return justCast_(characterSkill);
             }
-            return justCast_(characterSkill);
         } else {
             return false;
         }
     }
 
     @Override
-    public void triggerCastDelay(String skillName) {
-        getSkill(skillName).ifPresent(characterSkill -> {
-            WorldSpaceTime.getInstance().getWorldTiming().scheduleCastComplete(this, characterSkill.skill);
-        });
-    }
-
-    @Override
     public void onCastComplete(String skillName) {
         getSkill(skillName).ifPresent(characterSkill -> {
             justCast_(characterSkill);
-            _castingState = Optional.empty();
+            castingState_ = Optional.empty();
         });
     }
 
     @Override
     public Optional<String> isCasting() {
-        return _castingState;
+        return castingState_;
     }
 
     @Override

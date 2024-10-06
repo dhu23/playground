@@ -12,7 +12,11 @@ import fantasy.impl.deathknight.playcontrol.PlagueStrikeSpam;
 import fantasy.impl.item.ImmutableWeapon;
 import fantasy.impl.item.Weapon;
 import fantasy.impl.deathknight.DeathKnightPlayControl;
+import fantasy.impl.priest.GreaterHeal;
+import fantasy.impl.priest.Priest;
+import fantasy.impl.priest.playcontrol.GreaterHealSpam;
 import fantasy.impl.spacetime.WorldSpaceTime;
+import fantasy.intf.PlayControl;
 
 import java.time.Duration;
 
@@ -26,6 +30,10 @@ public class App {
             "Sword of Justice", Weapon.Style.TwoHandedWeapon, Weapon.Category.Sword);
 
     public static void main(String[] args) throws InterruptedException {
+        testPriest();
+    }
+
+    private static void testDeathKnight() throws InterruptedException {
         DeathKnight dk = enhanceWithTalents(createBasicDeathKnight());
 //        DeathKnightPlayControl obliterateSpam = new ObliterateSpam(dk);
 //        DeathKnightPlayControl strikeSpam = new ObliterateFrostStrikeBloodStrikeSpam(dk);
@@ -37,8 +45,15 @@ public class App {
         runRotation(dk, Duration.ofSeconds(300), true);
     }
 
+    private static void testPriest() {
+        Priest priest = createBasicPriest();
+        PlayControl greaterHealSpam = new GreaterHealSpam(priest);
+
+        runRotation(priest, Duration.ofSeconds(30));
+    }
+
     private static DeathKnight createBasicDeathKnight() {
-        DeathKnight dk = new DeathKnight("Irevlys", 60);
+        DeathKnight dk = new DeathKnight("Irevlys", 80);
         dk.setSkill(Obliterate.LEVEL_4);
         dk.setSkill(FrostStrike.LEVEL_6);
         dk.setSkill(BloodStrike.LEVEL_6);
@@ -47,6 +62,12 @@ public class App {
 //        dk.equipWeapon(REFORGED_TRUESILVER_CHAMPION);
         dk.equipWeapon(SWORD_OF_JUSTICE);
         return dk;
+    }
+
+    private static Priest createBasicPriest() {
+        Priest priest = new Priest("Letmepull", 80);
+        priest.setSkill(GreaterHeal.LEVEL_9);
+        return priest;
     }
 
     private static DeathKnight enhanceWithTalents(DeathKnight dk) {
@@ -89,5 +110,13 @@ public class App {
 //        Thread.sleep(duration.toMillis());
 //        dk.turnOffAutoAttack();
 //        WorldSpaceTime.getInstance().end();
+    }
+
+    private static void runRotation(Priest priest, Duration duration) {
+        WorldSpaceTime.getInstance().setUp(duration);
+
+        WorldSpaceTime.getInstance().getWorldTiming().select(priest, priest);
+
+        WorldSpaceTime.getInstance().await();
     }
 }
