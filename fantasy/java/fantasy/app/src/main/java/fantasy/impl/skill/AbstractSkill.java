@@ -3,6 +3,13 @@ package fantasy.impl.skill;
 import fantasy.intf.ResourceCost;
 import fantasy.intf.Skill;
 
+// casting a skill needs a few evaluation steps:
+// 1. cast requirement, such as target, distance, etc
+// 2. cool down requirement
+// 3. resource requirement
+
+// once the above are evaluated as true, the skill is cast
+// resource is consumed on successful cast
 public abstract class AbstractSkill implements Skill {
     protected final String name;
     protected final int level;

@@ -5,6 +5,14 @@
 * add a healing class
 * create a competition between a damage dealer and a healer on dummy target
 
+# Skill cast evaluation
+The following are evaluated before the skill is cast. Upon successful cast, 
+resource is consumed and cool downs/effects are triggered. 
+These evaluations shall be associated with characters. 
+- cast requirement, such as target, distance, etc
+- cool down requirement
+- resource requirement
+
 # Design Ideas
 ## Skill types
 * targeted instant skills: 
