@@ -5,6 +5,10 @@ public interface Skill extends Named {
 
     int level();
     ResourceCost cost();
+
+    boolean requiresTarget();
+    // int maxRange();
+
     boolean cast(Character caster);
     int coolDownInMillis();
     int castTimeInMillis();

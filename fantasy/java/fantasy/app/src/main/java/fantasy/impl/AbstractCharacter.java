@@ -9,6 +9,7 @@ import fantasy.intf.Character;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.stream.events.Characters;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -386,32 +387,41 @@ public abstract class AbstractCharacter implements Character {
         return casted;
     }
 
+    // casting a skill needs a few evaluation steps:
+    // 1. cast requirement, such as target, distance etc.
+    // 2. cool down requirement
+    // 3. resource requirement
+    // once the above are evaluated as true, the skill is cast
+    // resource is consumed on successful cast
     @Override
     public boolean cast(String name) {
-        if (!isCoolDownReady(name)) {
+        if (isUnderGlobalCoolDown()) {
             return false;
         }
-        Optional<CharacterSkill> skillOptional = getSkill(name);
-        if (skillOptional.isPresent()) {
-            CharacterSkill characterSkill = skillOptional.get();
-
-            // check if this is a skill with cast time
-            if (characterSkill.skill.castTimeInMillis() > 0) {
-                if (castingState_.isEmpty()) {
-                    // TODO send casting delay
-                    castingState_ = Optional.of(name);
-                    WorldSpaceTime.getInstance().getWorldTiming().scheduleCastComplete(this, characterSkill.skill);
-                    return true;
-                } else {
-                    // skill is still being cast
-                    return false;
-                }
+        Optional<CharacterSkill> characterSkillOptional = getSkill(name);
+        if (characterSkillOptional.isEmpty()) {
+            return false;
+        }
+        CharacterSkill characterSkill = characterSkillOptional.get();
+        if (characterSkill.isUnderCoolDown()) {
+            return false;
+        }
+        
+        // check if this is a skill with cast time
+        if (characterSkill.skill.castTimeInMillis() > 0) {
+            if (castingState_.isEmpty()) {
+                // TODO send casting delay
+                castingState_ = Optional.of(name);
+                WorldSpaceTime.getInstance().getWorldTiming().scheduleCastComplete(this, characterSkill.skill);
+                return true;
             } else {
-                return justCast_(characterSkill);
+                // skill is still being cast
+                return false;
             }
         } else {
-            return false;
+            return justCast_(characterSkill);
         }
+
     }
 
     @Override

@@ -1,5 +1,6 @@
 package fantasy.impl.deathknight;
 
+import fantasy.impl.skill.AbstractSkill;
 import fantasy.impl.skill.AbstractTargetSkill;
 import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
@@ -14,7 +15,7 @@ import java.util.TreeMap;
  * total damage increased by 12.5% for each of your diseases on the target.
  * </pre>
  */
-public class BloodStrike extends AbstractTargetSkill {
+public class BloodStrike extends AbstractSkill {
     public static final String BLOOD_STRIKE = "Blood Strike";
 
     public static final BloodStrike LEVEL_1 = new BloodStrike(1);
@@ -31,11 +32,11 @@ public class BloodStrike extends AbstractTargetSkill {
     }
 
     public BloodStrike(int level) {
-        super(BLOOD_STRIKE, level, getCost_(), 0, 0);
+        super(BLOOD_STRIKE, level, getCost_(), true,0, 0);
     }
 
     @Override
-    protected boolean castOnTarget_(Character caster, Character target) {
+    public boolean cast(Character caster) {
         if (caster instanceof DeathKnight deathKnight) {
             SkillUtils.SkillAmount amount = SkillUtils.calculate(
                     caster, target, this,
