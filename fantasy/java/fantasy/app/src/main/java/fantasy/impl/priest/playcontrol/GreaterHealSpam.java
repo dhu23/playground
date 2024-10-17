@@ -43,6 +43,12 @@ public class GreaterHealSpam implements PlayControl {
 
     }
 
+    @Override
+    public void onSuccessfulCast(Skill skill) {
+        logger.info("successfully cast {}", skill.name());
+        castGreaterHeal();
+    }
+
     protected void castGreaterHeal() {
         logger.info("casting greater heal...maybe");
         if (priest_.isCasting().isEmpty()) {

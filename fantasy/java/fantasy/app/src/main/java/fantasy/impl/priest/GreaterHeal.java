@@ -4,12 +4,12 @@ import fantasy.impl.data.ImmutableIntegerInterval;
 import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.resource.cost.BaseManaCost;
 import fantasy.impl.resource.cost.ImmutableBaseManaCost;
-import fantasy.impl.skill.AbstractTargetSkill;
+import fantasy.impl.deathknight.AbstractDeathKnightTargetSkill;
 import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
 
-public class GreaterHeal extends AbstractTargetSkill {
+public class GreaterHeal extends AbstractPriestTargetSkill {
     public static final String GREATER_HEAL = "Greater Heal";
 
     public static final GreaterHeal LEVEL_1 = new GreaterHeal(1);
@@ -23,7 +23,7 @@ public class GreaterHeal extends AbstractTargetSkill {
     public static final GreaterHeal LEVEL_9 = new GreaterHeal(9);
 
     public GreaterHeal(int level) {
-        super(GREATER_HEAL, level, getCost_(), 0, 3000);
+        super(GREATER_HEAL, level, getCost_(), true, 0,3000);
     }
 
     protected static BaseManaCost getCost_() {
@@ -31,21 +31,17 @@ public class GreaterHeal extends AbstractTargetSkill {
     }
 
     @Override
-    protected boolean castOnTarget_(Character caster, Character target) {
-        if (caster instanceof Priest priest) {
-            SkillUtils.SkillAmount amount = SkillUtils.calculate(
-                    caster, target, this,
-                    SkillUtils.AmountType.Healing,
-                    getBaseHealing_(),
-                    getMultiplier_(priest, target),
-                    getCriticalChance_(priest, target),
-                    getCriticalMultiplier_(priest, target),
-                    WorldSpaceTime.getInstance().getRandomGenerator());
-            target.receive(amount);
-            return true;
-        } else {
-            return false;
-        }
+    protected boolean castOnTarget_(Priest priest, Character target) {
+        SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                priest, target, this,
+                SkillUtils.AmountType.Healing,
+                getBaseHealing_(),
+                getMultiplier_(priest, target),
+                getCriticalChance_(priest, target),
+                getCriticalMultiplier_(priest, target),
+                WorldSpaceTime.getInstance().getRandomGenerator());
+        target.receive(amount);
+        return true;
     }
 
     protected IntegerInterval getBaseHealingRange_() {
@@ -72,7 +68,7 @@ public class GreaterHeal extends AbstractTargetSkill {
     }
 
     protected double getCriticalChance_(Priest priest, Character target) {
-        return 0.0;
+        return priest.spellCriticalChance();
     }
 
     protected double getCriticalMultiplier_(Priest priest, Character target) {

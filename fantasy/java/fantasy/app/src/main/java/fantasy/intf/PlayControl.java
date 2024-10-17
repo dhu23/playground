@@ -6,4 +6,5 @@ public interface PlayControl {
     void onGlobalCoolDownFinish();
     void onSkillCoolDownFinish(Skill skill);
     void onEffectExpiration(Character target, Effect effect);
+    void onSuccessfulCast(Skill skill);
 }

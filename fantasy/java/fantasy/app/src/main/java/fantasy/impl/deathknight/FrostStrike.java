@@ -1,6 +1,6 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.skill.AbstractTargetSkill;
+import fantasy.impl.skill.AbstractSkill;
 import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
@@ -14,7 +14,7 @@ import java.util.TreeMap;
  * causing 55% weapon damage plus 48 as Frost damage.
  * </pre>
  */
-public class FrostStrike extends AbstractTargetSkill {
+public class FrostStrike extends AbstractDeathKnightTargetSkill {
     public static final String FROST_STRIKE = "Frost Strike";
 
     public static final FrostStrike LEVEL_1 = new FrostStrike(1);
@@ -25,7 +25,7 @@ public class FrostStrike extends AbstractTargetSkill {
     public static final FrostStrike LEVEL_6 = new FrostStrike(6);
 
     public FrostStrike(int level) {
-        super(FROST_STRIKE, level, getCost_(), 0, 0);
+        super(FROST_STRIKE, level, getCost_(), true,0, 0);
     }
 
     protected static DeathKnightResourceCost getCost_() {
@@ -33,21 +33,17 @@ public class FrostStrike extends AbstractTargetSkill {
     }
 
     @Override
-    protected boolean castOnTarget_(Character caster, Character target) {
-        if (caster instanceof DeathKnight deathKnight) {
-            SkillUtils.SkillAmount amount = SkillUtils.calculate(
-                    caster, target, this, SkillUtils.AmountType.Frost,
-                    caster.dealWeaponDamage() * 0.55 + getBonusDamage_(),
-                    getMultiplier(deathKnight, target),
-                    getCriticalChance(deathKnight, target),
-                    getCriticalMultiplier(deathKnight, target),
-                    WorldSpaceTime.getInstance().getRandomGenerator());
+    protected boolean castOnTarget_(DeathKnight deathKnight, Character target) {
+        SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                deathKnight, target, this, SkillUtils.AmountType.Frost,
+                deathKnight.dealWeaponDamage() * 0.55 + getBonusDamage_(),
+                getMultiplier(deathKnight, target),
+                getCriticalChance(deathKnight, target),
+                getCriticalMultiplier(deathKnight, target),
+                WorldSpaceTime.getInstance().getRandomGenerator());
 
-            target.receive(amount);
-            return true;
-        } else {
-            return false;
-        }
+        target.receive(amount);
+        return true;
     }
 
     protected int getBonusDamage_() {

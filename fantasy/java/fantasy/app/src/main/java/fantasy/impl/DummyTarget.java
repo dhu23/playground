@@ -52,6 +52,11 @@ public class DummyTarget extends AbstractCharacter {
     }
 
     @Override
+    public boolean hasResourceFor(Skill skill) {
+        return false;
+    }
+
+    @Override
     public boolean consumeResource(Skill skill) {
         return false;
     }

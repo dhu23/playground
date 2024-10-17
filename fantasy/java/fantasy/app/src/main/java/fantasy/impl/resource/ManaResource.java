@@ -21,6 +21,19 @@ public class ManaResource {
         return String.format("%d mana", this.mana_);
     }
 
+    public boolean hasResourceFor(Skill skill, Character caster) {
+        if (skill.cost() instanceof BaseManaCost baseManaCost) {
+            int cost = (int) (baseManaCost.baseManaPercentage() * this.baseMana_ / 100.0);
+
+            // check if there is enough resource
+            if (cost > this.mana_) {
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
     public boolean consume(Skill skill, Character caster) {
         if (skill.cost() instanceof BaseManaCost baseManaCost) {
             int cost = (int) (baseManaCost.baseManaPercentage() * this.baseMana_ / 100.0);

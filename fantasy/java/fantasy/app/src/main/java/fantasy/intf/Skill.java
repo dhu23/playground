@@ -12,4 +12,6 @@ public interface Skill extends Named {
     boolean cast(Character caster);
     int coolDownInMillis();
     int castTimeInMillis();
+
+    boolean checkCastCondition(Character caster);
 }

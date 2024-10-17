@@ -378,13 +378,20 @@ public abstract class AbstractCharacter implements Character {
 
     protected abstract void onAttackWithOffHand_();
 
-    protected boolean justCast_(CharacterSkill characterSkill) {
-        boolean casted = characterSkill.get().cast(this);
-        if (casted) {
-            triggerSkillCoolDown(characterSkill.skill.name());
-            triggerGlobalCoolDown(characterSkill.get());
+    protected boolean justCast_(CharacterSkill characterSkill, boolean checkCondition) {
+        logger.info("calling just cast for {}, check-condition: {}", characterSkill.skill.name(), checkCondition);
+        if (checkCondition && !characterSkill.skill.checkCastCondition(this)) {
+            return false;
         }
-        return casted;
+
+        if (consumeResource(characterSkill.skill)) {
+            if (characterSkill.skill.cast(this)) {
+                triggerSkillCoolDown(characterSkill.skill.name());
+                control_.ifPresent(playControl -> playControl.onSuccessfulCast(characterSkill.skill));
+                return true;
+            }
+        }
+        return false;
     }
 
     // casting a skill needs a few evaluation steps:
@@ -392,12 +399,21 @@ public abstract class AbstractCharacter implements Character {
     // 2. cool down requirement
     // 3. resource requirement
     // once the above are evaluated as true, the skill is cast
-    // resource is consumed on successful cast
+    // 1. global cooldown triggered on cast start
+    // 2. resource is consumed on successful cast complete
+    // 2a. if resource is not sufficient, cast would fail
+    // 3. skill cooldown is triggered on successful cast
     @Override
     public boolean cast(String name) {
         if (isUnderGlobalCoolDown()) {
             return false;
         }
+
+        if (this.castingState_.isPresent()) {
+            // a skill is being cast
+            return false;
+        }
+
         Optional<CharacterSkill> characterSkillOptional = getSkill(name);
         if (characterSkillOptional.isEmpty()) {
             return false;
@@ -406,20 +422,26 @@ public abstract class AbstractCharacter implements Character {
         if (characterSkill.isUnderCoolDown()) {
             return false;
         }
-        
+
+        // target/distance/orientation check
+        if (!characterSkill.skill.checkCastCondition(this)) {
+            return false;
+        }
+
+        // resource requirement
+        if (!hasResourceFor(characterSkill.skill)) {
+            return false;
+        }
+
+        triggerGlobalCoolDown(characterSkill.skill);
         // check if this is a skill with cast time
         if (characterSkill.skill.castTimeInMillis() > 0) {
-            if (castingState_.isEmpty()) {
-                // TODO send casting delay
-                castingState_ = Optional.of(name);
-                WorldSpaceTime.getInstance().getWorldTiming().scheduleCastComplete(this, characterSkill.skill);
-                return true;
-            } else {
-                // skill is still being cast
-                return false;
-            }
+            // TODO send casting delay
+            castingState_ = Optional.of(name);
+            WorldSpaceTime.getInstance().getWorldTiming().scheduleCastComplete(this, characterSkill.skill);
+            return true;
         } else {
-            return justCast_(characterSkill);
+            return justCast_(characterSkill, false);
         }
 
     }
@@ -427,13 +449,14 @@ public abstract class AbstractCharacter implements Character {
     @Override
     public void onCastComplete(String skillName) {
         getSkill(skillName).ifPresent(characterSkill -> {
-            justCast_(characterSkill);
             castingState_ = Optional.empty();
+            justCast_(characterSkill, true);
         });
     }
 
     @Override
     public Optional<String> isCasting() {
+        logger.info("casting state: {}", castingState_);
         return castingState_;
     }
 

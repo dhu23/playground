@@ -1,9 +1,16 @@
 package fantasy.impl.skill;
 
+import fantasy.intf.Character;
 import fantasy.intf.ResourceCost;
 import fantasy.intf.Skill;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 public abstract class AbstractSkill implements Skill {
+    private static final Logger logger = LoggerFactory.getLogger(AbstractSkill.class);
+
     protected final String name;
     protected final int level;
     protected final ResourceCost cost;
@@ -28,6 +35,11 @@ public abstract class AbstractSkill implements Skill {
     @Override
     public ResourceCost cost() {
         return this.cost;
+    }
+
+    @Override
+    public boolean requiresTarget() {
+        return requiresTarget;
     }
 
     @Override
@@ -56,5 +68,12 @@ public abstract class AbstractSkill implements Skill {
     }
 
     @Override
+    public boolean checkCastCondition(Character caster) {
+        // check target if needed
+        if (requiresTarget() && caster.getTarget().isEmpty()) {
+            return false;
+        }
 
+        return true;
+    }
 }

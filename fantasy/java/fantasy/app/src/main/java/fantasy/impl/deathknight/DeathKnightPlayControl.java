@@ -47,6 +47,11 @@ public abstract class DeathKnightPlayControl implements PlayControl {
         playRotation();
     }
 
+    @Override
+    public void onSuccessfulCast(Skill skill) {
+        // no need to act because of gcd
+    }
+
     protected boolean castIcyTouch(boolean ignoreFrostFever) {
         Optional<Character> targetOptional = deathKnight_.getTarget();
         if (targetOptional.isEmpty()) {

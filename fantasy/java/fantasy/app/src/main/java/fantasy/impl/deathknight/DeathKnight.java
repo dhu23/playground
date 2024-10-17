@@ -147,7 +147,7 @@ public class DeathKnight extends AbstractCharacter {
             return neededRunicPower <= 0 || runicPowerLevel_ >= neededRunicPower;
         }
 
-        public boolean consume(Skill skill, DeathKnight deathKnight) {
+        public boolean hasResourceFor(Skill skill, DeathKnight deathKnight) {
             DeathKnightResourceCost cost = (DeathKnightResourceCost) skill.cost();
             if (cost == null) {
                 return false;
@@ -157,6 +157,13 @@ public class DeathKnight extends AbstractCharacter {
             Set<Integer> toBeUsed = supplyRunes(cost.getRuneList());
             boolean hasEnoughRunicPower = hasRunicPower(cost.runicPower());
             if (toBeUsed.size() != cost.getRuneList().size() || !hasEnoughRunicPower) {
+                return false;
+            }
+            return true;
+        }
+
+        public boolean consume(Skill skill, DeathKnight deathKnight) {
+            if (!hasResourceFor(skill, deathKnight)) {
                 return false;
             }
 
@@ -174,6 +181,8 @@ public class DeathKnight extends AbstractCharacter {
             }
 
             // consume runes
+            DeathKnightResourceCost cost = (DeathKnightResourceCost) skill.cost();
+            Set<Integer> toBeUsed = supplyRunes(cost.getRuneList());
             Instant nextAvailable = WorldSpaceTime.getInstance().getClock().now().plusSeconds(10);
             for (int runeIndex : toBeUsed) {
                 DeathKnightRune rune = getRune(runeIndex);
@@ -286,6 +295,11 @@ public class DeathKnight extends AbstractCharacter {
 
     public DeathKnightResource getDeathKnightResource() {
         return this.resource_;
+    }
+
+    @Override
+    public boolean hasResourceFor(Skill skill) {
+        return this.resource_.hasResourceFor(skill, this);
     }
 
     @Override

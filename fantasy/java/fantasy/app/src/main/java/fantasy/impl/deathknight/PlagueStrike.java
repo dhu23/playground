@@ -1,6 +1,6 @@
 package fantasy.impl.deathknight;
 
-import fantasy.impl.skill.AbstractTargetSkill;
+import fantasy.impl.skill.AbstractSkill;
 import fantasy.impl.skill.SkillUtils;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Character;
@@ -14,7 +14,7 @@ import java.util.TreeMap;
  * infects the target with Blood Plague, a disease dealing Shadow damage over time.
  * </pre>
  */
-public class PlagueStrike extends AbstractTargetSkill {
+public class PlagueStrike extends AbstractDeathKnightTargetSkill {
     public static final String PLAGUE_STRIKE = "Plague Strike";
 
     public static final PlagueStrike LEVEL_1 = new PlagueStrike(1);
@@ -25,7 +25,7 @@ public class PlagueStrike extends AbstractTargetSkill {
     public static final PlagueStrike LEVEL_6 = new PlagueStrike(6);
 
     public PlagueStrike(int level) {
-        super(PLAGUE_STRIKE, level, getCost_(), 4000, 0);
+        super(PLAGUE_STRIKE, level, getCost_(), true,4000, 0);
     }
 
     protected static DeathKnightResourceCost getCost_() {
@@ -34,27 +34,22 @@ public class PlagueStrike extends AbstractTargetSkill {
         return ImmutableDeathKnightResourceCost.of(runes, -10);
     }
 
-
     @Override
-    protected boolean castOnTarget_(Character caster, Character target) {
-        if (caster instanceof DeathKnight deathKnight) {
-            // inflict the de-buff on the target
-            target.receiveEffect(new BloodPlague(deathKnight, target,
-                    getBloodPlagueTickCount(deathKnight), getBloodPlagueTickDamage()));
+    protected boolean castOnTarget_(DeathKnight deathKnight, Character target) {
+        // inflict the de-buff on the target
+        target.receiveEffect(new BloodPlague(deathKnight, target,
+                getBloodPlagueTickCount(deathKnight), getBloodPlagueTickDamage()));
 
-            SkillUtils.SkillAmount amount = SkillUtils.calculate(
-                    caster, target, this, SkillUtils.AmountType.Physical,
-                    caster.dealWeaponDamage() * 0.5 + getBonusDamage_(),
-                    getMultiplier(deathKnight, target),
-                    getCriticalChance(deathKnight, target),
-                    getCriticalMultiplier(deathKnight, target),
-                    WorldSpaceTime.getInstance().getRandomGenerator());
+        SkillUtils.SkillAmount amount = SkillUtils.calculate(
+                deathKnight, target, this, SkillUtils.AmountType.Physical,
+                deathKnight.dealWeaponDamage() * 0.5 + getBonusDamage_(),
+                getMultiplier(deathKnight, target),
+                getCriticalChance(deathKnight, target),
+                getCriticalMultiplier(deathKnight, target),
+                WorldSpaceTime.getInstance().getRandomGenerator());
 
-            target.receive(amount);
-            return true;
-        } else {
-            return false;
-        }
+        target.receive(amount);
+        return true;
     }
 
     protected int getBonusDamage_() {

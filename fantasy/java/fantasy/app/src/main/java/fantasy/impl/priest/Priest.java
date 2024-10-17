@@ -6,6 +6,7 @@ import fantasy.impl.data.IntegerInterval;
 import fantasy.impl.deathknight.DeathKnight;
 import fantasy.impl.item.Weapon;
 import fantasy.impl.resource.ManaResource;
+import fantasy.impl.resource.cost.BaseManaCost;
 import fantasy.impl.spacetime.WorldSpaceTime;
 import fantasy.intf.Skill;
 import org.slf4j.Logger;
@@ -30,6 +31,11 @@ public class Priest extends AbstractCharacter {
     @Override
     protected void onAttackWithOffHand_() {
         // nothing
+    }
+
+    @Override
+    public boolean hasResourceFor(Skill skill) {
+        return this.resource_.hasResourceFor(skill, this);
     }
 
     @Override

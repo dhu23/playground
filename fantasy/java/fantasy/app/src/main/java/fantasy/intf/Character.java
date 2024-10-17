@@ -22,6 +22,7 @@ public interface Character extends Named {
     Duration mainHandAttackSpeed();
     Optional<Duration> offHandAttackSpeed();
 
+    boolean hasResourceFor(Skill skill);
     boolean consumeResource(Skill skill);
     void setSkill(Skill skill);
     void setTalent(Talent talent);
