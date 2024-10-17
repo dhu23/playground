@@ -34,7 +34,9 @@ public class LogUtils {
                        SkillUtils.AmountType amountType, String skillName, int amount, boolean critical) {
         switch (amountType) {
            case Healing -> {
-
+                String line = String.format("%s's %s heals %d to %s",
+                        caster.name(), skillName, amount, target.name());
+                logger.info(line);
             }
             default -> {
                 String line = String.format("%s's %s inflicts %d damage to %s",
