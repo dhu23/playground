@@ -1,6 +1,7 @@
 package math.game;
 
 import javax.swing.*;
+import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Random;
@@ -15,13 +16,15 @@ public class MathGame extends JFrame implements ActionListener {
 
     private final JButton confirm;
     private final JLabel answer;
+    private final JTextArea journal;
 
     private final JButton playAgain;
 
     private Expression mathQuestion;
+    private boolean questionLogged;
 
     public MathGame() {
-        setSize(560, 200);
+        setSize(560, 450);
         setLocation(768, 256);
         setTitle("Math Game!");
 
@@ -72,6 +75,14 @@ public class MathGame extends JFrame implements ActionListener {
         answer.setFont(new Font(null, Font.PLAIN, 20));
         centerPanel.add(answer);
 
+        journal = new JTextArea("Journal:\n", 16, 40);
+        journal.setEditable(false);
+        // always keep the focus at the last line of TextArea
+        DefaultCaret journalCaret = (DefaultCaret) journal.getCaret();
+        journalCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+        JScrollPane journalScrollPane = new JScrollPane(journal);
+        centerPanel.add(journalScrollPane);
+
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
         add(mainPanel);
@@ -90,10 +101,18 @@ public class MathGame extends JFrame implements ActionListener {
         } else if (choice == 1) {
             mathQuestion = Subtraction.makeSubtraction(rand, 100);
         } else {
-            mathQuestion = Multiplication.makeMultiplication(rand, 200);
+            mathQuestion = Multiplication.makeMultiplication(rand, 256);
         }
         question.setText(mathQuestion.display());
         answer.setText("Answer = ?");
+        questionLogged = false;
+    }
+
+    private void logQuestion() {
+        if (!questionLogged) {
+            journal.append(String.format("%s = %s\n", mathQuestion.display(), mathQuestion.getValue()));
+            questionLogged = true;
+        }
     }
 
     @Override
@@ -102,7 +121,9 @@ public class MathGame extends JFrame implements ActionListener {
         System.out.println("command=" + command);
         if (command.equals(DISPLAY_ANSWER_COMMAND)) {
             answer.setText(String.format("Answer = %d", mathQuestion.getValue()));
+            logQuestion();
         } else if (command.equals(PLAY_AGAIN_COMMAND)) {
+            logQuestion();
             makeQuestion();
         }
     }

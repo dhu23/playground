@@ -24,8 +24,8 @@ public class Addition implements Expression {
     }
 
     public static Addition makeAddition(Random random, int sumLimit) {
-        int left = random.nextInt(sumLimit);
-        int right = random.nextInt(sumLimit - left);
+        int left = random.nextInt(1, sumLimit);
+        int right = random.nextInt(1, sumLimit - left + 1);
         return new Addition(left, right);
     }
 }

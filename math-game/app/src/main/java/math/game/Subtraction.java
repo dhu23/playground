@@ -24,7 +24,7 @@ public class Subtraction implements Expression {
     }
 
     public static Subtraction makeSubtraction(Random random, int limit) {
-        int minuend = random.nextInt(1, limit);
-        return new Subtraction(minuend, random.nextInt(minuend));
+        int minuend = random.nextInt(2, limit + 1);
+        return new Subtraction(minuend, random.nextInt(1, minuend));
     }
 }

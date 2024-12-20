@@ -24,9 +24,13 @@ public class Multiplication implements Expression {
     }
 
     public static Multiplication makeMultiplication(Random random, int productLimit) {
-        int half = productLimit / 2;
-        int left = random.nextInt(2, half);
-        int right = random.nextInt( productLimit / left);
-        return new Multiplication(left, right);
+        int root = (int) Math.sqrt(productLimit);
+        int left = random.nextInt(2, root);
+        int right = random.nextInt(2, productLimit / left + 1);
+
+        if (random.nextDouble() < 0.5) {
+            return new Multiplication(left, right);
+        }
+        return new Multiplication(right, left);
     }
 }
