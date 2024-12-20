@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.List;
 import java.util.Random;
 
 public class MathGame extends JFrame implements ActionListener {
@@ -12,14 +13,26 @@ public class MathGame extends JFrame implements ActionListener {
     private static final String PLAY_AGAIN_COMMAND = "PlayAgain";
 
     private final Random rand = new Random();
-    private final JLabel question;
 
+    // entire UI
+    private final JPanel mainPanel = new JPanel();
+    private final CardLayout mainCardLayout = new CardLayout();
+    private int cardLayoutIndex = 1;
+    private final List<String> cardLayoutNames = List.of("Welcome", "Game");
+
+    // welcome UI
+    private final JPanel welcomePanel = new JPanel();
+    private final JLabel welcome;
+
+    // play UI
+    private final JPanel playPanel = new JPanel();
+    private final JLabel question;
     private final JButton confirm;
     private final JLabel answer;
     private final JTextArea journal;
-
     private final JButton playAgain;
 
+    // game mechanism
     private Expression mathQuestion;
     private boolean questionLogged;
 
@@ -35,12 +48,31 @@ public class MathGame extends JFrame implements ActionListener {
             }
         });
 
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BorderLayout());
+        mainPanel.setLayout(mainCardLayout);
 
-        // bottom corner
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.setLayout(new GridLayout(1, 3));
+        // welcome panel setup
+        welcomePanel.setLayout(new BorderLayout());
+        // welcome top corner
+        JPanel welcomeTopPanel = new JPanel();
+        welcomeTopPanel.setLayout(new FlowLayout());
+
+        welcome = new JLabel();
+        welcome.setFont(new Font(null, Font.PLAIN, 40));
+        welcome.setText("Welcome");
+
+        welcomeTopPanel.add(welcome);
+        welcomePanel.add(welcomeTopPanel, BorderLayout.NORTH);
+
+        // welcome center corner
+        JPanel welcomeCenterPanel = new JPanel();
+        welcomeCenterPanel.setLayout(new FlowLayout());
+
+        // play panel setup
+        playPanel.setLayout(new BorderLayout());
+
+        // play panel bottom corner
+        JPanel playBottomPanel = new JPanel();
+        playBottomPanel.setLayout(new GridLayout(1, 3));
 
         confirm = new JButton("Display Answer");
         confirm.setActionCommand(DISPLAY_ANSWER_COMMAND);
@@ -50,28 +82,28 @@ public class MathGame extends JFrame implements ActionListener {
         playAgain.setActionCommand(PLAY_AGAIN_COMMAND);
         playAgain.addActionListener(this);
 
-        bottomPanel.add(confirm);
-        bottomPanel.add(playAgain);
+        playBottomPanel.add(confirm);
+        playBottomPanel.add(playAgain);
 
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+        playPanel.add(playBottomPanel, BorderLayout.SOUTH);
 
-        // top corner
-        JPanel topPanel = new JPanel();
-        topPanel.setLayout(new FlowLayout());
+        // play panel top corner
+        JPanel playTopPanel = new JPanel();
+        playTopPanel.setLayout(new FlowLayout());
 
         question = new JLabel();
         question.setFont(new Font(null, Font.PLAIN, 48));
-        topPanel.add(question);
+        playTopPanel.add(question);
 
-        mainPanel.add(topPanel, BorderLayout.NORTH);
+        playPanel.add(playTopPanel, BorderLayout.NORTH);
 
-        // center corner
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new FlowLayout());
+        // play panel center corner
+        JPanel playCenterPanel = new JPanel();
+        playCenterPanel.setLayout(new FlowLayout());
 
         answer = new JLabel();
         answer.setFont(new Font(null, Font.PLAIN, 20));
-        centerPanel.add(answer);
+        playCenterPanel.add(answer);
 
         journal = new JTextArea("Journal:\n", 16, 40);
         journal.setEditable(false);
@@ -79,11 +111,16 @@ public class MathGame extends JFrame implements ActionListener {
         DefaultCaret journalCaret = (DefaultCaret) journal.getCaret();
         journalCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
         JScrollPane journalScrollPane = new JScrollPane(journal);
-        centerPanel.add(journalScrollPane);
+        playCenterPanel.add(journalScrollPane);
 
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        playPanel.add(playCenterPanel, BorderLayout.CENTER);
+
+        mainPanel.add(welcomePanel, cardLayoutNames.get(0));
+        mainPanel.add(playPanel, cardLayoutNames.get(1));
 
         add(mainPanel);
+
+        mainCardLayout.show(mainPanel, cardLayoutNames.get(cardLayoutIndex));
 
         makeQuestion();
 
