@@ -3,27 +3,25 @@ package math.game;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import javax.swing.event.*;
 import java.util.Random;
 
 public class MathGame extends JFrame implements ActionListener {
 
-    private static final String CONFIRM_COMMAND = "Confirm";
+    private static final String DISPLAY_ANSWER_COMMAND = "DisplayAnswer";
     private static final String PLAY_AGAIN_COMMAND = "PlayAgain";
 
     private final Random rand = new Random();
     private final JLabel question;
 
     private final JButton confirm;
-    private final JLabel result;
-    private final JButton playAgain;
+    private final JLabel answer;
 
-    private JLabel answer;
+    private final JButton playAgain;
 
     private Expression mathQuestion;
 
     public MathGame() {
-        setSize(560, 400);
+        setSize(560, 200);
         setLocation(768, 256);
         setTitle("Math Game!");
 
@@ -37,38 +35,31 @@ public class MathGame extends JFrame implements ActionListener {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
 
-        // left corner
-        // JPanel leftPanel = new JPanel();
-        // leftPanel.setLayout(new FlowLayout());
-        // mainPanel.add(leftPanel, BorderLayout.WEST);
-
-
         // bottom corner
         JPanel bottomPanel = new JPanel();
         bottomPanel.setLayout(new GridLayout(1, 3));
 
-        confirm = new JButton("Confirm");
-        confirm.setActionCommand(CONFIRM_COMMAND);
+        confirm = new JButton("Display Answer");
+        confirm.setActionCommand(DISPLAY_ANSWER_COMMAND);
         confirm.addActionListener(this);
 
-        result = new JLabel("");
+//        result = new JLabel("");
 
         playAgain = new JButton("Play Again");
         playAgain.setActionCommand(PLAY_AGAIN_COMMAND);
         playAgain.addActionListener(this);
 
         bottomPanel.add(confirm);
-        bottomPanel.add(result);
         bottomPanel.add(playAgain);
 
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         // top corner
         JPanel topPanel = new JPanel();
-        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+        topPanel.setLayout(new FlowLayout());
 
         question = new JLabel();
-
+        question.setFont(new Font(null, Font.PLAIN, 48));
         topPanel.add(question);
 
         mainPanel.add(topPanel, BorderLayout.NORTH);
@@ -77,54 +68,42 @@ public class MathGame extends JFrame implements ActionListener {
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new FlowLayout());
 
+        answer = new JLabel();
+        answer.setFont(new Font(null, Font.PLAIN, 20));
+        centerPanel.add(answer);
+
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
         add(mainPanel);
 
-        mathQuestion = makeQuestion();
+        makeQuestion();
 
         setVisible(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         // frame.pack(); // this would squeeze everything and pack up
     }
 
-    // private void setupQuestion() {
-    //     a = rand.nextInt(20);
-    //     b = rand.nextInt(20);
-    //     question.setText(String.format("%s + %s", a, b));
-    //     result.setText("");
-    //     confirm.setEnabled(true);
-    //     playAgain.setEnabled(false);
-    // }
-
-    private Expression makeQuestion() {
+    private void makeQuestion() {
         int choice = rand.nextInt(3);
         if (choice == 0) {
-            return TwoOperandAddition.makeAddition(rand, 800);
+            mathQuestion = Addition.makeAddition(rand, 1500);
         } else if (choice == 1) {
-            return TwoOperationSubtraction.makeSubtraction(rand, 100);
+            mathQuestion = Subtraction.makeSubtraction(rand, 100);
         } else {
-            return TwoOperandMultiplication.makeMultiplication(rand, 200);
+            mathQuestion = Multiplication.makeMultiplication(rand, 200);
         }
+        question.setText(mathQuestion.display());
+        answer.setText("Answer = ?");
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
         System.out.println("command=" + command);
-        if (command.equals(CONFIRM_COMMAND)) {
-            // if (ansVal == a + b) {
-            //     result.setText("Correct");
-            //     playAgain.setEnabled(true);
-            //     confirm.setEnabled(false);
-            //     journal.append(String.format("%d + %d = %d (right)\n", a, b, a+b));
-            // } else {
-            //     result.setText("Try again!");
-            //     journal.append(String.format("%d + %d = %d (wrong)\n", a, b, ansVal));
-            // }
+        if (command.equals(DISPLAY_ANSWER_COMMAND)) {
+            answer.setText(String.format("Answer = %d", mathQuestion.getValue()));
         } else if (command.equals(PLAY_AGAIN_COMMAND)) {
-            // setupQuestion();
-            mathQuestion = makeQuestion();
+            makeQuestion();
         }
     }
 }
