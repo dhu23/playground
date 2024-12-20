@@ -46,8 +46,6 @@ public class MathGame extends JFrame implements ActionListener {
         confirm.setActionCommand(DISPLAY_ANSWER_COMMAND);
         confirm.addActionListener(this);
 
-//        result = new JLabel("");
-
         playAgain = new JButton("Play Again");
         playAgain.setActionCommand(PLAY_AGAIN_COMMAND);
         playAgain.addActionListener(this);
