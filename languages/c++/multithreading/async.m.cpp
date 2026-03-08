@@ -2,6 +2,7 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include <format>
 
 // added for dot product example
 #include <random>
@@ -73,7 +74,9 @@ void test2()
 int factorial3(std::future<int>& f)
 {
     int res = 1;
+    std::cout << "waiting to get input" << std::endl;
     int n = f.get();
+    std::cout << "received n=" << n << std::endl;
     for (int i = n; i > 1; --i) { res *= i; }
     std::cout << "factorial3 is " << res << std::endl;
     return res;
@@ -88,6 +91,7 @@ void test3()
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
+    std::cout << "setting input via promise future to 4" << std::endl;
     p.set_value(4);
     int x = fut.get();
     std::cout << "get from child task:" << x << std::endl;
@@ -150,10 +154,17 @@ void test6()
     // auto y = f.get() or void y = f.get() cannot compile
 }
 
+std::string formatTimepoint(std::chrono::system_clock::time_point tp) {
+    return std::format("{:%Y:%m:%d %H:%M:%S}", tp);
+}
+
 // Eager or lazy evaluation
 void test7()
 {
     auto begin = std::chrono::system_clock::now();
+    std::cout << "begin timestamp: " << formatTimepoint(begin) << std::endl;
+
+    // deferred lazy task is called upon at future.get()
     auto asyncLazy = std::async(
         std::launch::deferred, 
         []{ return std::chrono::system_clock::now(); });
@@ -163,20 +174,28 @@ void test7()
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    auto lazyStart = asyncLazy.get() - begin;
-    auto eagerStart = asyncEager.get() - begin;
+    // launched function executed after sleep_for is done
+    auto lazyTimepoint = asyncLazy.get();
+    // launched function executed right away after launch
+    auto eagerTimepoint = asyncEager.get();
+
+    auto lazyStart = lazyTimepoint - begin;
+    auto eagerStart = eagerTimepoint - begin;
 
     auto lazyDuration = std::chrono::duration<double>(lazyStart).count();
     auto eagerDuration = std::chrono::duration<double>(eagerStart).count();
 
-    std::cout 
-        << "asyncLazy evaluated after: " << lazyDuration << " seconds" 
+    std::cout
+        << "lazy timestamp: " << formatTimepoint(lazyTimepoint)
+        << ", asyncLazy evaluated after: " << lazyDuration << " seconds" 
         << std::endl;
 
     std::cout 
-        << "asyncEager evaluated after: " << eagerDuration << " seconds"
+        << "eager timestamp: " << formatTimepoint(eagerTimepoint)
+        << ", asyncEager evaluated after: " << eagerDuration << " seconds"
         << std::endl;
-
+    // since deferred happens when the result is needed
+    // eager timestamp is much earlier than deferred timestamp
     std::cout << std::endl;
 }
 
@@ -356,8 +375,8 @@ int main(int argc, char* argv[])
     // test4();
     // test5();
     // test6();
-    // test7();
-    test8();
-    test9();
+    test7();
+    // test8();
+    // test9();
     return 0;
 }
