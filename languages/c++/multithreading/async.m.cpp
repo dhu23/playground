@@ -1,6 +1,7 @@
 #include <future>
 #include <chrono>
 #include <iostream>
+#include <thread>
 
 // added for dot product example
 #include <random>
