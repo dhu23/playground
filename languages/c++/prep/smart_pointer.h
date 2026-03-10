@@ -15,10 +15,10 @@ public:
     UniquePointer(const T& data);
     
     UniquePointer(const UniquePointer<T>& p) = delete;
-    UniquePointer& operator=(const UniquePointer<T>& p) = delete;
+    UniquePointer<T>& operator=(const UniquePointer<T>& p) = delete;
     
     UniquePointer(UniquePointer<T>&& p);
-    UniquePointer& operator=(UniquePointer<T>&& p);
+    UniquePointer<T>& operator=(UniquePointer<T>&& p);
 
     ~UniquePointer();
 
@@ -26,16 +26,20 @@ public:
     T* release();
     
     // returns the managed resource
-    T* get() const;
+    const T* get() const;
+    T* get();
 
     // update the managed resource to the new resource
     void reset(T* ptr);
     
     // get the internal managed resource object
     T& operator*();
+    const T& operator*() const;
 
     // get the internal pointer
     T* operator->() const;
+
+    operator bool() const;
 
 private:
     void clear();
@@ -63,6 +67,7 @@ UniquePointer<T>::operator=(UniquePointer<T>&& p) {
     this->clear();
     obj_ = p.obj_;
     p.obj_ = nullptr;
+    return *this;
 }
 
 template<typename T>
@@ -78,9 +83,15 @@ UniquePointer<T>::release() {
     return ret;
 }
 
+template <typename T> 
+const T*
+UniquePointer<T>::get() const {
+     return this->obj_; 
+}
+
 template<typename T>
 T*
-UniquePointer<T>::get() const {
+UniquePointer<T>::get() {
     return this->obj_;
 }
 
@@ -96,10 +107,21 @@ UniquePointer<T>::operator*() {
     return *(this->obj_);
 }
 
+template <typename T> 
+const T&
+UniquePointer<T>::operator*() const {
+     return *(this->obj_); 
+}
+
 template<typename T>
 T*
 UniquePointer<T>::operator->() const {
-    return this->get();
+    return this->obj_;
+}
+
+template<typename T>
+UniquePointer<T>::operator bool() const {
+    return nullptr != this->obj_;
 }
 
 template<typename T>
@@ -114,7 +136,22 @@ UniquePointer<T>::clear() {
 
 template<typename T>
 class SharedPointer {
+    struct ReferenceCounter {
 
+    };
+    ReferenceCounter* rc_;
+    T* obj_;
+public:
+    SharedPointer();
+    SharedPointer(T* p);
+    SharedPointer(const T& data);
+
+    SharedPointer(const SharedPointer<T>& other);
+    SharedPointer<T>& operator=(const SharedPointer<T>& other);
+
+    SharedPointer(SharedPointer<T>&& other);
+    SharedPointer<T>& operator=(SharedPointer<T>&& other);
 };
+
 
 #endif
