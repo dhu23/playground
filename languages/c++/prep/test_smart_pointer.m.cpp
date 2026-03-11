@@ -36,25 +36,23 @@ struct TestUniquePointer {
 
     static void test_creation() {
         std::cout << "========= test creation =========" << std::endl;
-        Point2D p{2, 3};
-
-        UniquePointer<Point2D> ptr{p};
+        UniquePointer<Point2D> ptr{};
         print(ptr);
     }
 
     static void test_move_construction() {
         std::cout << "========= test move ctor =========" << std::endl;
-        Point2D p{2, 3};
+        UniquePointer<Point2D> ptr1{UniquePointer<Point2D>{new Point2D{2, 3}}};
+        print(ptr1);
 
-        UniquePointer<Point2D> ptr{UniquePointer<Point2D>{p}};
-        print(ptr);
+        UniquePointer<Point2D> ptr2(std::move(ptr1));
+        print(ptr1);
+        print(ptr2);
     }
 
     static void test_move_assignment() {
         std::cout << "========= test move assign =========" << std::endl;
-        Point2D p{2, 3};
-
-        UniquePointer<Point2D> ptr{UniquePointer<Point2D>{p}};
+        UniquePointer<Point2D> ptr{new Point2D{2, 3}};
         UniquePointer<Point2D> another;
         
         std::cout << "newly created empty ptr: " << std::endl;

@@ -9,10 +9,10 @@
 //    - no copy sematics support 
 template<typename T>
 class UniquePointer {
-    T* obj_;
+    T* pObj_;
 public:
     UniquePointer();
-    UniquePointer(const T& data);
+    UniquePointer(T* ptr);
     
     UniquePointer(const UniquePointer<T>& p) = delete;
     UniquePointer<T>& operator=(const UniquePointer<T>& p) = delete;
@@ -47,26 +47,26 @@ private:
 
 template<typename T>
 UniquePointer<T>::UniquePointer()
-:obj_(nullptr) {
+: pObj_(nullptr) {
 }
 
 template<typename T>
-UniquePointer<T>::UniquePointer(const T& data)
-:obj_(new T(data)) {
+UniquePointer<T>::UniquePointer(T* ptr)
+: pObj_(ptr) {    
 }
 
 template<typename T>
 UniquePointer<T>::UniquePointer(UniquePointer<T>&& rhs)
-:obj_(rhs.obj_) {
-    rhs.obj_ = nullptr;
+: pObj_(rhs.pObj_) {
+    rhs.pObj_ = nullptr;
 }
 
 template<typename T>
 UniquePointer<T>&
 UniquePointer<T>::operator=(UniquePointer<T>&& p) {
     this->clear();
-    obj_ = p.obj_;
-    p.obj_ = nullptr;
+    pObj_ = p.pObj_;
+    p.pObj_ = nullptr;
     return *this;
 }
 
@@ -78,21 +78,21 @@ UniquePointer<T>::~UniquePointer() {
 template<typename T>
 T*
 UniquePointer<T>::release() {
-    T* ret = this->obj_;
-    this->obj_ = nullptr;
+    T* ret = this->pObj_;
+    this->pObj_ = nullptr;
     return ret;
 }
 
 template <typename T> 
 const T*
 UniquePointer<T>::get() const {
-     return this->obj_; 
+     return this->pObj_; 
 }
 
 template<typename T>
 T*
 UniquePointer<T>::get() {
-    return this->obj_;
+    return this->pObj_;
 }
 
 template<typename T>
@@ -104,31 +104,31 @@ UniquePointer<T>::reset(T* ptr) {
 template<typename T>
 T&
 UniquePointer<T>::operator*() {
-    return *(this->obj_);
+    return *(this->pObj_);
 }
 
 template <typename T> 
 const T&
 UniquePointer<T>::operator*() const {
-     return *(this->obj_); 
+     return *(this->pObj_); 
 }
 
 template<typename T>
 T*
 UniquePointer<T>::operator->() const {
-    return this->obj_;
+    return this->pObj_;
 }
 
 template<typename T>
 UniquePointer<T>::operator bool() const {
-    return nullptr != this->obj_;
+    return nullptr != this->pObj_;
 }
 
 template<typename T>
 void 
 UniquePointer<T>::clear() {
-    if (this->obj_) {
-        delete this->obj_;
+    if (this->pObj_) {
+        delete this->pObj_;
     }
 }
 
@@ -136,22 +136,109 @@ UniquePointer<T>::clear() {
 
 template<typename T>
 class SharedPointer {
-    struct ReferenceCounter {
-
-    };
-    ReferenceCounter* rc_;
-    T* obj_;
+    int* pRefCount_;
+    T* pObj_;
 public:
     SharedPointer();
     SharedPointer(T* p);
-    SharedPointer(const T& data);
 
     SharedPointer(const SharedPointer<T>& other);
     SharedPointer<T>& operator=(const SharedPointer<T>& other);
 
     SharedPointer(SharedPointer<T>&& other);
     SharedPointer<T>& operator=(SharedPointer<T>&& other);
+
+    ~SharedPointer();
+
+private:
+    int countUp();
+    int countDown();
 };
+
+template<typename T>
+SharedPointer<T>::SharedPointer()
+: pRefCount_(nullptr)
+, pObj_(nullptr) {
+}
+
+template<typename T>
+SharedPointer<T>::SharedPointer(T* p)
+: pRefCount_(new int(1))
+, pObj_(p) {
+}
+
+template<typename T>
+SharedPointer<T>::SharedPointer(const SharedPointer<T>& other)
+: pRefCount_(other.pRefCount_)
+, pObj_(other.pObj_) {
+    this->countUp();
+}
+
+template<typename T>
+SharedPointer<T>&
+SharedPointer<T>::operator=(const SharedPointer<T>& other) {
+    // cases to consider in copy assignment:
+    // 1. nullptr <- nullptr
+    // 2. nullptr <- another-valid-ptr
+    // 3. valid-ptr <- nullptr
+    // 4. valid-ptr <- another-valid-ptr
+    // 4. valid-ptr <- valid-ptr
+    if (other.pObj_ != this->pObj_) {
+        // if this is empty or this is different from other         
+        this->countDown(); // no-op when this is empty
+        this->pRefCount_ = other.pRefCount_;
+        this->pObj_ = other.pObj_;
+        this->countUp();
+    }
+    return *this;
+}
+
+template<typename T>
+SharedPointer<T>::SharedPointer(SharedPointer<T>&& other)
+: pRefCount_(other.pRefCount_)
+, pObj_(other.pObj_) {
+    other.pRefCount_ = nullptr;
+    other.pObj_ = nullptr;
+}
+
+template<typename T>
+SharedPointer<T>&
+SharedPointer<T>::operator=(SharedPointer<T>&& other) {
+    if (other.pObj_ == this->pObj_ || !this->pObj_) {
+        other.pRefCount_ = nullptr;
+        other.pObj_ = nullptr;
+        return *this;
+    }
+    
+}
+
+template<typename T>
+SharedPointer<T>::~SharedPointer() {
+    this->countDown();
+}
+
+template<typename T>
+int
+SharedPointer<T>::countUp() {
+    if (!this->pRefCount_) {
+        this->pRefCount_ = new int(0);
+    }
+    return ++(*this->pRefCount_);
+}
+
+template<typename T>
+int
+SharedPointer<T>::countDown() {
+    if (!this->pRefCount_ || 0 == *this->pRefCount_) {
+        return 0;
+    }
+    int ret = --(*this->pRefCount_);
+    if (ret == 0 && this->pObj_) {
+        delete this->pObj_;
+        this->pObj_ = nullptr;
+    }
+    return ret;
+}
 
 
 #endif
