@@ -1,6 +1,30 @@
 #ifndef SMART_POINTER_H
 #define SMART_POINTER_H
 
+#include <iostream>
+
+template<typename T>
+struct MemoryWrapper {
+    T* pObj_;
+
+    T* get() const {
+        return this->pObj_;
+    }
+
+    operator bool() const {
+        return nullptr != this->pObj_;
+    }
+
+    T& operator*() const {
+        return *this->pObj_;
+    }
+
+    T* operator->() const {
+        return this->get();
+    }
+};
+
+
 // mimic unique pointer from standard library
 // it owns the memory resource,
 //    - acquire memory on constructor
@@ -150,7 +174,17 @@ public:
 
     ~SharedPointer();
 
-private:
+    T* get() const { return this->pObj_; }
+
+    operator bool() const { return nullptr != this->pObj_; }
+
+    T& operator*() const { return *this->pObj_; }
+
+    T* operator->() const { return this->get(); }
+
+    int* getRefCount() const { return pRefCount_; }
+
+  private:
     int countUp();
     int countDown();
 };
@@ -188,7 +222,7 @@ SharedPointer<T>::operator=(const SharedPointer<T>& other) {
         this->countDown(); // no-op when this is empty
         this->pRefCount_ = other.pRefCount_;
         this->pObj_ = other.pObj_;
-        this->countUp();
+        this->countUp(); // no-op when the new state is empty
     }
     return *this;
 }
@@ -204,12 +238,17 @@ SharedPointer<T>::SharedPointer(SharedPointer<T>&& other)
 template<typename T>
 SharedPointer<T>&
 SharedPointer<T>::operator=(SharedPointer<T>&& other) {
-    if (other.pObj_ == this->pObj_ || !this->pObj_) {
+    if (other.pObj_ != this->pObj_) {
+        if (this->pObj_) {
+            this->countDown();
+        }
+        this->pRefCount_ = other.pRefCount_;
+        this->pObj_ = other.pObj_;
         other.pRefCount_ = nullptr;
         other.pObj_ = nullptr;
-        return *this;
     }
-    
+
+    return *this;
 }
 
 template<typename T>
@@ -220,18 +259,27 @@ SharedPointer<T>::~SharedPointer() {
 template<typename T>
 int
 SharedPointer<T>::countUp() {
-    if (!this->pRefCount_) {
-        this->pRefCount_ = new int(0);
+    if (this->pRefCount_) {
+        return ++(*this->pRefCount_);
     }
-    return ++(*this->pRefCount_);
+    return 0;
 }
 
 template<typename T>
 int
 SharedPointer<T>::countDown() {
     if (!this->pRefCount_ || 0 == *this->pRefCount_) {
+        std::cout << "destructing null " << pObj_ << ", refCount:" << pRefCount_
+                  << std::endl;
         return 0;
     }
+    std::cout << "destructing ";
+    if (pObj_) {
+        std::cout << *pObj_;
+    } else {
+        std::cout << "NoObj";
+    }
+    std::cout << ", refCount:" << *pRefCount_ << '(' << pRefCount_ << ')' << std::endl;
     int ret = --(*this->pRefCount_);
     if (ret == 0 && this->pObj_) {
         delete this->pObj_;
