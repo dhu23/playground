@@ -3,27 +3,6 @@
 
 #include <iostream>
 
-template<typename T>
-struct MemoryWrapper {
-    T* pObj_;
-
-    T* get() const {
-        return this->pObj_;
-    }
-
-    operator bool() const {
-        return nullptr != this->pObj_;
-    }
-
-    T& operator*() const {
-        return *this->pObj_;
-    }
-
-    T* operator->() const {
-        return this->get();
-    }
-};
-
 
 // mimic unique pointer from standard library
 // it owns the memory resource,
@@ -153,6 +132,7 @@ void
 UniquePointer<T>::clear() {
     if (this->pObj_) {
         delete this->pObj_;
+        this->pObj_ = nullptr;
     }
 }
 
@@ -211,6 +191,9 @@ SharedPointer<T>::SharedPointer(const SharedPointer<T>& other)
 template<typename T>
 SharedPointer<T>&
 SharedPointer<T>::operator=(const SharedPointer<T>& other) {
+    if (&other == this) {
+        return *this;
+    }
     // cases to consider in copy assignment:
     // 1. nullptr <- nullptr
     // 2. nullptr <- another-valid-ptr
@@ -284,6 +267,8 @@ SharedPointer<T>::countDown() {
     if (ret == 0 && this->pObj_) {
         delete this->pObj_;
         this->pObj_ = nullptr;
+        delete this->pRefCount_;
+        this->pRefCount_ = nullptr;
     }
     return ret;
 }

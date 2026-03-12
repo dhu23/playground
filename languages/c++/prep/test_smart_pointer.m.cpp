@@ -7,8 +7,19 @@
 
 
 struct Point2D {
+    static int ALIVE;
+
     int x;
     int y;
+
+    Point2D(int x, int y): x(x), y(y) {
+        ++Point2D::ALIVE;
+    }
+
+    ~Point2D() {
+        --Point2D::ALIVE;
+    }
+
     std::ostream& print(std::ostream& os) const {
         os << '(' << x << ',' << y << ')';
         return os; 
@@ -19,6 +30,12 @@ struct Point2D {
         return oss.str();
     }
 };
+
+int Point2D::ALIVE = 0;
+
+void printAlive() {
+    std::cout << "Alive:" << Point2D::ALIVE << std::endl;
+}
 
 std::ostream& operator<<(std::ostream& os, const Point2D& p) {
     p.print(os);
@@ -151,6 +168,8 @@ struct TestSharedPointer {
         print("assignee", assignee);
         print("sourcePtr1", sourcePtr1);
         print("sourcePtr2", sourcePtr2);
+
+        printAlive();
     }
 
     static void testMoveConstructor() {
@@ -164,6 +183,8 @@ struct TestSharedPointer {
         SharedPointer<Point2D> another(std::move(ptr));
         print("another", another);
         print("ptr", ptr);
+
+        printAlive();
     }
 
     static void testMoveAssignment() {
@@ -196,6 +217,8 @@ int main(int argc, char* argv[]) {
     TestSharedPointer::testCopyAssignment();
     TestSharedPointer::testMoveConstructor();
     TestSharedPointer::testMoveAssignment();
+
+    printAlive();
     
     return 0;
 }
