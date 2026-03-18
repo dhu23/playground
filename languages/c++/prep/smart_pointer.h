@@ -67,6 +67,9 @@ UniquePointer<T>::UniquePointer(UniquePointer<T>&& rhs)
 template<typename T>
 UniquePointer<T>&
 UniquePointer<T>::operator=(UniquePointer<T>&& p) {
+    if (&p == this) {
+        return *this;
+    }
     this->clear();
     pObj_ = p.pObj_;
     p.pObj_ = nullptr;

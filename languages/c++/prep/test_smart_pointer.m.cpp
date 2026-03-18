@@ -82,7 +82,17 @@ struct TestUniquePointer {
         std::cout << "the original:" << std::endl;
         print(ptr);
     }
+
+    static void testSelfMove() {
+        std::cout << "======== test self shared point move ==========" << std::endl;
+        UniquePointer<Point2D> ptr{new Point2D{2, 3}};
+        ptr = std::move(ptr);
+
+        std::cout << "ptr after move:" << std::endl;
+        print(ptr); // shouldn't be null
+    }
 };
+
 
 
 struct TestSharedPointer {
@@ -209,6 +219,9 @@ int main(int argc, char* argv[]) {
     TestUniquePointer::testEmptyCreation();
     TestUniquePointer::testMoveConstruction();
     TestUniquePointer::testMoveAssignment();
+    TestUniquePointer::testSelfMove();
+
+    printAlive(); // should be 0
 
     std::cout << "------------- SHARED POINTER --------------" << std::endl;
     TestSharedPointer::testEmptyCreation();
@@ -218,7 +231,7 @@ int main(int argc, char* argv[]) {
     TestSharedPointer::testMoveConstructor();
     TestSharedPointer::testMoveAssignment();
 
-    printAlive();
+    printAlive(); // should be 0
     
     return 0;
 }
