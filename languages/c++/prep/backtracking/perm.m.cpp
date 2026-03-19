@@ -13,38 +13,7 @@
 #include <vector>
 #include <algorithm>
 // #include <unordered_set>
-
-
-std::ostream& printVec(std::ostream& os, const std::vector<int> &data) {
-    if (data.empty()) {
-        os << "[]";
-    } else {
-        os << '[' << data[0];
-        for (int i = 1; i < data.size(); ++i) {
-            os << ',' << data[i];
-        }
-        os << ']';
-    }
-    return os;
-}
-
-class Visitor {
-public:
-    Visitor() {}
-    virtual ~Visitor() {}
-
-    virtual void accept(const std::vector<int>& data) = 0;
-};
-
-class Printer : public Visitor {
-public:
-    Printer() {}
-    ~Printer() {}
-
-    void accept(const std::vector<int>& data) {
-        printVec(std::cout, data) << std::endl;
-    }
-};
+#include "utils.h"
 
 void 
 runPermutation(
@@ -187,6 +156,8 @@ void testState() {
     cs.print(std::cout) << std::endl;
 }
 
+// compile:
+// clang++ -std=c++20 -Iinclude utils.cpp perm.m.cpp -o perm.tsk
 
 int main(int argc, char* argv[]) {
     std::vector<int> original{1, 2, 3};
@@ -195,6 +166,8 @@ int main(int argc, char* argv[]) {
     permutation(original, p);
     testState();
     permutation_(original, 2, p);
+
+    permutation_(std::vector<int>{1, 2, 3, 4}, 3, p);
 
     return 0;
 }
