@@ -43,69 +43,6 @@ private:
         return os;
     }
 
-    bool hasCollision(int position, int value) const {
-        if (hasRowCollision(position, value)) {
-            return true;
-        }
-        if (hasColumnCollision(position, value)) {
-            return true;
-        }
-        if (hasBoxCollision(position, value)) {
-            return true;
-        }
-        return false;
-    }
-
-    bool hasRowCollision(int position, int value) const {
-        int rowIndex = position / 9;
-        for (int i = 0; i < 9; ++i) {
-            int candidateIndex = rowIndex * 9 + i;
-            if (candidateIndex == position) {
-                continue;
-            }
-            if (grid_[candidateIndex] == value) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool hasColumnCollision(int position, int value) const {
-        int columnIndex = position % 9;
-        for (int i = 0; i < 9; ++i) {
-            int candidateIndex = i * 9 + columnIndex;
-            if (candidateIndex == position) {
-                continue;
-            }
-            if (grid_[candidateIndex] == value) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool hasBoxCollision(int position, int value) const {
-        int rowIndex = position / 9;
-        int columnIndex = position % 9;
-
-        // get top-left box index
-        int boxCornerRowIndex = (rowIndex / 3) * 3;
-        int boxCornerColumnIndex = (columnIndex / 3) * 3;
-
-        for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                int candidateIndex = (boxCornerRowIndex + i) * 9 + boxCornerColumnIndex + j;
-                if (candidateIndex == position) {
-                    continue;
-                }
-                if (grid_[candidateIndex] == value) {
-                    return false;
-                }
-            }
-        }
-        return false;
-    }
-
 public:
     SudokuState(const std::array<int, 81>& puzzle)
     : grid_(puzzle)
@@ -147,13 +84,11 @@ public:
     }
 
     void backout() {
-        int pos = blankToFill_[indexBeingWorked_];
+        int pos = blankToFill_[--indexBeingWorked_];
         std::cout 
-            << "backing out pos=" << pos << "(index=" << indexBeingWorked_ << ')' 
-            << " blankTOFillSize=" << blankToFill_.size()
+            << "backing out pos=" << pos << "(index=" << indexBeingWorked_ << ')'
             << std::endl;
         grid_[pos] = 0;
-	    --indexBeingWorked_;
     }
 
     // print every row like this 
@@ -195,13 +130,68 @@ public:
         
         return os;
     }
+
+    bool hasCollision(int pos, int value) const {
+        return hasRowCollision(pos, value) 
+            || hasColumnCollision(pos, value) 
+            || hasBoxCollision(pos, value);
+    }
+
+    bool hasRowCollision(int position, int value) const {
+        int rowIndex = position / 9;
+        for (int i = 0; i < 9; ++i) {
+            int candidateIndex = rowIndex * 9 + i;
+            if (candidateIndex == position) {
+                continue;
+            }
+            if (grid_[candidateIndex] == value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool hasColumnCollision(int position, int value) const {
+        int columnIndex = position % 9;
+        for (int i = 0; i < 9; ++i) {
+            int candidateIndex = i * 9 + columnIndex;
+            if (candidateIndex == position) {
+                continue;
+            }
+            if (grid_[candidateIndex] == value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool hasBoxCollision(int position, int value) const {
+        int rowIndex = position / 9;
+        int columnIndex = position % 9;
+
+        // get top-left box index
+        int boxCornerRowIndex = (rowIndex / 3) * 3;
+        int boxCornerColumnIndex = (columnIndex / 3) * 3;
+  
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                int candidateIndex =
+                    (boxCornerRowIndex + i) * 9 + boxCornerColumnIndex + j;
+                if (candidateIndex == position) {
+                    continue;
+                }
+                if (grid_[candidateIndex] == value) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 };
 
 std::ostream& operator<<(std::ostream& os, const SudokuState& state) {
     return state.print(os, false);
 }
-
-static int COUNT = 0;
 
 
 void solveSudoku_(SudokuState& state) {
@@ -217,7 +207,8 @@ void solveSudoku_(SudokuState& state) {
             
             state.fill(nextPosition.value(), choice);
             solveSudoku_(state);
-	        // TODO position can be made internal to state
+            
+            // TODO position can be made internal to state
 	        state.backout();
         }
     }
@@ -255,8 +246,11 @@ int main(int argc, char* argv[]) {
         0, 0, 8, 6, 0, 0, 3, 0, 0
     };
 
-    //std::cout << puzzle << std::endl;
-    solveSudoku(easyPuzzle);
+    SudokuState hard{hardPuzzle};
+    std:: cout << hard.hasBoxCollision(19, 1) << std::endl;
+
+    // std::cout << puzzle << std::endl;
+    solveSudoku(hardPuzzle);
 
     return 0;
 }
