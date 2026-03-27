@@ -37,6 +37,38 @@
 - Thread pool, scheduler
 - Lock-free structure and programming
 
+## C++ polymorphism
+- Runtime polymorphism
+  - Modern improvements
+    - always use `overrides`
+    - always have a virtual destructor
+    - use smart pointers
+    - avoid raw ownership
+  - When to use
+    - Heterogeneous collections
+    - plugin-style systems
+    - you need runtime flexibility
+  - Tradeoffs
+    - Indirection (vtable)
+    - Heap allocation often involved
+    - Harder to optimize (a major cost in modern codebase) 
+- Compile-time polymorphism (templates/concepts)
+  - templates
+  - C++20 concepts
+  - Why is it modern?
+    - no vtable overhead
+    - fully inlined
+    - type-safe constraints (concepts)
+  - When to use?
+    - Performance-critical code
+    - Known types at compile time
+    - Generic libraries
+  - Tradeoffs
+    - Code bloat (template instantiations)
+    - cannot store different types easily in one container
+- Type-erasure (modern alternative to virtual)
+  - 
+
 ## C++ Problem Solving (Senior)
 ### Some selection from Cracking the Coding Interview
 ### Dynamic Programming modeling
