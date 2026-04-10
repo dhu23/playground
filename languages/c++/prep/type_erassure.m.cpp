@@ -1,5 +1,6 @@
 #include <iostream>
 #include <functional>
+#include <memory>
 
 struct Option {};
 struct MarketData {};
@@ -41,15 +42,16 @@ double priceOption(const Option& option, const MarketData& md) {
     return ret;
 }
 
-/////////////////////////////
+//////////////////////////////
 // concept based polymorphism
-/////////////////////////////
+//////////////////////////////
+
+// not significant enough in this problem
 
 
 ////////////////////////////////////
 // std::function based polymorphism
 ////////////////////////////////////
-
 class PricerByFunction {
     std::function<double(const Option&, const MarketData&)> function_;
 public:
@@ -73,6 +75,52 @@ public:
 //////////////////////////////////////////
 // Manual Type Erasure based Polymorphism
 //////////////////////////////////////////
+
+class PricerByTypeErasure {
+    class Concept {
+    public:
+        virtual ~Concept() = default;
+        virtual double run(const Option& op, const MarketData& md) = 0;
+    };
+
+    template<typename T>
+    class Model {};
+
+    template<>
+    class Model<BlackScholes> : public Concept {
+    public: 
+        double run(const Option& option, const MarketData& md) override {
+            return runBlackScholes(option, md);
+        }
+    };
+
+    template<>
+    class Model<MonteCarlo> : public Concept {
+    public:
+        double run(const Option &option, const MarketData &md) override {
+            return runMonteCarlo(option, md);
+        }
+    };
+
+    PricerByTypeErasure(const std::shared_ptr<Concept> &model)
+        : model_(model) {}
+
+    std::shared_ptr<Concept> model_;
+public:
+    static PricerByTypeErasure makeBlackScholesPricer() {
+        return PricerByTypeErasure(std::make_shared<Model<BlackScholes>>());
+    }
+
+    static PricerByTypeErasure makeMonteCarloPricer() {
+        return PricerByTypeErasure(std::make_shared<Model<MonteCarlo>>());
+    }
+
+    double run(const Option& option, const MarketData& md) {
+        double ret = model_->run(option, md);
+        std::cout << "ret=" << ret << std::endl;
+        return ret;
+    }
+};
 
 
 struct TestPricerTypeErasure {
@@ -99,6 +147,14 @@ struct TestPricerTypeErasure {
         pricer = runMonteCarlo;
         pricer.run(OPTION, MD);
     }
+
+    static void testPricerByTypeErasure() {
+        std::cout << "Test Pricer by type erasure" << std::endl;
+        PricerByTypeErasure pricer = PricerByTypeErasure::makeBlackScholesPricer();
+        pricer.run(OPTION, MD);
+        pricer = PricerByTypeErasure::makeMonteCarloPricer();
+        pricer.run(OPTION, MD);
+    }
 };
 
 const Option TestPricerTypeErasure::OPTION{};
@@ -109,5 +165,6 @@ const MarketData TestPricerTypeErasure::MD{};
 int main(int argc, char* argv[]) {
     TestPricerTypeErasure::testPricerByTemplate();
     TestPricerTypeErasure::testPricerByFunction();
+    TestPricerTypeErasure::testPricerByTypeErasure();
     return 0;
 }
