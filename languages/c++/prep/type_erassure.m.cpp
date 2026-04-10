@@ -14,38 +14,100 @@ double runMonteCarlo(const Option& option, const MarketData& md) {
     return 2.0;
 }
 
+struct BlackScholes {};
+struct MonteCarlo {};
+
+
+////////////////////////////////
+// templates based polymorphism 
+////////////////////////////////
+template<typename T>
+double priceOptionHelper(const Option& option, const MarketData& md);
+
+template<>
+double priceOptionHelper<BlackScholes>(const Option& option, const MarketData& md) {
+    return runBlackScholes(option, md);
+}
+
+template <>
+double priceOptionHelper<MonteCarlo>(const Option &option, const MarketData &md) {
+    return runMonteCarlo(option, md);
+}
+
+template<typename T>
+double priceOption(const Option& option, const MarketData& md) {
+    double ret = priceOptionHelper<T>(option, md);
+    std::cout << "ret=" << ret << std::endl;
+    return ret;
+}
+
+/////////////////////////////
+// concept based polymorphism
+/////////////////////////////
+
+
+////////////////////////////////////
+// std::function based polymorphism
+////////////////////////////////////
 
 class PricerByFunction {
     std::function<double(const Option&, const MarketData&)> function_;
 public:
-    PricerByFunction(std::function<double(const Option&, const MarketData&)> function)
-    : function_(function) {
+    // PricerByFunction(std::function<double(const Option&, const MarketData&)> function)
+    // : function_(function) {
+    // }
+
+    template<typename F>
+    PricerByFunction(F&& f)
+    : function_(std::forward<F>(f)) {
     }
 
     double run(const Option& option, const MarketData& md) {
-        return function_(option, md);
+        double ret = function_(option, md);
+        std::cout << "ret=" << ret << std::endl;
+        return ret;
     }
 };
 
 
-struct TestPricerTypeErassure {
+//////////////////////////////////////////
+// Manual Type Erasure based Polymorphism
+//////////////////////////////////////////
+
+
+struct TestPricerTypeErasure {
     static const Option OPTION;
     static const MarketData MD; 
 
+    static void testPricerByTemplate() {
+        std::cout << "Test Pricer By Template" << std::endl;
+        priceOption<BlackScholes>(OPTION, MD);
+        priceOption<MonteCarlo>(OPTION, MD);
+    }
+
     static void testPricerByFunction() {
+        std::cout << "Test Pricer by std::function" << std::endl;
         PricerByFunction pricerByBS(::runBlackScholes);
-        std::cout << pricerByBS.run(OPTION, MD);
+        pricerByBS.run(OPTION, MD);
 
         PricerByFunction pricerByMC(::runMonteCarlo);
-        std::cout << pricerByMC.run(OPTION, MD);
+        pricerByMC.run(OPTION, MD);
+
+        PricerByFunction pricer = runBlackScholes;
+        pricer.run(OPTION, MD);
+
+        pricer = runMonteCarlo;
+        pricer.run(OPTION, MD);
     }
 };
 
-const Option TestPricerTypeErassure::OPTION{};
-const MarketData TestPricerTypeErassure::MD{};
+const Option TestPricerTypeErasure::OPTION{};
+const MarketData TestPricerTypeErasure::MD{};
 
-// clang++ -std=c++20 type_erassure.m.cpp -o type_erassure.tsk
+
+// clang++ -std=c++20 type_erasure.m.cpp -o type_erasure.tsk
 int main(int argc, char* argv[]) {
-    TestPricerTypeErassure::testPricerByFunction();
+    TestPricerTypeErasure::testPricerByTemplate();
+    TestPricerTypeErasure::testPricerByFunction();
     return 0;
 }
