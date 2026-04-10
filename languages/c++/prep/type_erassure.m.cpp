@@ -1,6 +1,7 @@
 #include <iostream>
 #include <functional>
 #include <memory>
+#include <utility>
 
 struct Option {};
 struct MarketData {};
@@ -83,6 +84,7 @@ class PricerByTypeErasure {
         virtual double run(const Option& op, const MarketData& md) = 0;
     };
 
+    // If we use function or equivalent of function, then we can just reply on T
     template<typename T>
     class Model {};
 
@@ -107,6 +109,7 @@ class PricerByTypeErasure {
 
     std::shared_ptr<Concept> model_;
 public:
+    // however having these factory methods defeats the purpose of type erasure
     static PricerByTypeErasure makeBlackScholesPricer() {
         return PricerByTypeErasure(std::make_shared<Model<BlackScholes>>());
     }
@@ -122,6 +125,58 @@ public:
     }
 };
 
+/////////////////////////////////////////////////////
+// full blown manual type erasure based polymorphism
+/////////////////////////////////////////////////////
+
+// this is another wrapping for more full blown type erasure
+struct BlackScholesModel {
+    double run(const Option &option, const MarketData &md) {
+        return runBlackScholes(option, md);
+    }
+};
+
+struct MonteCarloModel {
+    double run(const Option &option, const MarketData &md) {
+        return runMonteCarlo(option, md);
+    }
+};
+
+template<typename T>
+concept PricingModel = requires(T model, const Option& option, const MarketData& md) {
+    { model.run(option, md) } -> std::same_as<double>;
+};
+
+class PricerByFullTypeErasure {
+    class Concept {
+    public:
+        virtual ~Concept() = default;
+        virtual double run(const Option& option, const MarketData& md) = 0;
+    };
+
+    template<PricingModel M>
+    class Model : public Concept {
+        M model_;
+    public:
+        Model(M&& model): model_(std::forward<M>(model)) {}
+        double run(const Option& option, const MarketData& md) override {
+            return model_.run(option, md);
+        }
+    };
+
+    // data member
+    std::unique_ptr<Concept> pModel_;
+
+public:
+    template<PricingModel M>
+    PricerByFullTypeErasure(M&& model)
+    : pModel_(std::move(std::make_unique<Model<M>>(std::forward<M>(model)))) {
+    }
+
+    double run(const Option& option, const MarketData& md) {
+        return pModel_->run(option, md);
+    }
+};
 
 struct TestPricerTypeErasure {
     static const Option OPTION;
@@ -155,6 +210,14 @@ struct TestPricerTypeErasure {
         pricer = PricerByTypeErasure::makeMonteCarloPricer();
         pricer.run(OPTION, MD);
     }
+
+    static void testPricerByFullTypeErasure() {
+        std::cout << "Test Pricer by FULL type erasure" << std::endl;
+        PricerByFullTypeErasure pricer = BlackScholesModel{};
+        pricer.run(OPTION, MD);
+        pricer = MonteCarloModel{};
+        pricer.run(OPTION, MD);
+    }
 };
 
 const Option TestPricerTypeErasure::OPTION{};
@@ -166,5 +229,6 @@ int main(int argc, char* argv[]) {
     TestPricerTypeErasure::testPricerByTemplate();
     TestPricerTypeErasure::testPricerByFunction();
     TestPricerTypeErasure::testPricerByTypeErasure();
+    TestPricerTypeErasure::testPricerByFullTypeErasure();
     return 0;
 }
