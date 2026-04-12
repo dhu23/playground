@@ -1,3 +1,5 @@
+// CTC interview question
+
 #include <iostream>
 #include <functional>
 #include <memory>
@@ -170,7 +172,7 @@ class PricerByFullTypeErasure {
 public:
     template<PricingModel M>
     PricerByFullTypeErasure(M&& model)
-    : pModel_(std::move(std::make_unique<Model<M>>(std::forward<M>(model)))) {
+    : pModel_(std::make_unique<Model<M>>(std::forward<M>(model))) {
     }
 
     double run(const Option& option, const MarketData& md) {
