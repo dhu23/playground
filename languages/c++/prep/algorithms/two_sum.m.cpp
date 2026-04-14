@@ -31,6 +31,8 @@ void runTwoSum(const std::vector<int>& data, int target) {
 
 
 int main(int argc, char* argv[]) {
+    // for input that's not sorted, sort that data first. 
+    // in this case, the overal complexity is O(NlogN) + O(N)
     std::vector<int> sortedInput{1, 3, 4, 5, 7, 8, 9, 10, 12, 13};
     runTwoSum(sortedInput, 15);
     return 0;
