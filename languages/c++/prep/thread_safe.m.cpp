@@ -68,9 +68,18 @@ struct ConcurrencyTest {
                 counter.increment();
                 // std::cout << "t1:count=" << counter.get() << std::endl;
                 --count;
+
+                // without the following, two threads are hitting the contention
+                // with the following, it separates them and atomic version would pull ahead
+                int sum = 0;
+                for (int i = 0; i < count; ++i) {
+                    sum += i;
+                }
+                sum = count > sum ? count : sum;
             }
         };
         
+        auto start = std::chrono::steady_clock::now();
         std::jthread t1(increment, count);
         std::jthread t2(increment, count);
 
@@ -78,8 +87,13 @@ struct ConcurrencyTest {
 
         t1.request_stop();
         t2.request_stop();
+        auto end = std::chrono::steady_clock::now();
 
-        std::cout << "value=" << counter.get() << std::endl;
+        std::chrono::duration<double> elapsed = end-start;
+
+        std::cout 
+            << "value=" << counter.get() << ", elapsed=" << elapsed.count() 
+            << std::endl;
     }
 
     static void testThreadNotSafe() {
@@ -102,8 +116,8 @@ struct ConcurrencyTest {
 
 
 int main(int argc, char* argv[]) {
-    // ConcurrencyTest::testThreadNotSafe();
-    // ConcurrencyTest::testMutexBased();
+    ConcurrencyTest::testThreadNotSafe();
+    ConcurrencyTest::testMutexBased();
     ConcurrencyTest::testAtomicBased();
     return 0;
 }
