@@ -11,12 +11,15 @@
 // next read(pop) happens at head
 // next write(push) happens at tail
 
+// the next of tail == head means full
+// tail == head means empty
+// so the queue's capacity is actually N-1
+
 #include <array>
 #include <atomic>
 #include <chrono>
 #include <iostream>
 #include <mutex>
-#include <stop_token>
 #include <string_view>
 #include <thread>
 
@@ -132,14 +135,14 @@ struct BoundedQueueTest {
             isProducerDone.store(true);
         };
 
-        int result = 0;
-        auto reader = [&queue, &result, &isProducerDone](std::stop_token stopToken) {
+        int result = 0; // use it only after reader is done
+        auto reader = [&queue, &result, &isProducerDone]() {
             int temp = 0;
-            while (!stopToken.stop_requested()) {
+            while (true) {
                 if (queue.pop(temp)) {    
                     ++result;
                 } else if (isProducerDone.load()) {
-                    // if the queue is empty and producer is done, exit
+                    // when the queue is empty and producer is done, exit
                     break;
                 }
             }
@@ -152,7 +155,6 @@ struct BoundedQueueTest {
 
         producer.join();
         // std::cout << "producer joined" << std::endl;
-        consumer.request_stop();
         consumer.join();
 
         auto end = std::chrono::system_clock::now();
