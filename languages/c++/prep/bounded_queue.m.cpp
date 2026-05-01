@@ -12,14 +12,13 @@
 // next write(push) happens at tail
 
 #include <array>
+#include <atomic>
+#include <chrono>
 #include <iostream>
 #include <mutex>
-#include <numeric>
-#include <optional>
 #include <stop_token>
-#include <string>
+#include <string_view>
 #include <thread>
-#include <unordered_set>
 
 // mutex based version
 template<typename T, size_t N>
@@ -32,6 +31,9 @@ public:
     MutexBased(): data_{}, head_(0), tail_(0) {
     }
 
+    // added as a feature to experiment new features 
+    constexpr static std::string_view impl_type = "MutexBased";
+
     bool push(const T& t) {
         std::lock_guard<std::mutex> lock(mutex_);
         size_t next = (tail_ + 1) % N;
@@ -43,85 +45,157 @@ public:
         return true;
     }
 
-    bool pop() {
+    bool pop(T& out) {
         std::lock_guard<std::mutex> lock(mutex_);
         if (tail_ == head_) { // empty
             return false;
         }
+        out = data_[head_]; 
+        // if the above throws an exception, head_ doesn't move
+        // it moves only when out is correctly populated
+        // this assumes that T needs copy assignment
         head_ = (head_ + 1) % N;
         return true;
-    }
-
-    std::optional<T> peek() const {
-        if (tail_ == head_) {
-            return std::optional<T>();
-        }
-        return data_[head_];
     }
 };
 
 // lock free version
+template<typename T, size_t N>
+class LockFreeBased {
+    std::array<T, N> data_;
+    std::atomic<size_t> head_;
+    std::atomic<size_t> tail_;
+public:
+    LockFreeBased(): data_{}, head_{0}, tail_{0} {}
+
+    constexpr static std::string_view impl_type = "LockFreeBased";
+
+    // push(write) owns where tail_ is
+    // pop(read) owns where head_ is
+
+    // therefore in push, head_ should be loaded on acquire
+    // and in pop, tail_ should be loaded on acquire
+
+    bool push(const T& t) {
+        size_t tail = tail_.load(std::memory_order_relaxed);
+        size_t next = (tail + 1) % N;
+        if (next == head_.load(std::memory_order_acquire)) {
+            // queue is full
+            return false;
+        }
+        data_[tail] = t;
+        tail_.store(next, std::memory_order_release);
+        return true;
+    }
+
+    bool pop(T& out) {
+        size_t head = head_.load(std::memory_order_relaxed);
+        if (head == tail_.load(std::memory_order::acquire)) {
+            return false;
+        }
+        out = data_[head];
+        head = (head + 1) % N;
+        head_.store(head, std::memory_order::release);
+        return true;
+    }
+};
+
 
 template<typename T, typename U>
-concept BoundedQ = requires(T t, const U& u) {
-    { t.pop() } -> std::same_as<bool>;
-    { t.push(u) } -> std::same_as<bool>;
-    { t.peek() } -> std::same_as<std::optional<U>>;
+concept BoundedQ = requires(T t, const U& uin, U& uout) {
+    { t.pop(uout) } -> std::same_as<bool>;
+    { t.push(uin) } -> std::same_as<bool>;
+    { T::impl_type } -> std::same_as<const std::string_view&>;
 };
 
 struct BoundedQueueTest {
     template<typename QueueType>
-    requires BoundedQ<QueueType, std::string>
-    static void runTest(QueueType& queue, int count) {
+    requires BoundedQ<QueueType, int>
+    static void runIntTest(QueueType& queue, int count, bool retryOnFull) {
         using namespace std::chrono_literals;
 
-        auto writer = [&queue, count]() {
+        std::cout
+            << "impl: " << QueueType::impl_type << ", count: " << count 
+            << ", retryOnFull:" << retryOnFull 
+            << std::endl;;
+
+        std::atomic<bool> isProducerDone{false};
+
+        auto writer = [&queue, count, retryOnFull, &isProducerDone]() {
             for (int i = 0; i < count; ++i) {
-                queue.push(std::to_string(i));
+                // we can have two flavors of the test: 
+                // with retry: we won't be losing any messages and can be 
+                // used to compare throughput more easily. Otherwise, many
+                // other fact, such as reader speed, queue size come to play
+                while (!queue.push(i) && retryOnFull);
             }
+            isProducerDone.store(true);
         };
 
-        std::unordered_set<int> result{};
-        auto reader = [&queue, &result](std::stop_token stopToken) {
+        int result = 0;
+        auto reader = [&queue, &result, &isProducerDone](std::stop_token stopToken) {
+            int temp = 0;
             while (!stopToken.stop_requested()) {
-                std::optional<std::string> item = queue.peek();
-                if (item) {
-                    queue.pop();
-                    try {
-                        result.insert(std::stoi(*item));
-                    } catch (...) {
-                        std::cout
-                            << "cannot convert " << *item << " to int"
-                            << std::endl;
-                    }
+                if (queue.pop(temp)) {    
+                    ++result;
+                } else if (isProducerDone.load()) {
+                    // if the queue is empty and producer is done, exit
+                    break;
                 }
             }
         };
 
-        std::cout << "starting" << std::endl;
+        auto start = std::chrono::system_clock::now();
+        // std::cout << "starting" << std::endl;
         std::jthread consumer(reader); // start consumer first
         std::jthread producer(writer);
 
         producer.join();
-        std::cout << "producer joined" << std::endl;
-        std::this_thread::sleep_for(1s);
+        // std::cout << "producer joined" << std::endl;
         consumer.request_stop();
         consumer.join();
 
-        int expected = count * (count - 1) / 2;
-        int collected = std::accumulate(result.begin(), result.end(), 0);
-        std::cout << "expected: " << expected << ", collected: " << collected << std::endl;
+        auto end = std::chrono::system_clock::now();
+
+        auto elapsedInMicros = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+        std::cout 
+            << "Count Result ===> expected: " << count << ", collected: " << result 
+            << ", elapsed=" << elapsedInMicros.count() << "us"
+            << std::endl;
     }
 
-    static void testMutexBased() {
-        MutexBased<std::string, 128> mb{};
-        runTest(mb, 1000);
+    template<size_t N>
+    static void testMutexBased(int count) {
+        MutexBased<int, N> mb{};
+        runIntTest(mb, count, true);
+        runIntTest(mb, count, false);
+    }
+
+    template<size_t N>
+    static void testLockFreeBased(int count) {
+        LockFreeBased<int, N> lfb{};
+        runIntTest(lfb, count, true);
+        runIntTest(lfb, count, false);
+    }
+
+    template<size_t N>
+    static void runComparisonExperiments(int count) {
+        std::cout 
+            << "------ running comparison for N: " << N 
+            << ", count: " << count << " ------"
+            << std::endl;
+        testMutexBased<N>(count);
+        testLockFreeBased<N>(count);
     }
 };
 
 
 int main(int argc, char* argv[]) {
-    BoundedQueueTest::testMutexBased();
+    BoundedQueueTest::runComparisonExperiments<128>(100);
+    BoundedQueueTest::runComparisonExperiments<128>(1000);
+    BoundedQueueTest::runComparisonExperiments<1024>(10000);
+    BoundedQueueTest::runComparisonExperiments<8192>(500000);
 
     return 0;
 }
