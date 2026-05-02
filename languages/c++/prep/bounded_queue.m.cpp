@@ -23,7 +23,6 @@
 #include <iostream>
 #include <mutex>
 #include <ostream>
-#include <ratio>
 #include <string_view>
 #include <thread>
 #include <vector>
