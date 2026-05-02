@@ -173,7 +173,12 @@ struct BoundedQueueTest {
                 if (queue.pop(temp)) {    
                     ++result;
                 } else if (isProducerDone.load()) {
-                    // when the queue is empty and producer is done, exit
+                    // when the queue is possibly empty and producer is done
+                    // however it is possible producer wrote more after pop failure
+                    // so drain them
+                    while (queue.pop(temp)) {
+                        ++result;
+                    }
                     break;
                 }
             }
