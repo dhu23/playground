@@ -18,8 +18,12 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <fstream>
+#include <initializer_list>
 #include <iostream>
 #include <mutex>
+#include <ostream>
+#include <ratio>
 #include <string_view>
 #include <thread>
 
@@ -36,6 +40,7 @@ public:
 
     // added as a feature to experiment new features 
     constexpr static std::string_view impl_type = "MutexBased";
+    constexpr static size_t capacity = N;
 
     bool push(const T& t) {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -72,6 +77,7 @@ public:
     LockFreeBased(): data_{}, head_{0}, tail_{0} {}
 
     constexpr static std::string_view impl_type = "LockFreeBased";
+    constexpr static size_t capacity = N;
 
     // push(write) owns where tail_ is
     // pop(read) owns where head_ is
@@ -108,13 +114,38 @@ template<typename T, typename U>
 concept BoundedQ = requires(T t, const U& uin, U& uout) {
     { t.pop(uout) } -> std::same_as<bool>;
     { t.push(uin) } -> std::same_as<bool>;
+    // need the reference part for the concept to match constexpr static variables
     { T::impl_type } -> std::same_as<const std::string_view&>;
+    { T::capacity } -> std::same_as<const size_t&>;
 };
+
+
+struct TestResult {
+    std::string type;
+    size_t queueSize;
+    int generated;
+    int collected;
+    long elapsedInMicros;
+    bool retryOnFull;
+
+    std::ostream& printCsv(std::ostream& os) const {
+        os 
+            << type << ',' << queueSize << ',' 
+            << generated << ',' << collected << ','
+            << elapsedInMicros << ',' << retryOnFull;
+        return os;
+    }
+
+    static std::string header() {
+        return "type,queueSize,generated,collected,elapsedInMicros,retryOnFull";
+    }
+};
+
 
 struct BoundedQueueTest {
     template<typename QueueType>
     requires BoundedQ<QueueType, int>
-    static void runIntTest(QueueType& queue, int count, bool retryOnFull) {
+    static TestResult runIntTest(QueueType& queue, int count, bool retryOnFull) {
         using namespace std::chrono_literals;
 
         std::cout
@@ -162,9 +193,18 @@ struct BoundedQueueTest {
         auto elapsedInMicros = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
         std::cout 
-            << "Count Result ===> expected: " << count << ", collected: " << result 
+            << "Count Result ===> expected: " << count
+            << ", collected: " << result
+            << ", queue-capacity: " << QueueType::capacity  
             << ", elapsed=" << elapsedInMicros.count() << "us"
             << std::endl;
+        return TestResult{
+            std::string{QueueType::impl_type}, // need to call std::string(std::string_view) ctor
+            QueueType::capacity,
+            count, result, // produced message #, collected message #
+            elapsedInMicros.count(),
+            retryOnFull
+        };
     }
 
     template<size_t N>
@@ -190,6 +230,48 @@ struct BoundedQueueTest {
         testMutexBased<N>(count);
         testLockFreeBased<N>(count);
     }
+
+    template<template<typename, size_t> class QueueType, size_t N>
+    static void generateSurfacePointsForQueueType(int count, std::ostream& os) {
+        QueueType<int, N> queue{};
+        runIntTest(queue, count, true).printCsv(os) << std::endl;
+        runIntTest(queue, count, false).printCsv(os) << std::endl;   
+    }
+
+    template<template<typename, size_t> class QueueType, size_t... Ns>
+    static void generateSurfaceForQueueType(std::initializer_list<int> counts, std::ostream &os) {
+        for (int count : counts) {
+            (generateSurfacePointsForQueueType<QueueType, Ns>(count, os), ...); 
+        }
+    }
+
+    static void runSurface() {
+        std::cout << "run Surface" << std::endl;
+
+        std::ofstream output("./surface.csv");
+        output << TestResult::header() << std::endl;
+
+        std::initializer_list<int> counts = {
+            100, 200, 300, 400, 500, 
+            1'000, 1'500, 2'000, 2'500, 
+            3'000, 3'500, 4'000, 4'500, 5'000, 
+            10'000, 15'000, 20'000, 
+            25'000, 30'000, 35'000, 40'000, 45'000, 50'000, 
+            100'000, 150'000, 200'000, 250'000, 
+            300'000, 350'000, 400'000, 450'000, 500'000, 
+            1'000'000, 1'100'000, 1'200'000, 
+            1'300'000, 1'400'000, 1'500'000
+        };
+
+        auto start = std::chrono::system_clock::now();
+        
+        generateSurfaceForQueueType<MutexBased, 256, 512, 1024, 2048, 4096, 8192>(counts, output);
+        generateSurfaceForQueueType<LockFreeBased, 256, 512, 1024, 2048, 4096, 8192>(counts, output);
+        
+        auto end = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "runSurface took: " << elapsed.count() << "ms" << std::endl;
+    }
 };
 
 
@@ -198,6 +280,14 @@ int main(int argc, char* argv[]) {
     BoundedQueueTest::runComparisonExperiments<128>(1000);
     BoundedQueueTest::runComparisonExperiments<1024>(10000);
     BoundedQueueTest::runComparisonExperiments<8192>(500000);
+
+    std::cout << "testing generateSurfacePointsForQueueType" << std::endl;
+    BoundedQueueTest::generateSurfacePointsForQueueType<LockFreeBased, 128>(300, std::cout);
+
+    std::cout << "testing generateSurfaceForQueueType" << std::endl;
+    BoundedQueueTest::generateSurfaceForQueueType<LockFreeBased, 128, 256>({300, 600}, std::cout);
+
+    BoundedQueueTest::runSurface();
 
     return 0;
 }
