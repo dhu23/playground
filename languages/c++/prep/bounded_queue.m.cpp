@@ -26,6 +26,7 @@
 #include <ratio>
 #include <string_view>
 #include <thread>
+#include <vector>
 
 // mutex based version
 template<typename T, size_t N>
@@ -184,7 +185,7 @@ struct BoundedQueueTest {
             }
         };
 
-        auto start = std::chrono::system_clock::now();
+        auto start = std::chrono::steady_clock::now();
         // std::cout << "starting" << std::endl;
         std::jthread consumer(reader); // start consumer first
         std::jthread producer(writer);
@@ -193,7 +194,7 @@ struct BoundedQueueTest {
         // std::cout << "producer joined" << std::endl;
         consumer.join();
 
-        auto end = std::chrono::system_clock::now();
+        auto end = std::chrono::steady_clock::now();
 
         auto elapsedInMicros = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
@@ -244,7 +245,7 @@ struct BoundedQueueTest {
     }
 
     template<template<typename, size_t> class QueueType, size_t... Ns>
-    static void generateSurfaceForQueueType(std::initializer_list<int> counts, std::ostream &os) {
+    static void generateSurfaceForQueueType(const std::vector<int>& counts, std::ostream &os) {
         for (int count : counts) {
             (generateSurfacePointsForQueueType<QueueType, Ns>(count, os), ...); 
         }
@@ -277,6 +278,35 @@ struct BoundedQueueTest {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "runSurface took: " << elapsed.count() << "ms" << std::endl;
     }
+
+    static void runDenseSurface() {
+        std::cout << "run dense Surface" << std::endl;
+
+        std::ofstream output("./surface-dense.csv");
+        output << TestResult::header() << std::endl;
+
+        // generates up to 1000, 2000, ..., 200000
+        std::vector<int> counts;
+        for (int i = 1; i <= 200; ++i) {
+            counts.push_back(i * 1000);
+        } 
+
+        auto start = std::chrono::system_clock::now();
+
+        generateSurfaceForQueueType<
+            MutexBased, 
+            100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 
+            1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000>(counts, output);
+        generateSurfaceForQueueType<
+            LockFreeBased, 
+            100, 200, 300, 400, 500, 600, 700, 800, 900, 1000,
+            1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000>(counts, output);
+
+        auto end = std::chrono::system_clock::now();
+        auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "run dense Surface took: " << elapsed.count() << "ms" << std::endl;
+    }
 };
 
 
@@ -293,6 +323,7 @@ int main(int argc, char* argv[]) {
     BoundedQueueTest::generateSurfaceForQueueType<LockFreeBased, 128, 256>({300, 600}, std::cout);
 
     BoundedQueueTest::runSurface();
+    BoundedQueueTest::runDenseSurface();
 
     return 0;
 }
