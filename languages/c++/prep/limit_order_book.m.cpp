@@ -43,12 +43,19 @@
 // - snapshot consisitency?
 // - reader/writer separation
 
+#include <cassert>
+#include <chrono>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
+#include <ostream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 enum class Side {
     Buy,
@@ -62,106 +69,550 @@ struct Timestamp {
     uint64_t value;
 };
 
-
-// forward declaration for Order friend class
-template<typename Compare>
-class LimitOrderBookSide; 
-
-class Order {
-    template<typename Compare>
-    friend class LimitOrderBookSide;
-
-    std::string orderId_;
-    int64_t price_;
-    uint32_t qty_;
-    Side side_;
-    Timestamp timestamp_;
-
-    Order* prev_; // accessed by LimitOrderBookSide
-    Order* next_; // accessed by LimitOrderBookSide
-public:
-    Order(
-        const std::string& orderId, 
-        int64_t price, uint32_t qty,
-        Side side, Timestamp timestamp 
-    ): orderId_(orderId), price_(price), qty_(qty), side_(side), timestamp_(timestamp) {}
-
-    const std::string& orderId() const { return orderId_; }
-    int64_t price() const { return price_; }
-    uint32_t qty() const { return qty_; }
-    Side side() const { return side_; }
-    Timestamp timestamp() const { return timestamp_; }
-};
-
-enum class AddResult {
-
-};
-
-enum class CancelResult {
-
-};
-
-enum class ModifyResult {
-
-};
-
-struct Level {
+struct Trade {
+    std::string aggressorId;
+    std::string passiveId;
     int64_t price;
-    Order* head; // point to the first Order, not the sentinel node
-    Order* tail; // point to the last Order, not the sentinel node
-};
+    uint32_t qty;
 
-template<typename Compare>
-class LimitOrderBookSide {
-    std::unordered_map<std::string, std::unique_ptr<Order>> orderMap_;
-    std::map<int64_t, Level> levels_;
-
-public:
-    LimitOrderBookSide(): orderMap_(), levels_() {}
-
-    AddResult addOrder(const std::string& orderId, int64_t price, uint32_t quantity, Side side) {
-
-    }
-
-    CancelResult cancelOrder(const std::string& orderId) {
-
-    }
-
-    ModifyResult modifyOrder(const std::string& orderId, int64_t price) {
-
-    }
-
-    ModifyResult modifyOrder(const std::string& orderId, uint32_t quantity) {
-
+    std::ostream& print(std::ostream& os) const {
+        os 
+            << "Trade[`aggressorId=" << aggressorId
+            << ",`passiveId=" << passiveId << ",`px=" << price
+            << ",`qty=" << qty << ']';
+        return os;
     }
 };
 
+std::ostream& operator<<(std::ostream& os, const Trade& trade) {
+   return trade.print(os);
+}
+
+template<typename Itr>
+std::ostream& printIterator(std::ostream& os, Itr begin, Itr end, char separator) {
+    os << '[';
+    Itr it = begin;
+    while (it != end) {
+        os << *it << separator;
+        ++it;
+    }
+    os << ']';
+    return os; 
+}
+
+struct AddResult {
+    enum class Type {
+        DuplicateOrderIdRejection,
+        PassiveOrderAdded,
+        AggressiveOrderAdded,
+        AggressiveOrderFilled,
+        AggressiveOrderRejection
+    };
+
+    static AddResult duplicatRejection() {
+        return AddResult{Type::DuplicateOrderIdRejection, {}};
+    }
+
+    static AddResult passiveOrderAdded() {
+        return AddResult{Type::PassiveOrderAdded, {}};
+    }
+
+    // Order is inserted into the book after sweeping the far side
+    static AddResult aggressiveOrderAdded(std::vector<Trade>&& trades) {
+        return AddResult{Type::AggressiveOrderAdded, std::move(trades)};
+    }
+
+    // the far side is swept and the order is fully filled
+    static AddResult aggressiveOrderFilled(std::vector<Trade>&& trades) {
+        return AddResult{Type::AggressiveOrderFilled, std::move(trades)};
+    }
+
+    static AddResult aggressiveOrderRejection() {
+        return AddResult{Type::AggressiveOrderRejection, {}};
+    }
+
+    Type type;
+    std::vector<Trade> trades;
+};
+
+std::ostream& operator<<(std::ostream& os, AddResult::Type type) {
+    switch (type) {
+        case AddResult::Type::DuplicateOrderIdRejection:
+            os << "DuplicateOrderIdRejection";
+            return os;
+        case AddResult::Type::PassiveOrderAdded:
+            os << "PassiveOrderAdded";
+            return os;
+        case AddResult::Type::AggressiveOrderAdded:
+            os << "AggressiveOrderAdded";
+            return os;
+        case AddResult::Type::AggressiveOrderFilled:
+            os << "AggresiveOrderFilled";
+            return os;
+        case AddResult::Type::AggressiveOrderRejection:
+            os << "AggressiveOrderRejection";
+            return os;
+    }
+    __builtin_unreachable();
+}
+
+std::ostream& operator<<(std::ostream& os, const AddResult& res) {
+    os << "AddResult[`type=" << res.type << ",`trades=";
+    printIterator(os, res.trades.begin(), res.trades.end(), ',') << ']';
+    return os;
+}
+
+struct CancelResult {
+    enum class Type {
+        UnknownOrderId,
+        Cancelled,
+        CancelRej
+    };
+
+    Type type;
+
+    static CancelResult unknownOrderId() {
+        return CancelResult{Type::UnknownOrderId};
+    }
+
+    static CancelResult cancelled() {
+        return CancelResult{Type::Cancelled};
+    }
+
+    static CancelResult cancelRejection() {
+        return CancelResult{Type::CancelRej};
+    }
+};
+
+std::ostream& operator<<(std::ostream& os, CancelResult::Type type) {
+    switch (type) {
+        case CancelResult::Type::UnknownOrderId:
+            os << "UnknownOrderId";
+            return os;
+        case CancelResult::Type::Cancelled:
+            os << "Cancelled";
+            return os;
+        case CancelResult::Type::CancelRej:
+            os << "CancelRej";
+            return os;
+    }
+    __builtin_unreachable();
+}
+
+std::ostream& operator<<(std::ostream& os, const CancelResult& res) {
+    os << "CancelResult[`type=" << res.type << ']';
+    return os;
+}
+
+struct ModifyResult {
+    enum class Type {
+
+    };
+
+    Type type;
+};
 
 class LimitOrderBook {
-    LimitOrderBookSide<std::greater<int64_t>> bidSide_;
-    LimitOrderBookSide<std::less<int64_t>> askSide_;
+
+    struct Level;
+    struct Order {
+        std::string orderId_;
+        int64_t price_;
+        uint32_t qty_;
+        Side side_;
+        Timestamp timestamp_;
+
+        Order* prev_ = nullptr; // accessed by LimitOrderBookSide
+        Order* next_ = nullptr; // accessed by LimitOrderBookSide
+
+        // data structure is responsible for keeping order <-> level consistent
+        Level* level_ = nullptr; 
+
+        Order(const std::string &orderId, int64_t price, uint32_t qty,
+              Side side, Timestamp timestamp)
+            : orderId_(orderId)
+            , price_(price), qty_(qty), side_(side), timestamp_(timestamp) {}
+
+        const std::string &orderId() const { return orderId_; }
+        int64_t price() const { return price_; }
+        uint32_t qty() const { return qty_; }
+        Side side() const { return side_; }
+        Timestamp timestamp() const { return timestamp_; }
+
+        std::ostream& print(std::ostream& os) const {
+            os 
+                << "Order[`orderId=" << orderId_ 
+                << ",`px=" << price_ << ",`qty=" << qty_
+                << ",`side=";
+            switch(side_) {
+                case Side::Buy: 
+                    os << 'B';
+                    break;
+                case Side::Sell:
+                    os << 'S';
+                    break;
+                default:
+                    break;    
+            }
+            os << ']';
+            return os;
+        }
+    };
+
+    struct Level {
+        int64_t price;
+        Order* head; // point to the first Order, not the sentinel node
+        Order* tail; // point to the last Order, not the sentinel node
+        size_t orderCount = 0;
+        uint32_t totalQty = 0;
+
+        std::ostream& print(std::ostream& os) const {
+            os << "Level[`px=" << price;
+            os << ",`ord#=" << orderCount << ",`qty=" << totalQty;
+            os << ",`orders=[";
+            Order* order = head;
+            while (order != nullptr) {
+                os << order->orderId_ << ',';
+                order = order->next_;
+            }
+            os << "]]";
+            return os;
+        }
+
+        friend std::ostream& operator<<(std::ostream& os, const Level& level) {
+            return level.print(os);
+        }
+    };
+
+    template<typename Compare>
+    class BookSide {
+        // track levels by map to order prices from best to worst
+        std::map<int64_t, Level, Compare> levels_;
+
+    public:
+        bool empty() const {
+            return levels_.empty();
+        }
+
+        std::optional<int64_t> bestPrice() const {
+            if (empty()) {
+                return std::nullopt;
+            }
+            return levels_.begin()->first;
+        }
+
+        void addOrder(Order& order) {
+            auto foundLevel = levels_.find(order.price_);
+            if (foundLevel == levels_.end()) {
+                // the first order in this price level
+                // the order are not linked to another other orders
+                auto [it, inserted] = levels_.emplace(
+                    order.price_, 
+                    Level{order.price_, &order, &order, 1, order.qty_});
+
+                // TODO check inserted flag
+                
+                // update order's level pointer to point the new level for fast access
+                order.level_ = &(it->second);
+
+            } else {
+                // append to the end of the price level
+                Level& existingLevel = foundLevel->second;
+                Order* pLastOrder = existingLevel.tail;
+                if (pLastOrder == nullptr) {
+                    // Should not happen!
+                } else {
+                    std::cout 
+                        << "Appending " << order.orderId()
+                        << ",lastOrd=" << pLastOrder->orderId() << std::endl;
+                    pLastOrder->next_ = &order; // point the new one to last
+                    order.prev_ = pLastOrder; // point the last to the new one
+                    
+                    existingLevel.tail = &order; // update level tail to the new one
+                    existingLevel.orderCount += 1;
+                    existingLevel.totalQty += order.qty_;
+
+                    // update the order level pointer to the level location
+                    order.level_ = &existingLevel;
+                }
+            }
+        }
+
+        bool removeOrder(Order& order) {
+            bool foundPriceLevel = levels_.find(order.price_) != levels_.end();
+            bool hasLevelPtr = order.level_ != nullptr;
+            if (hasLevelPtr != foundPriceLevel) {
+                // INCONSISTENT
+                std::cerr 
+                    << "inconsistent state, order:" << order.orderId()
+                    << ", hasLevelPtr: " << hasLevelPtr 
+                    << ", foundPriceLevel" << foundPriceLevel
+                    << std::endl;
+            } else if (!hasLevelPtr) {
+                // Don't do anything, this order isn't in the book levels
+                std::cerr 
+                    << "inconsistent state, order: " << order.orderId()
+                    << " is not in the book" << std::endl;
+            } else {
+                Order* prev = order.prev_;
+                Order* next = order.next_;
+                bool firstInLevel = prev == nullptr; 
+                bool lastInLevel = next == nullptr;
+
+                // TODO this can use some refactoring to reduce duplication
+                // for now keep it in this explicit way
+                if (firstInLevel && lastInLevel) {
+                    // this is the only element
+                    // set the level that contains it to empty
+                    order.level_->head = nullptr;
+                    order.level_->tail = nullptr;
+
+                    // no need to reset order's prev or next, they are nullptr
+                } else if (firstInLevel) {
+                    // break the chain between order and its next
+                    order.next_->prev_ = nullptr;
+                    order.next_ = nullptr;
+                } else if (lastInLevel) {
+                    // break the chain betwen order and its prev
+                    order.prev_->next_ = nullptr;
+                    order.prev_ = nullptr;
+                } else {
+                    // break chains with both prev and next
+                    order.next_->prev_ = nullptr;
+                    order.next_ = nullptr;
+                    order.prev_->next_ = nullptr;
+                    order.prev_ = nullptr;
+                }
+
+                // reduce level size
+                order.level_->orderCount -= 1;
+                order.level_->totalQty -= order.qty_;
+
+                // if the level is now empty, clean up the level
+                
+
+                return true;
+            }
+            return false;
+        }
+
+        std::ostream& print(std::ostream& os, bool bestPriceFirst) const {
+            if (levels_.empty()) {
+                os << "No Levels";
+                return os;
+            }
+
+            os << "Levels# : " << levels_.size() << std::endl;
+            if (bestPriceFirst) {
+                for (auto it = levels_.begin(); it != levels_.end(); ++it) {
+                    os << it->first << " ====> ";
+                    it->second.print(os) << std::endl;
+                }
+            } else {
+                for (auto it = levels_.rbegin(); it != levels_.rend(); ++it) {
+                    os << it->first << " ====> ";
+                    it->second.print(os) << std::endl;
+                }
+            }
+            return os;
+        }
+    };
+
+    Timestamp now() {
+        auto now = std::chrono::system_clock::now();
+        auto epochDuration = now.time_since_epoch();
+        long millis = std::chrono::duration_cast<std::chrono::milliseconds>(epochDuration).count(); 
+        return Timestamp{static_cast<uint64_t>(millis)};
+    }
+
+    void match() {
+
+    }
+
+    // Limit Order Book data internals
+    // orders are owned by the orderId -> order map
+    std::unordered_map<std::string, std::unique_ptr<Order>> orderMap_;
+    BookSide<std::greater<int64_t>> bidSide_;
+    BookSide<std::less<int64_t>> askSide_;
+
 public:
-    LimitOrderBook(): bidSide_(), askSide_() {}
+    LimitOrderBook(): orderMap_{}, bidSide_{}, askSide_{} {}
+
+    std::optional<int64_t> bestBid() const {
+        return bidSide_.bestPrice();
+    }
+
+    std::optional<int64_t> bestAsk() const {
+        return askSide_.bestPrice();
+    }
 
     // add a new order to the internal FIFO priority
-    AddResult addOrder(const std::string& orderId, int64_t price, uint32_t quantity, Side side) {
+    AddResult addOrder(
+        const std::string& orderId, int64_t price, uint32_t quantity, Side side, 
+        bool rejectCrossOrder
+    ) {
+        // check if orderId already exists
+        auto found = orderMap_.find(orderId);
+        if (orderMap_.end() != found) {
+            // cannot add a new order with duplicate order ID
+            return AddResult::duplicatRejection();
+        }
 
+        // check if the order crosses with the other side.
+        // if it is a passive order on the near side (or improving spread), 
+        // passively insert that to the book
+        // otherwise, invoke matching engine logic that generate trades
+        switch (side) {
+            case Side::Buy: {
+                std::optional<int64_t> bestAsk = askSide_.bestPrice();
+                if (bestAsk && price >= bestAsk) {
+                    // this is where the new buy order cross with asks
+                    if (rejectCrossOrder) {
+                        return AddResult::aggressiveOrderRejection();
+                    } else {
+                        // invoke match engine logic to generate fills
+
+                    }
+                } else {
+                    // simple insert into the bid side
+                    std::unique_ptr<Order> order = std::make_unique<Order>(
+                        orderId, price, quantity, side, now());
+                    Order* pOrder = order.get();
+                    orderMap_.emplace(orderId, std::move(order));
+
+                    // find the level and link the orders on the bid side
+                    bidSide_.addOrder(*pOrder);
+                    return AddResult::passiveOrderAdded();
+                }
+            }
+            case Side::Sell: {
+                std::optional<int64_t> bestBid = bidSide_.bestPrice();
+                if (bestBid && price <= bestBid) {
+                    // this is where the new sell order cross with bids
+                    if (rejectCrossOrder) {
+                        return AddResult::aggressiveOrderRejection();
+                    } else {
+                        // invoke match engine logic to generate fills
+                    }
+                } else {
+                    // simple insert
+                    std::cout << "simple inserting for sell" << std::endl;
+                    std::unique_ptr<Order> order = std::make_unique<Order>(
+                        orderId, price, quantity, side, now());
+                    Order* pOrder = order.get();
+                    orderMap_.emplace(orderId, std::move(order));
+
+                    // find the level and link the orders on the bid side
+                    askSide_.addOrder(*pOrder);
+                    return AddResult::passiveOrderAdded();
+                }
+            }
+        }
+        __builtin_unreachable();
     }
 
     CancelResult cancelOrder(const std::string& orderId) {
-
+        auto found = orderMap_.find(orderId);
+        if (found == orderMap_.end()) {
+            return CancelResult::unknownOrderId();
+        }
+        switch (found->second->side()) {
+            case Side::Buy: {
+                if (bidSide_.removeOrder(*found->second)) {
+                    return CancelResult::cancelled();
+                } else {
+                    return CancelResult::cancelRejection();
+                }
+            }
+            case Side::Sell: {
+                if (askSide_.removeOrder(*found->second)) {
+                    return CancelResult::cancelled();
+                } else {
+                    return CancelResult::cancelRejection();
+                }
+            }
+        }
     }
 
     ModifyResult modifyOrder(const std::string& orderId, int64_t price) {
-
+        throw std::runtime_error("no impl");
     }
 
     ModifyResult modifyOrder(const std::string& orderId, uint32_t quantity) {
+        throw std::runtime_error("no impl");
+    }
 
+    std::ostream& print(std::ostream& os) const {
+        os << "Book:" << std::endl;
+        os << "----- Asks -----" << std::endl;
+        askSide_.print(os, false);
+        os << "----- Bids -----" << std::endl;
+        bidSide_.print(os, true);
+        return os;
     }
 };
 
 
 int main(int argc, char *argv[]) {
+    LimitOrderBook book{};
+    book.print(std::cout) << std::endl;
+
+    // cancel non-existing order 
+    CancelResult cancelRes = book.cancelOrder("order-1");
+    assert(cancelRes.type == CancelResult::Type::UnknownOrderId);
+    book.print(std::cout) << std::endl;
+
+    // add passive order
+    AddResult addRes = book.addOrder("s1", 101, 10, Side::Sell, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    book.print(std::cout) << std::endl;
+
+    // add more passive orders at new levels
+    addRes = book.addOrder("s2", 102, 20, Side::Sell, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    addRes = book.addOrder("s3", 103, 30, Side::Sell, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    book.print(std::cout) << std::endl;
+
+    // add more passive orders at existing levels
+    addRes = book.addOrder("s4", 103, 31, Side::Sell, true);
+    assert(addRes.type ==  AddResult::Type::PassiveOrderAdded);
+    book.print(std::cout) << std::endl;
+
+    addRes = book.addOrder("s5", 102, 21, Side::Sell, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    addRes = book.addOrder("s6", 102, 22, Side::Sell, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    book.print(std::cout) << std::endl;
+
+    // populate the other side
+    addRes = book.addOrder("b1", 99, 10, Side::Buy, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    addRes = book.addOrder("b2", 99, 11, Side::Buy, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    book.print(std::cout) << std::endl;
+
+    addRes = book.addOrder("b3", 99, 12, Side::Buy, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    book.print(std::cout) << std::endl;
+
+    addRes = book.addOrder("b4", 98, 20, Side::Buy, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    addRes = book.addOrder("b5", 98, 21, Side::Buy, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    
+    addRes = book.addOrder("b6", 97, 30, Side::Buy, true);
+    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+    book.print(std::cout) << std::endl;
+
+    // cancel non-existing order
+    cancelRes = book.cancelOrder("order-1");
+    assert(cancelRes.type == CancelResult::Type::UnknownOrderId);
+
+    // cancel the only order in a level
+    cancelRes = book.cancelOrder("b6");
+    assert(cancelRes.type == CancelResult::Type::Cancelled);
+    book.print(std::cout) << std::endl;
+
     return 0; 
 }
