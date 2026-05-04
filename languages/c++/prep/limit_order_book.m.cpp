@@ -339,7 +339,8 @@ class LimitOrderBook {
         }
 
         bool removeOrder(Order& order) {
-            bool foundPriceLevel = levels_.find(order.price_) != levels_.end();
+            auto levelIt = levels_.find(order.price_);
+            bool foundPriceLevel = levelIt != levels_.end();
             bool hasLevelPtr = order.level_ != nullptr;
             if (hasLevelPtr != foundPriceLevel) {
                 // INCONSISTENT
@@ -354,43 +355,61 @@ class LimitOrderBook {
                     << "inconsistent state, order: " << order.orderId()
                     << " is not in the book" << std::endl;
             } else {
+                Level* pLevel = order.level_;
                 Order* prev = order.prev_;
                 Order* next = order.next_;
                 bool firstInLevel = prev == nullptr; 
                 bool lastInLevel = next == nullptr;
+                std::cout 
+                    << "removing " << order.orderId()
+                    << ", first? : " << firstInLevel
+                    << ", last? : " << lastInLevel
+                    << std::endl;
 
                 // TODO this can use some refactoring to reduce duplication
                 // for now keep it in this explicit way
                 if (firstInLevel && lastInLevel) {
                     // this is the only element
                     // set the level that contains it to empty
-                    order.level_->head = nullptr;
-                    order.level_->tail = nullptr;
+                    pLevel->head = nullptr;
+                    pLevel->tail = nullptr;
 
                     // no need to reset order's prev or next, they are nullptr
                 } else if (firstInLevel) {
+                    // reset level head to the next one
+                    pLevel->head = order.next_;
+
                     // break the chain between order and its next
                     order.next_->prev_ = nullptr;
                     order.next_ = nullptr;
+
                 } else if (lastInLevel) {
+                    // reset level tail to the prev one
+                    pLevel->tail = order.prev_;
+
                     // break the chain betwen order and its prev
                     order.prev_->next_ = nullptr;
                     order.prev_ = nullptr;
+
                 } else {
                     // break chains with both prev and next
-                    order.next_->prev_ = nullptr;
+                    order.next_->prev_ = order.prev_;
+                    order.prev_->next_ = order.next_;
+
                     order.next_ = nullptr;
-                    order.prev_->next_ = nullptr;
                     order.prev_ = nullptr;
                 }
 
+                order.level_ = nullptr; // remove order link to level
+
                 // reduce level size
-                order.level_->orderCount -= 1;
-                order.level_->totalQty -= order.qty_;
-
-                // if the level is now empty, clean up the level
+                pLevel->orderCount -= 1;
+                pLevel->totalQty -= order.qty_;
                 
-
+                // if the level is now empty, clean up the level
+                if (pLevel->orderCount == 0) {
+                    levels_.erase(levelIt);
+                }
                 return true;
             }
             return false;
@@ -519,6 +538,7 @@ public:
         switch (found->second->side()) {
             case Side::Buy: {
                 if (bidSide_.removeOrder(*found->second)) {
+                    orderMap_.erase(found);
                     return CancelResult::cancelled();
                 } else {
                     return CancelResult::cancelRejection();
@@ -526,6 +546,7 @@ public:
             }
             case Side::Sell: {
                 if (askSide_.removeOrder(*found->second)) {
+                    orderMap_.erase(found);
                     return CancelResult::cancelled();
                 } else {
                     return CancelResult::cancelRejection();
@@ -544,6 +565,13 @@ public:
 
     std::ostream& print(std::ostream& os) const {
         os << "Book:" << std::endl;
+        
+        os << "orders:[";
+        for (const auto& kv : orderMap_) {
+            os << kv.first << ',';
+        } 
+        os << ']' << std::endl;
+
         os << "----- Asks -----" << std::endl;
         askSide_.print(os, false);
         os << "----- Bids -----" << std::endl;
@@ -611,6 +639,30 @@ int main(int argc, char *argv[]) {
 
     // cancel the only order in a level
     cancelRes = book.cancelOrder("b6");
+    assert(cancelRes.type == CancelResult::Type::Cancelled);
+    book.print(std::cout) << std::endl;
+
+    // cancel the first order in a level
+    cancelRes = book.cancelOrder("s3");
+    assert(cancelRes.type == CancelResult::Type::Cancelled);
+    book.print(std::cout) << std::endl;
+
+    // cancel the last order in a level
+    cancelRes = book.cancelOrder("b5");
+    assert(cancelRes.type == CancelResult::Type::Cancelled);
+    book.print(std::cout) << std::endl;
+
+    // cancel something in the middle
+    cancelRes = book.cancelOrder("s5");
+    assert(cancelRes.type == CancelResult::Type::Cancelled);
+    book.print(std::cout) << std::endl;
+
+    // cancel order by order to remove a whole level
+    cancelRes = book.cancelOrder("b1");
+    assert(cancelRes.type == CancelResult::Type::Cancelled);
+    cancelRes = book.cancelOrder("b3");
+    assert(cancelRes.type == CancelResult::Type::Cancelled);
+    cancelRes = book.cancelOrder("b2");
     assert(cancelRes.type == CancelResult::Type::Cancelled);
     book.print(std::cout) << std::endl;
 
