@@ -103,6 +103,7 @@ std::ostream& printIterator(std::ostream& os, Itr begin, Itr end, char separator
 struct AddResult {
     enum class Type {
         DuplicateOrderIdRejection,
+        NonPositiveQtyRejection,
         PassiveOrderAdded,
         AggressiveOrderAdded,
         AggressiveOrderFilled,
@@ -111,6 +112,10 @@ struct AddResult {
 
     static AddResult duplicatRejection() {
         return AddResult{Type::DuplicateOrderIdRejection, {}};
+    }
+
+    static AddResult nonPositiveQtyRejection() {
+        return AddResult{Type::NonPositiveQtyRejection, {}};
     }
 
     static AddResult passiveOrderAdded() {
@@ -140,6 +145,9 @@ std::ostream& operator<<(std::ostream& os, AddResult::Type type) {
         case AddResult::Type::DuplicateOrderIdRejection:
             os << "DuplicateOrderIdRejection";
             return os;
+        case AddResult::Type::NonPositiveQtyRejection:
+            os << "NonPositiveQtyRejection";
+            return os;
         case AddResult::Type::PassiveOrderAdded:
             os << "PassiveOrderAdded";
             return os;
@@ -152,7 +160,7 @@ std::ostream& operator<<(std::ostream& os, AddResult::Type type) {
         case AddResult::Type::AggressiveOrderRejection:
             os << "AggressiveOrderRejection";
             return os;
-    }
+        }
     __builtin_unreachable();
 }
 
@@ -288,8 +296,21 @@ class LimitOrderBook {
     class BookSide {
         // track levels by map to order prices from best to worst
         std::map<int64_t, Level, Compare> levels_;
+        Compare priceComparator_;
 
     public:
+        BookSide(): levels_{}, priceComparator_(Compare()) {}
+
+        // for a cross price, check if this is marketable:
+        // if this is a bid book, cross price(aggressive sell) <= bestBid
+        // if this is an ask book, cross price(aggressive buy) >= bestAsk  
+        bool isCrossPriceMarketable(int64_t crossPrice) const {
+            if (empty()) {
+                return false;
+            }
+            return !priceComparator_(crossPrice, levels_.begin()->first);
+        }
+
         bool empty() const {
             return levels_.empty();
         }
@@ -339,6 +360,8 @@ class LimitOrderBook {
         }
 
         bool removeOrder(Order& order) {
+            // in production, order.level_ would be used directly.
+            // added other code for debugging internal inconsistency
             auto levelIt = levels_.find(order.price_);
             bool foundPriceLevel = levelIt != levels_.end();
             bool hasLevelPtr = order.level_ != nullptr;
@@ -406,7 +429,9 @@ class LimitOrderBook {
                 pLevel->orderCount -= 1;
                 pLevel->totalQty -= order.qty_;
                 
-                // if the level is now empty, clean up the level
+                // if the level is now empty, clean up the level.
+                // this would cause the order cancel to be O(logN)
+                // maybe an alternative is to leave the empty level as is
                 if (pLevel->orderCount == 0) {
                     levels_.erase(levelIt);
                 }
@@ -444,8 +469,77 @@ class LimitOrderBook {
         return Timestamp{static_cast<uint64_t>(millis)};
     }
 
-    void match() {
+    template<typename FarSideBook>
+    void 
+    match(
+        FarSideBook& farSide, 
+        int& remainingQuantity, std::vector<Trade>& generatedTrades
+    ) {
+        
+    }
 
+    // the call site of this function has figured the near side and far side
+    // so there is no need to check against side in this function
+    // TODO: NearSideBook/FarSideBook can have function to provide Buy/Sell
+    template <typename NearSideBook, typename FarSideBook>
+    AddResult 
+    addOrder(
+        NearSideBook& nearSide, FarSideBook& farSide,
+        const std::string& orderId, int64_t price, uint32_t quantity, Side side,
+        bool rejectCrossOrder
+    ) {
+        if (quantity == 0) {
+            return AddResult::nonPositiveQtyRejection();
+        }
+        auto found = orderMap_.find(orderId);
+        if (orderMap_.end() != found) {
+            // cannot add a new order with duplicate order ID
+            return AddResult::duplicatRejection();
+        }
+
+        // if it is a passive order on the near side or improving spread
+        // passively insert that to the book
+        // otherwise, an aggressive order may trigger matching engine logic
+        // that generates trades, if not rejected
+        std::optional<int64_t> bestFarSide = farSide.bestPrice();
+        uint32_t remainingQuantity = quantity;
+        std::vector<Trade> generatedTrades{};
+
+        if (farSide.isCrossPriceMarketable(price)) {
+            // this is where the new order is an aggressive order
+            if (rejectCrossOrder) {
+                return AddResult::aggressiveOrderRejection();
+            } else {
+                // invoke matching engine logic to generate fills and update 
+                // remainingQuantity and generatedTrades.
+                
+            }
+        }
+
+        // either the aggressive order has some remaining quantity 
+        // or it was originall passive
+        if (remainingQuantity > 0) {
+            std::unique_ptr<Order> pOrder = std::make_unique<Order>(
+                orderId, price, remainingQuantity, side, now());
+            nearSide.addOrder(*pOrder);
+            orderMap_.emplace(orderId, std::move(pOrder));
+            if (generatedTrades.empty()) {
+                return AddResult::passiveOrderAdded();
+            } else {
+                return AddResult::aggressiveOrderAdded(std::move(generatedTrades));
+            }
+        } else {
+            // no quantity to add to the book
+            if (generatedTrades.empty()) {
+                // this only happens when input quantity is zero which is handled at the top
+                std::cerr 
+                    << "Inconsistent state with no remaining quantity or trades, order: "
+                    << orderId << std::endl;
+                return AddResult::nonPositiveQtyRejection();
+            } else {
+                return AddResult::aggressiveOrderFilled(std::move(generatedTrades));
+            }
+        }
     }
 
     // Limit Order Book data internals
@@ -470,62 +564,15 @@ public:
         const std::string& orderId, int64_t price, uint32_t quantity, Side side, 
         bool rejectCrossOrder
     ) {
-        // check if orderId already exists
-        auto found = orderMap_.find(orderId);
-        if (orderMap_.end() != found) {
-            // cannot add a new order with duplicate order ID
-            return AddResult::duplicatRejection();
-        }
-
-        // check if the order crosses with the other side.
-        // if it is a passive order on the near side (or improving spread), 
-        // passively insert that to the book
-        // otherwise, invoke matching engine logic that generate trades
         switch (side) {
-            case Side::Buy: {
-                std::optional<int64_t> bestAsk = askSide_.bestPrice();
-                if (bestAsk && price >= bestAsk) {
-                    // this is where the new buy order cross with asks
-                    if (rejectCrossOrder) {
-                        return AddResult::aggressiveOrderRejection();
-                    } else {
-                        // invoke match engine logic to generate fills
-
-                    }
-                } else {
-                    // simple insert into the bid side
-                    std::unique_ptr<Order> order = std::make_unique<Order>(
-                        orderId, price, quantity, side, now());
-                    Order* pOrder = order.get();
-                    orderMap_.emplace(orderId, std::move(order));
-
-                    // find the level and link the orders on the bid side
-                    bidSide_.addOrder(*pOrder);
-                    return AddResult::passiveOrderAdded();
-                }
-            }
-            case Side::Sell: {
-                std::optional<int64_t> bestBid = bidSide_.bestPrice();
-                if (bestBid && price <= bestBid) {
-                    // this is where the new sell order cross with bids
-                    if (rejectCrossOrder) {
-                        return AddResult::aggressiveOrderRejection();
-                    } else {
-                        // invoke match engine logic to generate fills
-                    }
-                } else {
-                    // simple insert
-                    std::cout << "simple inserting for sell" << std::endl;
-                    std::unique_ptr<Order> order = std::make_unique<Order>(
-                        orderId, price, quantity, side, now());
-                    Order* pOrder = order.get();
-                    orderMap_.emplace(orderId, std::move(order));
-
-                    // find the level and link the orders on the bid side
-                    askSide_.addOrder(*pOrder);
-                    return AddResult::passiveOrderAdded();
-                }
-            }
+            case Side::Buy:
+                return addOrder(
+                    bidSide_, askSide_,
+                    orderId, price, quantity, side, rejectCrossOrder);
+            case Side::Sell:
+                return addOrder(
+                    askSide_, bidSide_, 
+                    orderId, price, quantity, side, rejectCrossOrder);
         }
         __builtin_unreachable();
     }
