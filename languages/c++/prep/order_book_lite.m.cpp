@@ -1,4 +1,4 @@
-// this is to track a limit order book (lite)
+// this is to track a aggregated Level 2 limit order book (lite)
 // assume 1 tick = $0.01, 1 cent
 // 101.5    10150      1000    A         
 // 100.5    10050      1200    A
