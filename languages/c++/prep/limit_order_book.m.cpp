@@ -214,11 +214,53 @@ std::ostream& operator<<(std::ostream& os, const CancelResult& res) {
 
 struct ModifyResult {
     enum class Type {
-
+        UnknownOrderId,
+        NothingToChange,
+        QuantityChanged,
+        PriceChanged
     };
 
     Type type;
+
+    static ModifyResult unknownOrderId() {
+        return ModifyResult{Type::UnknownOrderId};
+    }
+
+    static ModifyResult nothingToChange() {
+        return ModifyResult{Type::NothingToChange};
+    }
+
+    static ModifyResult quantityChanged() {
+        return ModifyResult{Type::QuantityChanged};
+    }
+
+    static ModifyResult priceChanged() {
+        return ModifyResult{Type::PriceChanged};
+    }
 };
+
+std::ostream& operator<<(std::ostream& os, ModifyResult::Type type) {
+    switch (type) {
+        case ModifyResult::Type::UnknownOrderId:
+            os << "UnknownOrderId";
+            return os;
+        case ModifyResult::Type::NothingToChange:
+            os << "NothingToChange";
+            return os;
+        case ModifyResult::Type::QuantityChanged:
+            os << "QuantityChanged";
+            return os;
+        case ModifyResult::Type::PriceChanged:
+            os << "PricedChanged";
+            return os;
+    }
+    __builtin_unreachable();
+}
+
+std::ostream& operator<<(std::ostream& os, const ModifyResult& res) {
+    os << "ModifyResult[`type=" << res.type << ']';
+    return os;
+}
 
 class LimitOrderBook {
 
@@ -359,6 +401,18 @@ class LimitOrderBook {
             }
         }
 
+        Order* nextOrder() const {
+            if (empty()) {
+                return nullptr;
+            }
+            Level& level = levels_.begin()->second;
+            if (!level.head) {
+                // TODO inconsistent state if we clear empty level
+                return nullptr;
+            }
+            return level.head;
+        }
+
         bool removeOrder(Order& order) {
             // in production, order.level_ would be used directly.
             // added other code for debugging internal inconsistency
@@ -472,10 +526,15 @@ class LimitOrderBook {
     template<typename FarSideBook>
     void 
     match(
-        FarSideBook& farSide, 
-        int& remainingQuantity, std::vector<Trade>& generatedTrades
+        FarSideBook& farSide, int64_t price,
+        uint32_t& remainingQuantity, std::vector<Trade>& generatedTrades
     ) {
-        
+        while (farSide.isCrossPriceMarketable(price)) {
+            Order* pNextOrder = farSide.nextOrder();
+            if (pNextOrder) {
+                
+            }
+        }
     }
 
     // the call site of this function has figured the near side and far side
@@ -512,7 +571,7 @@ class LimitOrderBook {
             } else {
                 // invoke matching engine logic to generate fills and update 
                 // remainingQuantity and generatedTrades.
-                
+                // match(farSide, price, remainingQuantity, generatedTrades);
             }
         }
 
@@ -602,12 +661,23 @@ public:
         }
     }
 
-    ModifyResult modifyOrder(const std::string& orderId, int64_t price) {
+    // modifying price changes book/level structure 
+    ModifyResult modifyOrderPrice(const std::string& orderId, int64_t price) {
         throw std::runtime_error("no impl");
     }
 
-    ModifyResult modifyOrder(const std::string& orderId, uint32_t quantity) {
-        throw std::runtime_error("no impl");
+    // modifying order quantity doesn't change book/level structure
+    ModifyResult modifyOrderQuantity(const std::string& orderId, uint32_t quantity) {
+        auto found = orderMap_.find(orderId);
+        if (found == orderMap_.end()) {
+            return ModifyResult::unknownOrderId();
+        } else {
+            Order* pOrder = found->second.get();
+            int32_t delta = static_cast<int32_t>(quantity) - static_cast<int32_t>(pOrder->qty_);
+            pOrder->qty_ = quantity;
+            pOrder->level_->totalQty += delta;
+            return ModifyResult::quantityChanged();
+        }
     }
 
     std::ostream& print(std::ostream& os) const {
@@ -711,6 +781,14 @@ int main(int argc, char *argv[]) {
     assert(cancelRes.type == CancelResult::Type::Cancelled);
     cancelRes = book.cancelOrder("b2");
     assert(cancelRes.type == CancelResult::Type::Cancelled);
+    book.print(std::cout) << std::endl;
+
+    ModifyResult modRes = book.modifyOrderQuantity("b4", 10);
+    assert(modRes.type == ModifyResult::Type::QuantityChanged);
+    book.print(std::cout) << std::endl;
+
+    modRes = book.modifyOrderQuantity("b4", 100);
+    assert(modRes.type == ModifyResult::Type::QuantityChanged);
     book.print(std::cout) << std::endl;
 
     return 0; 
