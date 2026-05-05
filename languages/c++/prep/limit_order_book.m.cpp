@@ -350,7 +350,13 @@ class LimitOrderBook {
             if (empty()) {
                 return false;
             }
-            return !priceComparator_(crossPrice, levels_.begin()->first);
+            
+            bool crossable = !priceComparator_(crossPrice, levels_.begin()->first);
+            std::cout << "crossPrice:" << crossPrice
+                      << ",this side:" << levels_.begin()->first 
+                      << ",crossable:" << crossable
+                      << std::endl;
+            return crossable;
         }
 
         bool empty() const {
@@ -401,7 +407,7 @@ class LimitOrderBook {
             }
         }
 
-        Order* nextOrder() const {
+        Order* nextOrder() {
             if (empty()) {
                 return nullptr;
             }
@@ -526,13 +532,27 @@ class LimitOrderBook {
     template<typename FarSideBook>
     void 
     match(
-        FarSideBook& farSide, int64_t price,
+        FarSideBook& farSide, const std::string& orderId, int64_t price,
         uint32_t& remainingQuantity, std::vector<Trade>& generatedTrades
     ) {
-        while (farSide.isCrossPriceMarketable(price)) {
+        while (farSide.isCrossPriceMarketable(price) && remainingQuantity > 0) {
             Order* pNextOrder = farSide.nextOrder();
-            if (pNextOrder) {
-                
+            if (!pNextOrder) {
+                // no more orders to be matched on the far-side
+                break;
+            }
+
+            uint32_t fillQty = std::min(pNextOrder->qty(), remainingQuantity); 
+            generatedTrades.emplace_back(orderId, pNextOrder->orderId(), pNextOrder->price(), fillQty);
+            remainingQuantity -= fillQty;
+            if (fillQty == pNextOrder->qty()) {
+                // the passive order is fully filled
+                cancelOrder(pNextOrder->orderId());
+            } else { // fillQty < next qty
+                uint32_t postFillQty = pNextOrder->qty() - fillQty;
+                modifyOrderQuantity(pNextOrder->orderId(), postFillQty);
+                // no need to keep looping as there is not enough quantity to match
+                break;
             }
         }
     }
@@ -571,7 +591,7 @@ class LimitOrderBook {
             } else {
                 // invoke matching engine logic to generate fills and update 
                 // remainingQuantity and generatedTrades.
-                // match(farSide, price, remainingQuantity, generatedTrades);
+                match(farSide, orderId, price, remainingQuantity, generatedTrades);
             }
         }
 
@@ -673,6 +693,7 @@ public:
             return ModifyResult::unknownOrderId();
         } else {
             Order* pOrder = found->second.get();
+            // TODO: maybe just use int32_t for quantity
             int32_t delta = static_cast<int32_t>(quantity) - static_cast<int32_t>(pOrder->qty_);
             pOrder->qty_ = quantity;
             pOrder->level_->totalQty += delta;
@@ -783,12 +804,32 @@ int main(int argc, char *argv[]) {
     assert(cancelRes.type == CancelResult::Type::Cancelled);
     book.print(std::cout) << std::endl;
 
+    // modify order quantity down
     ModifyResult modRes = book.modifyOrderQuantity("b4", 10);
     assert(modRes.type == ModifyResult::Type::QuantityChanged);
     book.print(std::cout) << std::endl;
 
+    // modify order quantity up
     modRes = book.modifyOrderQuantity("b4", 100);
     assert(modRes.type == ModifyResult::Type::QuantityChanged);
+    book.print(std::cout) << std::endl;
+
+    // add aggressive order (no matching allowed)
+    addRes = book.addOrder("b100", 102, 15, Side::Buy, true);
+    assert(addRes.type == AddResult::Type::AggressiveOrderRejection);
+
+    // add aggressive order (small)
+    addRes = book.addOrder("b100", 102, 32, Side::Buy, false);
+    std::cout << addRes << std::endl;
+    assert(addRes.type == AddResult::Type::AggressiveOrderFilled);
+    assert(addRes.trades.size() == 3);
+    book.print(std::cout) << std::endl;
+
+    // add aggressive order (large)
+    addRes = book.addOrder("s100", 95, 101, Side::Sell, false);
+    std::cout << addRes << std::endl;
+    assert(addRes.type == AddResult::Type::AggressiveOrderAdded);
+    assert(addRes.trades.size() == 1);
     book.print(std::cout) << std::endl;
 
     return 0; 
