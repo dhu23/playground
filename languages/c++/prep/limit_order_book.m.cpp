@@ -215,27 +215,38 @@ std::ostream& operator<<(std::ostream& os, const CancelResult& res) {
 struct ModifyResult {
     enum class Type {
         UnknownOrderId,
+        ModificationRejected,
         NothingToChange,
         QuantityChanged,
-        PriceChanged
+        PriceChanged,
+        OrderFilled
     };
 
     Type type;
+    std::vector<Trade> trades;
 
     static ModifyResult unknownOrderId() {
-        return ModifyResult{Type::UnknownOrderId};
+        return ModifyResult{Type::UnknownOrderId, {}};
+    }
+
+    static ModifyResult modificationRejected() {
+        return ModifyResult{Type::ModificationRejected, {}};
     }
 
     static ModifyResult nothingToChange() {
-        return ModifyResult{Type::NothingToChange};
+        return ModifyResult{Type::NothingToChange, {}};
     }
 
     static ModifyResult quantityChanged() {
-        return ModifyResult{Type::QuantityChanged};
+        return ModifyResult{Type::QuantityChanged, {}};
     }
 
-    static ModifyResult priceChanged() {
-        return ModifyResult{Type::PriceChanged};
+    static ModifyResult priceChanged(std::vector<Trade>&& trades) {
+        return ModifyResult{Type::PriceChanged, std::move(trades)};
+    }
+
+    static ModifyResult orderFilled(std::vector<Trade>&& trades) {
+        return ModifyResult{Type::OrderFilled, std::move(trades)};
     }
 };
 
@@ -243,6 +254,9 @@ std::ostream& operator<<(std::ostream& os, ModifyResult::Type type) {
     switch (type) {
         case ModifyResult::Type::UnknownOrderId:
             os << "UnknownOrderId";
+            return os;
+        case ModifyResult::Type::ModificationRejected:
+            os << "ModificationRejected";
             return os;
         case ModifyResult::Type::NothingToChange:
             os << "NothingToChange";
@@ -252,6 +266,9 @@ std::ostream& operator<<(std::ostream& os, ModifyResult::Type type) {
             return os;
         case ModifyResult::Type::PriceChanged:
             os << "PricedChanged";
+            return os;
+        case ModifyResult::Type::OrderFilled:
+            os << "OrderFilled";
             return os;
     }
     __builtin_unreachable();
@@ -422,17 +439,20 @@ class LimitOrderBook {
         bool removeOrder(Order& order) {
             // in production, order.level_ would be used directly.
             // added other code for debugging internal inconsistency
-            auto levelIt = levels_.find(order.price_);
-            bool foundPriceLevel = levelIt != levels_.end();
+            
+            // comment out O(logN) debug code
+            // auto levelIt = levels_.find(order.price_);
+            // bool foundPriceLevel = levelIt != levels_.end();
             bool hasLevelPtr = order.level_ != nullptr;
-            if (hasLevelPtr != foundPriceLevel) {
-                // INCONSISTENT
-                std::cerr 
-                    << "inconsistent state, order:" << order.orderId()
-                    << ", hasLevelPtr: " << hasLevelPtr 
-                    << ", foundPriceLevel" << foundPriceLevel
-                    << std::endl;
-            } else if (!hasLevelPtr) {
+            // if (hasLevelPtr != foundPriceLevel) {
+            //     // INCONSISTENT
+            //     std::cerr 
+            //         << "inconsistent state, order:" << order.orderId()
+            //         << ", hasLevelPtr: " << hasLevelPtr 
+            //         << ", foundPriceLevel" << foundPriceLevel
+            //         << std::endl;
+            // } else 
+            if (!hasLevelPtr) {
                 // Don't do anything, this order isn't in the book levels
                 std::cerr 
                     << "inconsistent state, order: " << order.orderId()
@@ -493,7 +513,8 @@ class LimitOrderBook {
                 // this would cause the order cancel to be O(logN)
                 // maybe an alternative is to leave the empty level as is
                 if (pLevel->orderCount == 0) {
-                    levels_.erase(levelIt);
+                    // this is O(logN)
+                    // levels_.erase(levelIt);
                 }
                 return true;
             }
@@ -621,6 +642,37 @@ class LimitOrderBook {
         }
     }
 
+    template<typename NearSideBook, typename FarSideBook>
+    ModifyResult
+    modifyOrderPrice(
+        NearSideBook& nearSide, FarSideBook& farSide, 
+        Order& order, int64_t price
+    ) {
+        nearSide.removeOrder(order);
+
+        uint32_t remainingQuantity = order.qty();
+        std::vector<Trade> generatedTrades{};
+
+        if (farSide.isCrossPriceMarketable(price)) {    
+            // invoke matching engine logic to generate fills and update
+            // remainingQuantity and generatedTrades.
+            match(farSide, order.orderId(), price, remainingQuantity, generatedTrades);
+        }
+
+        if (remainingQuantity > 0) {
+            // the order still exists after 
+            order.price_ = price;
+            order.qty_ = remainingQuantity;
+            nearSide.addOrder(order);
+        
+            return ModifyResult::priceChanged(std::move(generatedTrades));
+        } else {
+            // the order is full filled
+            orderMap_.erase(order.orderId_);
+            return ModifyResult::orderFilled(std::move(generatedTrades));
+        }
+    }
+
     // Limit Order Book data internals
     // orders are owned by the orderId -> order map
     std::unordered_map<std::string, std::unique_ptr<Order>> orderMap_;
@@ -629,6 +681,12 @@ class LimitOrderBook {
 
 public:
     LimitOrderBook(): orderMap_{}, bidSide_{}, askSide_{} {}
+
+    // cannot have any copy/move as that invalidates internal pointers
+    LimitOrderBook(const LimitOrderBook& other) = delete;
+    LimitOrderBook& operator=(const LimitOrderBook& other) = delete;
+    LimitOrderBook(LimitOrderBook&& other) = delete;
+    LimitOrderBook& operator=(LimitOrderBook&& other) = delete;
 
     std::optional<int64_t> bestBid() const {
         return bidSide_.bestPrice();
@@ -679,15 +737,36 @@ public:
                 }
             }
         }
+        __builtin_unreachable();
     }
 
     // modifying price changes book/level structure 
     ModifyResult modifyOrderPrice(const std::string& orderId, int64_t price) {
-        throw std::runtime_error("no impl");
+        auto found = orderMap_.find(orderId);
+        if (found == orderMap_.end()) {
+            return ModifyResult::unknownOrderId();
+        }
+
+        Order& order = *found->second;
+        if (order.price() == price) {
+            return ModifyResult::nothingToChange();
+        }
+
+        switch (order.side()) {
+            case Side::Buy: 
+                return modifyOrderPrice(bidSide_, askSide_, order, price);
+            case Side::Sell:
+                return modifyOrderPrice(askSide_, bidSide_, order, price);
+        }
+        __builtin_unreachable();
+    
     }
 
     // modifying order quantity doesn't change book/level structure
     ModifyResult modifyOrderQuantity(const std::string& orderId, uint32_t quantity) {
+        if (quantity <= 0) {
+            return ModifyResult::modificationRejected();
+        }
         auto found = orderMap_.find(orderId);
         if (found == orderMap_.end()) {
             return ModifyResult::unknownOrderId();
@@ -830,6 +909,22 @@ int main(int argc, char *argv[]) {
     std::cout << addRes << std::endl;
     assert(addRes.type == AddResult::Type::AggressiveOrderAdded);
     assert(addRes.trades.size() == 1);
+    book.print(std::cout) << std::endl;
+
+    // modify order price level
+    modRes = book.modifyOrderPrice("s4", 105);
+    assert(modRes.type == ModifyResult::Type::PriceChanged);
+    book.print(std::cout) << std::endl;
+
+    // modify order price to cross with the other side, but still survives
+    book.addOrder("b101", 90, 20, Side::Buy, false);
+    modRes = book.modifyOrderPrice("b101", 99);
+    assert(modRes.type == ModifyResult::Type::PriceChanged);
+    book.print(std::cout) << std::endl;
+
+    // modify order to be full filled
+    modRes = book.modifyOrderPrice("b101", 103);
+    assert(modRes.type == ModifyResult::Type::OrderFilled);
     book.print(std::cout) << std::endl;
 
     return 0; 
