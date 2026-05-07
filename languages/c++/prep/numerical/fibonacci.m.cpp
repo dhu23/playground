@@ -8,7 +8,7 @@
 // 3. using the matrix multiplication 
 //    exponential can be done log(N) instead of linear N
 
-#include <algorithm>
+
 #include <cassert>
 #include <chrono>
 #include <functional>
@@ -35,13 +35,13 @@ struct Fibonacci {
         // and arrive at F(1), F(2)
         // and repeat to get to F(N-1), F(N)
         // this takes N-1 iterations
-        int a = 0;
-        int b = 1;
+        long a = 0;
+        long b = 1;
 
         int count = n-1;
         while (count > 0) {
             // go from (a, b) -> (b, a+b)
-            int temp = a + b;
+            long temp = a + b;
             a = b;
             b = temp;
             --count;
@@ -125,7 +125,7 @@ struct Fibonacci {
             std::vector<Matrix> powers{};
             std::vector<long> exponents{};
 
-            Matrix power = transition;
+            Matrix power = m;
             long exponent = 1;
 
             while (exponent <= n) {

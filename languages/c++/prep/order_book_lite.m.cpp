@@ -35,7 +35,8 @@ public:
     };
 
 private:
-    template <typename Compare> class OrderBookSide {
+    template <typename Compare> 
+    class OrderBookSide {
         std::map<int64_t, uint64_t, Compare> levels_;
 
     public:

@@ -26,6 +26,8 @@
 - References vs pointers
 - Lambdas and captures (`[]`, `[=]`, `[&]`, `[this]`)
 - Move semantics subtleties
+- perfect forwarding
+- allocator behavior
 - Const correctness, `constexpr`, `if constexpr` usage
 - Function overloading & operator overloading rules
 - Undefined behavior traps(dangling pointers, iterator invalidation)
