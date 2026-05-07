@@ -11,14 +11,14 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <vector>
 
 struct Fibonacci {
     // by its recursive definition
-    static long recursive(long n) {
-        assert(n >= 0);
+    static uint64_t recursive(uint16_t n) {
         if (n <= 1) {
             return n;
         } 
@@ -26,7 +26,7 @@ struct Fibonacci {
     }
 
     // basically this calculates F(2), F(3), ... all the way to F(N)
-    static long linearRoll(long n) {
+    static uint64_t linearRoll(uint16_t n) {
         assert(n >= 0);
         if (n <= 1) {
             return n;
@@ -35,13 +35,13 @@ struct Fibonacci {
         // and arrive at F(1), F(2)
         // and repeat to get to F(N-1), F(N)
         // this takes N-1 iterations
-        long a = 0;
-        long b = 1;
+        uint64_t a = 0;
+        uint64_t b = 1;
 
-        int count = n-1;
+        uint16_t count = n-1;
         while (count > 0) {
             // go from (a, b) -> (b, a+b)
-            long temp = a + b;
+            uint64_t temp = a + b;
             a = b;
             b = temp;
             --count;
@@ -59,10 +59,10 @@ struct Fibonacci {
     // |  F(N-1)  |           |  1  0  |  |  F(N-2)  |
     // --        --           --      --  --        -- 
     struct Matrix {
-        long a;
-        long b;
-        long c;
-        long d;
+        uint64_t a;
+        uint64_t b;
+        uint64_t c;
+        uint64_t d;
     };
 
     // m1       m2
@@ -78,8 +78,7 @@ struct Fibonacci {
     }
 
     struct ExponentialByRecursion {
-        static Matrix exponential(const Matrix& m, long n) {
-            assert(n > 0);
+        static Matrix exponential(const Matrix& m, uint16_t n) {
             if (n == 1) {
                 return m;
             }
@@ -93,8 +92,7 @@ struct Fibonacci {
     };
 
     struct ExponentialBySquaringBase {
-        static Matrix exponential(const Matrix& m, long n) {
-            assert(n > 0);
+        static Matrix exponential(const Matrix& m, uint16_t n) {
             if (n == 1) {
                 return m;
             }
@@ -114,8 +112,7 @@ struct Fibonacci {
     };
 
     struct ExponentialByStackIteration {
-        static Matrix exponential(const Matrix& m, long n) {        
-            assert(n > 0);
+        static Matrix exponential(const Matrix& m, uint16_t n) {
             if (n == 1) {
                 return m;
             }
@@ -123,10 +120,10 @@ struct Fibonacci {
             // build up a vector that holds the power of T^1, T^2, T^4, T^8...
             // this is basically the binary representation of exponent
             std::vector<Matrix> powers{};
-            std::vector<long> exponents{};
+            std::vector<uint16_t> exponents{};
 
             Matrix power = m;
-            long exponent = 1;
+            uint16_t exponent = 1;
 
             while (exponent <= n) {
                 powers.push_back(power);
@@ -139,7 +136,7 @@ struct Fibonacci {
             Matrix result{1, 0, 0, 1};
 
             while (!exponents.empty()) {
-                long lastExponent = exponents.back();
+                uint16_t lastExponent = exponents.back();
                 if (lastExponent <= n) {
                     // multiple that to the results
                     result = multiple(result, powers.back());
@@ -162,8 +159,7 @@ struct Fibonacci {
     // T*T*...T*V0 (with n-1 Ts) gives V(n-1), that is (F(N), F(N-1))
     // so we calculate T^(n-1)
     template<typename E>
-    static long matrix(long n) {
-        assert(n >= 0);
+    static uint64_t matrix(uint16_t n) {
         if (n <= 1) {
             return n;
         }
@@ -175,7 +171,7 @@ struct Fibonacci {
 
 struct Test {
     static void testConsistency() {
-        for (long i = 0; i < 10; ++i) {
+        for (uint16_t i = 0; i < 10; ++i) {
             std::cout << "---- i: " << i << " ----" << std::endl;
             std::cout << "recursive: " << Fibonacci::recursive(i) << std::endl;
             std::cout << "linear-roll: " << Fibonacci::linearRoll(i) << std::endl;
@@ -194,10 +190,10 @@ struct Test {
         }
     }
 
-    static void profile(std::function<long(long)> fib, int max) {
-        for (int i = 0; i < max; ++i) {
+    static void profile(std::function<uint64_t(uint16_t)> fib, uint16_t max) {
+        for (uint16_t i = 0; i < max; ++i) {
             auto start = std::chrono::steady_clock::now();
-            long res = fib(i);
+            uint64_t res = fib(i);
             auto end = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
             std::cout 
@@ -208,10 +204,10 @@ struct Test {
 
     static void testPerformance() {
         profile(Fibonacci::recursive, 35);
-        profile(Fibonacci::linearRoll, 70);
-        profile(Fibonacci::matrix<Fibonacci::ExponentialByStackIteration>, 90);
-        profile(Fibonacci::matrix<Fibonacci::ExponentialByRecursion>, 90);
-        profile(Fibonacci::matrix<Fibonacci::ExponentialBySquaringBase>, 90);
+        profile(Fibonacci::linearRoll, 100);
+        profile(Fibonacci::matrix<Fibonacci::ExponentialByStackIteration>, 100);
+        profile(Fibonacci::matrix<Fibonacci::ExponentialByRecursion>, 100);
+        profile(Fibonacci::matrix<Fibonacci::ExponentialBySquaringBase>, 100);
     }
 };
 
