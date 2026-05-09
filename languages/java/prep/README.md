@@ -74,4 +74,74 @@
 
 ## Networking
 # TCP vs UDP
-- TCP: connection-oriented 
+- TCP: connection-oriented, reliable, ordered, 3-way handshake
+- UDP: connectionless, best-effort, lower latency
+- Trading: UDP multicast for market dtaa (feed handlers) -- one-to-many, speed over reliability
+- Trading: TCP for order flow - must guarantee delivery & ordering
+- Reliable UDP: application-level retransmit/sequencing on top of UDP (e.g. Aeron)
+- Unicast vs multicast - when each is appropriate
+
+# IPC - Same Server
+- Unix domain sockets - most flexible
+- Shared memory (mmap, shmget) - fastest, need synchronization
+- Pipes / named pipes (FIFO)
+- Trade-offs: Latency vs complexity vs safety
+
+# IPC - Different Servers
+- TCP/UDP sockets, HTTP/REST, gPRC(HTTP/2 + protobuf)
+- Messgae brokers: Kafka, RabbitMQ - async decoupling
+- Serialization: JSON vs Protobuf vs Avro
+
+# Data Encoding
+- Text formats: JSON, XML, CSV
+- Binary formats: protobuf, Avro, MessagePack
+- Schema evolution & backward/forward compatibility
+- Character encoding: UTF-8 vs UTF-16, Base64 for binary-over-text
+
+## System Design
+# SOLID Principles
+- S - Single Responsibility: one reason to change
+- O - Open/Closed: extend without modifying
+- L - Liskov Substitution: subtypes must be substitutable
+- I - Interface Segregation: no forced unused dependencies
+- D - Dependency Inversion: depend on abstractions
+
+# OMS/EMS (optional)
+- OMS vs EMS - what each owns (order lifecycle vs execution/routing)
+- Order lifecycle: new -> validated -> routed -> partial fill -> filled/cancelled
+- Key OMS features to mention: state management, pre-trade checks, compliance, position tracking
+- Key EMS features to mention: algo execution, market connectivity, real-time market data
+
+## Role-Specific (BAM Exec Tech)
+# Execution Algorithms
+- Experience building execution algos (TWAP, VWAP, POV, MOO, MOC)
+- Millisecond-awareness: where does latency matter most in the order path
+
+# Low-latency Data
+- Techniques: object pooling, off-heap memory, avoiding GC pauses
+- Lock-free structures in parctice (Disrupotr, CAS loops, Atomic classes)
+- Measuring & profiling latency (JMH, Flame graphs, percentile distributions)
+
+# Distributed Systems
+- Designing for fault tolerance: failover, idempotency, exactly-once sematics
+- State management across nodes - event sourcing, replication, consensus
+
+# AI awareness
+- Can name tools they use (Copilot, Claude, ChatGPT)
+- basic awareness e.g. latest Claude/OpenAI model
+- what is a Claude skill
+
+# Communication & Pace
+- Can explain technical trade-offs clearly to non-technical stakeholders
+- Scenario: it is Friday 5PM, a production issue is starting to surface - what do you do?
+
+## Coding Test
+# Counting set
+- set sematics and equals/hascode constract
+- identifies the addAll() double counting bug
+- Explains why composition is preferable in inheritance in this scenario
+
+# Testability
+- Identifies testability issus such as HTTP calls, randomness etc
+- Refactors towards DI, extracting calls to HTTP client and Random()
+- Cleanly refactors code
