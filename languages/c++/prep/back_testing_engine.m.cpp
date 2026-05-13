@@ -72,11 +72,10 @@ struct Event {
     using EventData = std::variant<MarketData, Signal, Scheduled>;
 
     int64_t timestamp;
-    size_t sourceId; // used to indicate if it is from a stream
     EventData data;
 
     std::ostream& print(std::ostream& os) const {
-        os << "Event[`ts=" << timestamp << ",srcId=" << sourceId << ",data=";
+        os << "Event[`ts=" << timestamp << ",data=";
         std::visit(overloaded{
             [&os](const MarketData& marketData) -> std::ostream& {return marketData.print(os);},
             [&os](const Signal& signal) -> std::ostream& {return signal.print(os);},
@@ -138,12 +137,23 @@ concept EventProcessorT = requires(T t, const Event& event) {
 template<typename EventProc>
 requires EventProcessorT<EventProc>
 class Engine {
+    struct EngineEvent {
+        Event event;
+        size_t sourceId; // used to indicate if it is from a stream
+
+        bool operator>(const EngineEvent& other) const {
+            return event.operator>(other.event);
+        }
+    };
+
     EventProc processor_;
     std::vector<EventSource*> sources_;
-    std::priority_queue<Event, std::vector<Event>, std::greater<Event>> mergeQueue_;
+    std::priority_queue<
+        EngineEvent, std::vector<EngineEvent>, std::greater<EngineEvent>
+    > mergeQueue_;
 
     // advance time and return the next event
-    std::optional<Event> getNext() {
+    std::optional<EngineEvent> getNext() {
         if (mergeQueue_.empty()) {
             return std::nullopt;
         }
@@ -159,7 +169,7 @@ class Engine {
         std::cout << ", sources size: " << sources_.size() << std::endl;
         EventSource* pSource = sources_[next.sourceId];
         if (pSource->hasNext()) {
-            mergeQueue_.push(pSource->getNext());
+            mergeQueue_.push(EngineEvent{pSource->getNext(), next.sourceId});
         }
 
         return next;
@@ -176,9 +186,8 @@ public:
             return;
         }
         Event event = eventSource.getNext();
-        mergeQueue_.push(event);
-        // TODO make it robust
-        // assuming event source Id matches vector location
+        size_t sourceId = sources_.size();
+        mergeQueue_.push(EngineEvent{event, sourceId});
         sources_.push_back(&eventSource);
     }
 
@@ -188,11 +197,11 @@ public:
 
     void run() {
         while (true) {
-            std::optional<Event> event = getNext();
-            if (!event) {
+            std::optional<EngineEvent> next = getNext();
+            if (!next) {
                 break;
             }
-            processor_.process(*event);
+            processor_.process(next->event);
         }
     }
 };
@@ -232,30 +241,30 @@ struct EngineTest {
     constexpr static int32_t AAPL = 2654;
     constexpr static int32_t TSLA = 960;
 
-    static VectorDataSource makeMarketDataSource(size_t sourceId) {
+    static VectorDataSource makeMarketDataSource() {
         VectorDataSource mds{"test-md-source"};
         uint32_t seqNum = 0;
         int64_t ts = 1;
     
         for (double px : {150.0, 151.0, 152.0}) {
-            mds.add(Event{ts, sourceId, MarketData{AAPL, px, seqNum++}});
+            mds.add(Event{ts, MarketData{AAPL, px, seqNum++}});
             ts += 10;
-            mds.add(Event{ts, sourceId, MarketData{TSLA, px + 1000.0, seqNum++}});
+            mds.add(Event{ts, MarketData{TSLA, px + 1000.0, seqNum++}});
             ts += 10;
         }
 
         return mds;
     }
 
-    static VectorDataSource makeSignalSource(size_t sourceId) {
+    static VectorDataSource makeSignalSource() {
         VectorDataSource signals{"test-signal-source"};
         uint32_t seqNum = 1;
         int64_t ts = 5;
 
         for (double px : {150.0, 151.0, 152.0}) {
-            signals.add(Event{ts, sourceId, Signal{AAPL, px, 100, seqNum++}});
+            signals.add(Event{ts, Signal{AAPL, px, 100, seqNum++}});
             ts += 10;
-            signals.add(Event{ts, sourceId, Signal{TSLA, px + 1000.0, 200, seqNum++}});
+            signals.add(Event{ts, Signal{TSLA, px + 1000.0, 200, seqNum++}});
             ts += 10;
         }
 
@@ -264,8 +273,8 @@ struct EngineTest {
 
     static void testReplayMarketData() {
         Engine<TestEventProcessor> engine{};
-        VectorDataSource mds = makeMarketDataSource(0);
-        VectorDataSource signals = makeSignalSource(1);
+        VectorDataSource mds = makeMarketDataSource();
+        VectorDataSource signals = makeSignalSource();
         engine.addEventSource(mds);
         engine.addEventSource(signals);
         engine.run();
