@@ -134,8 +134,7 @@ concept EventProcessorT = requires(T t, const Event& event) {
     { t.process(event) };
 };
 
-template<typename EventProc>
-requires EventProcessorT<EventProc>
+template<EventProcessorT EventProc>
 class Engine {
     struct EngineEvent {
         Event event;
@@ -181,6 +180,7 @@ public:
     , sources_{}
     , mergeQueue_{} {}
 
+    // TODO: make clear contract who owns EventSource
     void addEventSource(EventSource& eventSource) {
         if (!eventSource.hasNext()) {
             return;

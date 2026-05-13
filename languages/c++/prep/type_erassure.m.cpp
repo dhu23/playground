@@ -79,6 +79,9 @@ public:
 // Manual Type Erasure based Polymorphism
 //////////////////////////////////////////
 
+// this type erasure implementation has a drawback:
+// it couples the types that are to be erased, such as
+// BlackSholes, MonteCarlo etc. 
 class PricerByTypeErasure {
     class Concept {
     public:
@@ -132,6 +135,8 @@ public:
 /////////////////////////////////////////////////////
 
 // this is another wrapping for more full blown type erasure
+// it can erase any type that behaves like PricingModel:
+// existing ones, externally owned ones, and even future ones
 struct BlackScholesModel {
     double run(const Option &option, const MarketData &md) {
         return runBlackScholes(option, md);
