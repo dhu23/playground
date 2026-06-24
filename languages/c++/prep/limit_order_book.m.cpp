@@ -52,7 +52,6 @@
 #include <memory>
 #include <optional>
 #include <ostream>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -280,7 +279,6 @@ std::ostream& operator<<(std::ostream& os, const ModifyResult& res) {
 }
 
 class LimitOrderBook {
-
     struct Level;
     struct Order {
         std::string orderId_;
@@ -328,8 +326,8 @@ class LimitOrderBook {
 
     struct Level {
         int64_t price;
-        Order* head; // point to the first Order, not the sentinel node
-        Order* tail; // point to the last Order, not the sentinel node
+        Order* head = nullptr; // point to the first Order, not the sentinel node
+        Order* tail = nullptr; // point to the last Order, not the sentinel node
         size_t orderCount = 0;
         uint32_t totalQty = 0;
 
@@ -349,16 +347,48 @@ class LimitOrderBook {
         friend std::ostream& operator<<(std::ostream& os, const Level& level) {
             return level.print(os);
         }
+
+        // manage appending order to a level.
+        // The motivation to remove this logic out of BookSide is
+        // so that if we have different type of BookSide implementation
+        // such as vector based book implementation for enhance price level
+        // access efficiency, we would not have to duplicate level-append logic
+        void appendOrder(Order& order) {
+            Order* pLastOrder = this->tail;
+            if (pLastOrder == nullptr) {
+                assert(this->head == nullptr);
+                // this is when a level is completely empty
+                // update head pointer. 
+                this->head = &order;
+            } else {
+                // this order
+                pLastOrder->next_ = &order;
+                order.prev_ = pLastOrder;
+            }
+            // common part of the logic regardless if it is empty level or not
+            this->tail = &order;
+            this->orderCount += 1;
+            this->totalQty += order.qty_;
+            order.level_ = this;
+        }
     };
 
     template<typename Compare>
     class BookSide {
         // track levels by map to order prices from best to worst
         std::map<int64_t, Level, Compare> levels_;
+        // for efficient level count tracking
+        // because empty levels are not necessarily removed from levels_
+        // to avoid potential O(logN) operations
+        size_t levelCount_;
         Compare priceComparator_;
 
     public:
-        BookSide(): levels_{}, priceComparator_(Compare()) {}
+        BookSide(): levels_{}, levelCount_(0), priceComparator_(Compare()) {}
+
+        size_t levelCount() const {
+            return levelCount_;
+        }
 
         // for a cross price, check if this is marketable:
         // if this is a bid book, cross price(aggressive sell) <= bestBid
@@ -377,7 +407,7 @@ class LimitOrderBook {
         }
 
         bool empty() const {
-            return levels_.empty();
+            return levelCount_ == 0;
         }
 
         std::optional<int64_t> bestPrice() const {
@@ -394,33 +424,40 @@ class LimitOrderBook {
                 // the order are not linked to another other orders
                 auto [it, inserted] = levels_.emplace(
                     order.price_, 
-                    Level{order.price_, &order, &order, 1, order.qty_});
+                    Level{order.price_});
 
-                // TODO check inserted flag
-                
-                // update order's level pointer to point the new level for fast access
-                order.level_ = &(it->second);
+                assert(inserted);
+                it->second.appendOrder(order);
+                levelCount_ += 1;
+
+                // // update order's level pointer to point the new level for fast access
+                // order.level_ = &(it->second);
 
             } else {
                 // append to the end of the price level
                 Level& existingLevel = foundLevel->second;
-                Order* pLastOrder = existingLevel.tail;
-                if (pLastOrder == nullptr) {
-                    // Should not happen!
-                } else {
-                    std::cout 
-                        << "Appending " << order.orderId()
-                        << ",lastOrd=" << pLastOrder->orderId() << std::endl;
-                    pLastOrder->next_ = &order; // point the new one to last
-                    order.prev_ = pLastOrder; // point the last to the new one
-                    
-                    existingLevel.tail = &order; // update level tail to the new one
-                    existingLevel.orderCount += 1;
-                    existingLevel.totalQty += order.qty_;
-
-                    // update the order level pointer to the level location
-                    order.level_ = &existingLevel;
+                bool emptyLevel = existingLevel.orderCount == 0;
+                existingLevel.appendOrder(order);
+                if (emptyLevel) {
+                    levelCount_ += 1;
                 }
+                // Order* pLastOrder = existingLevel.tail;
+                // if (pLastOrder == nullptr) {
+                //     // Should not happen!
+                // } else {
+                //     std::cout 
+                //         << "Appending " << order.orderId()
+                //         << ",lastOrd=" << pLastOrder->orderId() << std::endl;
+                //     pLastOrder->next_ = &order; // point the new one to last
+                //     order.prev_ = pLastOrder; // point the last to the new one
+                    
+                //     existingLevel.tail = &order; // update level tail to the new one
+                //     existingLevel.orderCount += 1;
+                //     existingLevel.totalQty += order.qty_;
+
+                //     // update the order level pointer to the level location
+                //     order.level_ = &existingLevel;
+                // }
             }
         }
 
@@ -515,6 +552,7 @@ class LimitOrderBook {
                 if (pLevel->orderCount == 0) {
                     // this is O(logN)
                     // levels_.erase(levelIt);
+                    levelCount_ -= 1;
                 }
                 return true;
             }
@@ -551,8 +589,7 @@ class LimitOrderBook {
     }
 
     template<typename FarSideBook>
-    void 
-    match(
+    void match(
         FarSideBook& farSide, const std::string& orderId, int64_t price,
         uint32_t& remainingQuantity, std::vector<Trade>& generatedTrades
     ) {
@@ -696,6 +733,14 @@ public:
         return askSide_.bestPrice();
     }
 
+    size_t bidLevelCount() const {
+        return bidSide_.levelCount();
+    }
+
+    size_t askLevelCount() const {
+        return askSide_.levelCount();
+    }
+
     // add a new order to the internal FIFO priority
     AddResult addOrder(
         const std::string& orderId, int64_t price, uint32_t quantity, Side side, 
@@ -797,8 +842,71 @@ public:
     }
 };
 
+struct TestScenarios {
+    static void testEmptyBook() {
+        LimitOrderBook book{};
+        assert(book.bidLevelCount() == 0);
+        assert(book.askLevelCount() == 0);
+        assert(!book.bestBid());
+        assert(!book.bestAsk());
+        // book.print(std::cout) << std::endl;
+    }
 
-int main(int argc, char *argv[]) {
+    static void testAddingToEmpty() {
+        LimitOrderBook book{};
+        AddResult addRes = book.addOrder("s1", 101, 10, Side::Sell, true);
+        assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+        assert(book.bidLevelCount() == 0);
+        assert(book.askLevelCount() == 1);
+        assert(!book.bestBid());
+        assert(book.bestAsk());
+        assert(*book.bestAsk() == 101);
+        // book.print(std::cout) << std::endl;
+    }
+
+    static void testAddingAndRemoval() {
+        LimitOrderBook book{};
+        book.addOrder("s1", 101, 10, Side::Sell, true);
+        CancelResult cancelRes = book.cancelOrder("s1");
+
+        assert(cancelRes.type == CancelResult::Type::Cancelled);
+
+        assert(book.bidLevelCount() == 0);
+        assert(book.askLevelCount() == 0);
+        assert(!book.bestBid());
+        assert(!book.bestAsk());
+        // book.print(std::cout) << std::endl;
+    }
+
+    static void testAddingExtraToExistingLevel() {
+        LimitOrderBook book{};
+        book.addOrder("s1", 101, 10, Side::Sell, true);
+        AddResult addRes = book.addOrder("s2", 101, 20, Side::Sell, true);
+
+        assert(addRes.type == AddResult::Type::PassiveOrderAdded);
+
+        assert(book.bidLevelCount() == 0);
+        assert(book.askLevelCount() == 1);
+        assert(!book.bestBid());
+        assert(book.bestAsk());
+        assert(*book.bestAsk() == 101);
+        // book.print(std::cout) << std::endl;
+    }
+
+    static void testAddingAndRemovalMultiple() {
+        LimitOrderBook book{};
+        book.addOrder("s1", 101, 10, Side::Sell, true);
+        book.addOrder("s2", 101, 20, Side::Sell, true);
+
+        CancelResult cancelRes = book.cancelOrder("s1");
+
+        assert(cancelRes.type == CancelResult::Type::Cancelled);
+
+        book.print(std::cout) << std::endl;
+    }
+};
+
+void testLimitBookScenario() {
     LimitOrderBook book{};
     book.print(std::cout) << std::endl;
 
@@ -895,14 +1003,21 @@ int main(int argc, char *argv[]) {
 
     // add aggressive order (no matching allowed)
     addRes = book.addOrder("b100", 102, 15, Side::Buy, true);
+    std::cout << "expecting rejection" << std::endl;
     assert(addRes.type == AddResult::Type::AggressiveOrderRejection);
+    std::cout << "expecting rejection good" << std::endl;
+    book.print(std::cout) << std::endl;
+
+    std::cout << "------------------------" << std::endl;
 
     // add aggressive order (small)
-    addRes = book.addOrder("b100", 102, 32, Side::Buy, false);
+    addRes = book.addOrder("b100", 101, 32, Side::Buy, false);
     std::cout << addRes << std::endl;
     assert(addRes.type == AddResult::Type::AggressiveOrderFilled);
     assert(addRes.trades.size() == 3);
     book.print(std::cout) << std::endl;
+
+    std::cout << "=========================" << std::endl;
 
     // add aggressive order (large)
     addRes = book.addOrder("s100", 95, 101, Side::Sell, false);
@@ -926,6 +1041,14 @@ int main(int argc, char *argv[]) {
     modRes = book.modifyOrderPrice("b101", 103);
     assert(modRes.type == ModifyResult::Type::OrderFilled);
     book.print(std::cout) << std::endl;
+}
 
-    return 0; 
+int main(int argc, char *argv[]) {
+    // testLimitBookScenario();
+    TestScenarios::testEmptyBook();
+    TestScenarios::testAddingToEmpty();
+    TestScenarios::testAddingAndRemoval();
+    TestScenarios::testAddingExtraToExistingLevel();
+    TestScenarios::testAddingAndRemovalMultiple();
+    return 0;
 }
