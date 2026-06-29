@@ -414,7 +414,11 @@ class LimitOrderBook {
             if (empty()) {
                 return std::nullopt;
             }
-            return levels_.begin()->first;
+            auto bestLevel = levels_.begin();
+            while (bestLevel->second.orderCount == 0) {
+                ++bestLevel;
+            }
+            return bestLevel->first;
         }
 
         void addOrder(Order& order) {
@@ -550,6 +554,8 @@ class LimitOrderBook {
                 // this would cause the order cancel to be O(logN)
                 // maybe an alternative is to leave the empty level as is
                 if (pLevel->orderCount == 0) {
+                    std::cout << "level order size is reduced to 0: " << pLevel->price << std::endl;
+                    std::cout << "reducing level count by 1 from " << levelCount_ << std::endl;
                     // this is O(logN)
                     // levels_.erase(levelIt);
                     levelCount_ -= 1;
@@ -559,22 +565,29 @@ class LimitOrderBook {
             return false;
         }
 
+        // TODO update by using new level count
         std::ostream& print(std::ostream& os, bool bestPriceFirst) const {
-            if (levels_.empty()) {
+            // TODO: package implementation of how levels are managed
+            // into a class 
+            if (empty()) {
                 os << "No Levels";
                 return os;
             }
 
-            os << "Levels# : " << levels_.size() << std::endl;
+            os << "Levels# : " << levelCount() << std::endl;
             if (bestPriceFirst) {
                 for (auto it = levels_.begin(); it != levels_.end(); ++it) {
-                    os << it->first << " ====> ";
-                    it->second.print(os) << std::endl;
+                    if (it->second.orderCount > 0) {
+                        os << it->first << " ====> ";
+                        it->second.print(os) << std::endl;
+                    }
                 }
             } else {
                 for (auto it = levels_.rbegin(); it != levels_.rend(); ++it) {
-                    os << it->first << " ====> ";
-                    it->second.print(os) << std::endl;
+                    if (it->second.orderCount > 0) {
+                        os << it->first << " ====> ";
+                        it->second.print(os) << std::endl;
+                    }
                 }
             }
             return os;
@@ -893,7 +906,7 @@ struct TestScenarios {
         // book.print(std::cout) << std::endl;
     }
 
-    static void testAddingAndRemovalMultiple() {
+    static void testAddingAndRemovalToSameLevel() {
         LimitOrderBook book{};
         book.addOrder("s1", 101, 10, Side::Sell, true);
         book.addOrder("s2", 101, 20, Side::Sell, true);
@@ -902,7 +915,66 @@ struct TestScenarios {
 
         assert(cancelRes.type == CancelResult::Type::Cancelled);
 
+        assert(book.bidLevelCount() == 0);
+        assert(book.askLevelCount() == 1);
+        assert(!book.bestBid());
+        assert(book.bestAsk());
+        assert(*book.bestAsk() == 101);
+
+        cancelRes = book.cancelOrder("s2");
+
+        assert(cancelRes.type == CancelResult::Type::Cancelled);
+
+        assert(book.bidLevelCount() == 0);
+        assert(book.askLevelCount() == 0);
+        assert(!book.bestBid());
+        assert(!book.bestAsk());
+
         book.print(std::cout) << std::endl;
+    }
+
+    static void testAddingAndRemovalMultiple() {
+        std::cout << "Adding and Removing Multiple --------------" << std::endl;
+        LimitOrderBook book{};
+        book.addOrder("s-101-1", 101, 10, Side::Sell, true);
+        book.addOrder("s-102-1", 102, 100, Side::Sell, true);
+
+        assert(book.askLevelCount() == 2);
+        assert(book.bestAsk());
+        assert(*book.bestAsk() == 101);
+
+        book.addOrder("s-101-2", 101, 20, Side::Sell, true);
+        assert(book.askLevelCount() == 2);
+        assert(book.bestAsk());
+        assert(*book.bestAsk() == 101);
+
+        book.cancelOrder("s-101-1");
+        assert(book.askLevelCount() == 2);
+        assert(book.bestAsk());
+        assert(*book.bestAsk() == 101);
+
+        book.print(std::cout) << std::endl;
+
+        std::cout << "Canceling the last 101 order" << std::endl;
+        std::cout << "expect to see one less level than " << book.askLevelCount() << std::endl;
+        book.cancelOrder("s-101-2");
+
+        book.print(std::cout) << std::endl;
+        assert(book.askLevelCount() == 1);
+        assert(book.bestAsk());
+        std::cout << "bestAsk=" << *book.bestAsk() << std::endl;
+        assert(*book.bestAsk() == 102);
+
+        // book.addOrder("s-100-1", 100, 50, Side::Sell, true);
+        // assert(book.askLevelCount() == 1);
+    }
+
+    static void testAddingPassiveOrder() {
+        LimitOrderBook book{};
+        book.addOrder("s1", 101, 10, Side::Sell, true);
+        book.addOrder("s2", 101, 20, Side::Sell, true);
+
+        // book.addOrder("b1", )
     }
 };
 
@@ -1049,6 +1121,7 @@ int main(int argc, char *argv[]) {
     TestScenarios::testAddingToEmpty();
     TestScenarios::testAddingAndRemoval();
     TestScenarios::testAddingExtraToExistingLevel();
+    TestScenarios::testAddingAndRemovalToSameLevel();
     TestScenarios::testAddingAndRemovalMultiple();
     return 0;
 }
