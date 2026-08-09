@@ -442,8 +442,13 @@ class LimitOrderBook {
             if (empty()) {
                 return false;
             }
-            
-            bool crossable = !priceComparator_(crossPrice, levels_.begin()->first);
+
+            std::optional<int64_t> bestPrice = this->bestPrice();
+            if (!bestPrice) {
+                return false;
+            }
+
+            bool crossable = !priceComparator_(crossPrice, *bestPrice);
             // std::cout << "crossPrice:" << crossPrice
             //           << ",this side:" << levels_.begin()->first 
             //           << ",crossable:" << crossable
@@ -460,11 +465,11 @@ class LimitOrderBook {
             if (empty()) {
                 return std::nullopt;
             }
-            auto bestLevel = levels_.begin();
-            while (bestLevel->second.orderCount == 0) {
-                ++bestLevel;
+            auto bestLevelItr = levels_.begin();
+            while (bestLevelItr->second.orderCount == 0) {
+                ++bestLevelItr;
             }
-            return bestLevel->first;
+            return bestLevelItr->first;
         }
 
         void addOrder(Order& order) {
@@ -495,12 +500,11 @@ class LimitOrderBook {
             if (empty()) {
                 return nullptr;
             }
-            Level& level = levels_.begin()->second;
-            if (!level.head) {
-                // TODO inconsistent state if we clear empty level
-                return nullptr;
+            auto nextLevelItr = levels_.begin();
+            while (nextLevelItr->second.orderCount == 0) {
+                ++nextLevelItr;
             }
-            return level.head;
+            return nextLevelItr->second.head;
         }
 
         bool removeOrder(Order& order) {
@@ -625,20 +629,21 @@ class LimitOrderBook {
         FarSideBook& farSide, const std::string& orderId, int64_t price,
         uint32_t& remainingQuantity, std::vector<Trade>& generatedTrades
     ) {
-        std::cout << "matching...remaining: " << remainingQuantity 
-            << ", price=" << price << std::endl;
+        // std::cout << "matching...remaining: " << remainingQuantity 
+        //     << ", price=" << price << std::endl;
         while (farSide.isCrossPriceMarketable(price) && remainingQuantity > 0) {
-            std::cout << "crosing price: " << price << ", remaining: " << remainingQuantity << std::endl;
+            // std::cout << "crosing price: " << price << ", remaining: " << remainingQuantity << std::endl;
+            // std::cout << "still crossing, price=" << price << ",best:" << *(farSide.bestPrice()) << std::endl;
             Order* pNextOrder = farSide.nextOrder();
             if (!pNextOrder) {
                 this->print(std::cout) << std::endl;
                 // no more orders to be matched on the far-
-                std::cout << "far side is empty" << std::endl;
+                // std::cout << "far side is empty" << std::endl;
                 break;
             }
-            std::cout << "far side next order px:" << pNextOrder->price()
-                << ",qty=" << pNextOrder->qty_ << ", id=" << pNextOrder->orderId()
-                << std::endl;
+            // std::cout << "far side next order px:" << pNextOrder->price()
+            //     << ",qty=" << pNextOrder->qty_ << ", id=" << pNextOrder->orderId()
+            //     << std::endl;
             uint32_t fillQty = std::min(pNextOrder->qty(), remainingQuantity); 
             generatedTrades.emplace_back(orderId, pNextOrder->orderId(), pNextOrder->price(), fillQty);
             remainingQuantity -= fillQty;
@@ -682,6 +687,8 @@ class LimitOrderBook {
         std::vector<Trade> generatedTrades{};
 
         if (farSide.isCrossPriceMarketable(price)) {
+            // std::cout << "price is crossing with book: " << price << ", best:" 
+            //     << *(farSide.bestPrice()) << std::endl;
             // this is where the new order is an aggressive order
             if (rejectCrossOrder) {
                 return AddResult::aggressiveOrderRejection();
@@ -691,6 +698,8 @@ class LimitOrderBook {
                 match(farSide, orderId, price, remainingQuantity, generatedTrades);
             }
         }
+
+        // std::cout << "after matching, remaining qty:" << remainingQuantity << std::endl;
 
         // either the aggressive order has some remaining quantity 
         // or it was originall passive
@@ -1151,166 +1160,59 @@ struct TestScenarios {
 
         // add large/aggressive order that sweeps the entire market
         AddResult res = book.addOrder("b-101-1", 101, 50, Side::Buy, false);
-        std::cout << res << std::endl;
+        // std::cout << res << std::endl;
 
-        book.print(std::cout) << std::endl;
+        // book.print(std::cout) << std::endl;
 
         assert(res.type == AddResult::Type::AggressiveOrderFilled);
-        assert(res.trades.size() == 3);
+        // removed two orders from level 100
+        // generated one extra fill from one order at level 101
+        assert(res.trades.size() == 3); 
+
+        assert(book.askLevelCount() == 1);
+        assert(book.bidLevelCount() == 0);
+        LevelView expectedLevel101{101, 2, 25};
+        assert(expectedLevel101 == book.level(101));
+    }
+
+    static void testSweepingFarSide() {
+        LimitOrderBook book{};
+        book.addOrder("s-101-1", 101, 10, Side::Sell, true);
+        book.addOrder("s-101-2", 101, 20, Side::Sell, true);
+        book.addOrder("s-100-1", 100, 15, Side::Sell, true);
+        book.addOrder("s-100-2", 100, 30, Side::Sell, true);
+
+        // add large/aggressive order that sweeps the entire market
+        AddResult res = book.addOrder("b-101-1", 101, 150, Side::Buy, false);
+        // std::cout << res << std::endl;
+
+        // book.print(std::cout) << std::endl;
+
+        assert(res.type == AddResult::Type::AggressiveOrderAdded);
+        // removed two orders from level 100, two from 101
+        assert(res.trades.size() == 4);
+
+        assert(book.askLevelCount() == 0);
+        assert(book.bidLevelCount() == 1);
+        LevelView expectedLevel101{101, 1, 75};
+        assert(expectedLevel101 == book.level(101));
     }
 };
 
-void testLimitBookScenario() {
-    LimitOrderBook book{};
-    book.print(std::cout) << std::endl;
-
-    // cancel non-existing order 
-    CancelResult cancelRes = book.cancelOrder("order-1");
-    assert(cancelRes.type == CancelResult::Type::UnknownOrderId);
-    book.print(std::cout) << std::endl;
-
-    // add passive order
-    AddResult addRes = book.addOrder("s1", 101, 10, Side::Sell, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    book.print(std::cout) << std::endl;
-
-    // add more passive orders at new levels
-    addRes = book.addOrder("s2", 102, 20, Side::Sell, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    addRes = book.addOrder("s3", 103, 30, Side::Sell, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    book.print(std::cout) << std::endl;
-
-    // add more passive orders at existing levels
-    addRes = book.addOrder("s4", 103, 31, Side::Sell, true);
-    assert(addRes.type ==  AddResult::Type::PassiveOrderAdded);
-    book.print(std::cout) << std::endl;
-
-    addRes = book.addOrder("s5", 102, 21, Side::Sell, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    addRes = book.addOrder("s6", 102, 22, Side::Sell, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    book.print(std::cout) << std::endl;
-
-    // populate the other side
-    addRes = book.addOrder("b1", 99, 10, Side::Buy, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    addRes = book.addOrder("b2", 99, 11, Side::Buy, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    book.print(std::cout) << std::endl;
-
-    addRes = book.addOrder("b3", 99, 12, Side::Buy, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    book.print(std::cout) << std::endl;
-
-    addRes = book.addOrder("b4", 98, 20, Side::Buy, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    addRes = book.addOrder("b5", 98, 21, Side::Buy, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    
-    addRes = book.addOrder("b6", 97, 30, Side::Buy, true);
-    assert(addRes.type == AddResult::Type::PassiveOrderAdded);
-    book.print(std::cout) << std::endl;
-
-    // cancel non-existing order
-    cancelRes = book.cancelOrder("order-1");
-    assert(cancelRes.type == CancelResult::Type::UnknownOrderId);
-
-    // cancel the only order in a level
-    cancelRes = book.cancelOrder("b6");
-    assert(cancelRes.type == CancelResult::Type::Cancelled);
-    book.print(std::cout) << std::endl;
-
-    // cancel the first order in a level
-    cancelRes = book.cancelOrder("s3");
-    assert(cancelRes.type == CancelResult::Type::Cancelled);
-    book.print(std::cout) << std::endl;
-
-    // cancel the last order in a level
-    cancelRes = book.cancelOrder("b5");
-    assert(cancelRes.type == CancelResult::Type::Cancelled);
-    book.print(std::cout) << std::endl;
-
-    // cancel something in the middle
-    cancelRes = book.cancelOrder("s5");
-    assert(cancelRes.type == CancelResult::Type::Cancelled);
-    book.print(std::cout) << std::endl;
-
-    // cancel order by order to remove a whole level
-    cancelRes = book.cancelOrder("b1");
-    assert(cancelRes.type == CancelResult::Type::Cancelled);
-    cancelRes = book.cancelOrder("b3");
-    assert(cancelRes.type == CancelResult::Type::Cancelled);
-    cancelRes = book.cancelOrder("b2");
-    assert(cancelRes.type == CancelResult::Type::Cancelled);
-    book.print(std::cout) << std::endl;
-
-    // modify order quantity down
-    ModifyResult modRes = book.modifyOrderQuantity("b4", 10);
-    assert(modRes.type == ModifyResult::Type::QuantityChanged);
-    book.print(std::cout) << std::endl;
-
-    // modify order quantity up
-    modRes = book.modifyOrderQuantity("b4", 100);
-    assert(modRes.type == ModifyResult::Type::QuantityChanged);
-    book.print(std::cout) << std::endl;
-
-    // add aggressive order (no matching allowed)
-    addRes = book.addOrder("b100", 102, 15, Side::Buy, true);
-    std::cout << "expecting rejection" << std::endl;
-    assert(addRes.type == AddResult::Type::AggressiveOrderRejection);
-    std::cout << "expecting rejection good" << std::endl;
-    book.print(std::cout) << std::endl;
-
-    std::cout << "------------------------" << std::endl;
-
-    // add aggressive order (small)
-    addRes = book.addOrder("b100", 101, 32, Side::Buy, false);
-    std::cout << addRes << std::endl;
-    assert(addRes.type == AddResult::Type::AggressiveOrderFilled);
-    assert(addRes.trades.size() == 3);
-    book.print(std::cout) << std::endl;
-
-    std::cout << "=========================" << std::endl;
-
-    // add aggressive order (large)
-    addRes = book.addOrder("s100", 95, 101, Side::Sell, false);
-    std::cout << addRes << std::endl;
-    assert(addRes.type == AddResult::Type::AggressiveOrderAdded);
-    assert(addRes.trades.size() == 1);
-    book.print(std::cout) << std::endl;
-
-    // modify order price level
-    modRes = book.modifyOrderPrice("s4", 105);
-    assert(modRes.type == ModifyResult::Type::PriceChanged);
-    book.print(std::cout) << std::endl;
-
-    // modify order price to cross with the other side, but still survives
-    book.addOrder("b101", 90, 20, Side::Buy, false);
-    modRes = book.modifyOrderPrice("b101", 99);
-    assert(modRes.type == ModifyResult::Type::PriceChanged);
-    book.print(std::cout) << std::endl;
-
-    // modify order to be full filled
-    modRes = book.modifyOrderPrice("b101", 103);
-    assert(modRes.type == ModifyResult::Type::OrderFilled);
-    book.print(std::cout) << std::endl;
-}
-
 int main(int argc, char *argv[]) {
-    // // testLimitBookScenario();
-    // TestScenarios::testEmptyBook();
-    // TestScenarios::testAddingToEmpty();
-    // TestScenarios::testAddingAndRemoval();
-    // TestScenarios::testAddingExtraToExistingLevel();
-    // TestScenarios::testAddingAndRemovalToSameLevel();
-    // TestScenarios::testAddingAndRemovalMultiple();
-    // TestScenarios::testAddingPassiveFarSideOrder();
-    // TestScenarios::testAddingDisallowedAggressiveFarSideOrder();
-    // TestScenarios::testAddingSmallAggressiveFarSideOrder();
-    // TestScenarios::testAddingMediumAggressiveFarSideOrder();
-    // TestScenarios::testAddingLargeAggressiveFarSideOrder();
+    TestScenarios::testEmptyBook();
+    TestScenarios::testAddingToEmpty();
+    TestScenarios::testAddingAndRemoval();
+    TestScenarios::testAddingExtraToExistingLevel();
+    TestScenarios::testAddingAndRemovalToSameLevel();
+    TestScenarios::testAddingAndRemovalMultiple();
+    TestScenarios::testAddingPassiveFarSideOrder();
+    TestScenarios::testAddingDisallowedAggressiveFarSideOrder();
+    TestScenarios::testAddingSmallAggressiveFarSideOrder();
+    TestScenarios::testAddingMediumAggressiveFarSideOrder();
+    TestScenarios::testAddingLargeAggressiveFarSideOrder();
     TestScenarios::testAddingLargeExtraAggressiveFarSideOrder();
+    TestScenarios::testSweepingFarSide();
 
     return 0;
 }
