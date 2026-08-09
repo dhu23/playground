@@ -588,10 +588,7 @@ class LimitOrderBook {
             return false;
         }
 
-        // TODO update by using new level count
         std::ostream& print(std::ostream& os, bool bestPriceFirst) const {
-            // TODO: package implementation of how levels are managed
-            // into a class 
             if (empty()) {
                 os << "No Levels";
                 return os;
@@ -636,7 +633,7 @@ class LimitOrderBook {
             // std::cout << "still crossing, price=" << price << ",best:" << *(farSide.bestPrice()) << std::endl;
             Order* pNextOrder = farSide.nextOrder();
             if (!pNextOrder) {
-                this->print(std::cout) << std::endl;
+                // this->print(std::cout) << std::endl;
                 // no more orders to be matched on the far-
                 // std::cout << "far side is empty" << std::endl;
                 break;
